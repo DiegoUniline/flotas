@@ -1,158 +1,121 @@
 import { useState } from 'react'
-import { Input } from '@/components/ui/Input'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Drawer } from '@/components/ui/Drawer'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Pagination } from '@/components/ui/Pagination'
+import { ListToolbar } from '@/components/ui/ListToolbar'
+import { TableScrollArea } from '@/components/ui/TableScrollArea'
 import { Can } from '@/components/Can'
 import { LocationsTable } from './components/LocationsTable'
-import { LocationForm, toLocationInsert, type LocationFormValues } from './components/LocationForm'
-import {
-  useCreateLocation,
-  useDeleteLocation,
-  useLocationsQuery,
-  useUpdateLocation,
-  PAGE_SIZE,
-} from './hooks/useLocations'
-import { LOCATION_TYPES, type Location, type LocationFilters, type LocationSort } from './api/locationsApi'
-import { PageScroll } from '@/components/ui/PageScroll'
+import { useLocationsQuery } from './hooks/useLocations'
+import { LOCATION_TYPES, type LocationFilters, type LocationSort } from './api/locationsApi'
+import { computeDateRange } from '@/lib/dateRanges'
+import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
-type DrawerState = { mode: 'create' } | { mode: 'edit'; location: Location } | null
+const FILTER_FIELDS: FilterFieldDef[] = [
+  { key: 'location_type', label: 'Tipo', type: 'select', options: LOCATION_TYPES.map((t) => ({ value: t.value, label: t.label })) },
+  { key: 'active', label: 'Activa', type: 'boolean' },
+  { key: 'city', label: 'Ciudad', type: 'text' },
+  { key: 'state', label: 'Estado', type: 'text' },
+]
+
+const GROUP_FIELDS: GroupFieldDef[] = [
+  { key: 'location_type', label: 'Tipo' },
+  { key: 'active', label: 'Estado' },
+  { key: 'state', label: 'Estado (geográfico)' },
+]
 
 export function LocationsPage() {
-  const [filters, setFilters] = useState<LocationFilters>({ search: '', locationType: null, active: null })
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [dateRange, setDateRange] = useState(computeDateRange('all'))
+  const [advanced, setAdvanced] = useState<AppliedFilter[]>([])
+  const [groupBy, setGroupBy] = useState<string | null>(null)
   const [sort, setSort] = useState<LocationSort>({ column: 'name', direction: 'asc' })
   const [page, setPage] = useState(0)
-  const [drawer, setDrawer] = useState<DrawerState>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Location | null>(null)
 
+  const filters: LocationFilters = { search, dateRange, advanced, groupBy }
   const locationsQuery = useLocationsQuery(filters, sort, page)
-  const createMutation = useCreateLocation()
-  const updateMutation = useUpdateLocation()
-  const deleteMutation = useDeleteLocation()
-
-  const hasFilters = filters.search.trim() !== '' || filters.locationType !== null || filters.active !== null
-
-  function updateFilters(patch: Partial<LocationFilters>) {
-    setFilters((current) => ({ ...current, ...patch }))
-    setPage(0)
-  }
-
-  function handleFormSubmit(values: LocationFormValues) {
-    const input = toLocationInsert(values)
-    if (drawer?.mode === 'edit') {
-      updateMutation.mutate(
-        { id: drawer.location.id, input },
-        { onSuccess: () => setDrawer(null) },
-      )
-    } else {
-      createMutation.mutate(input, { onSuccess: () => setDrawer(null) })
-    }
-  }
-
-  function handleConfirmDelete() {
-    if (!deleteTarget) return
-    deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) })
-  }
+  const hasFilters = search.trim() !== '' || advanced.length > 0 || dateRange.preset !== 'all'
 
   return (
-    <PageScroll>
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full flex-col gap-3 p-4">
+      <div className="flex shrink-0 items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Sucursales</h1>
+          <h1 className="text-lg font-semibold text-ink">Sucursales</h1>
           <p className="text-sm text-gray-500">Ubicaciones operativas de tu organización.</p>
         </div>
         <Can permission="locations.manage">
-          <Button onClick={() => setDrawer({ mode: 'create' })}>Nueva sucursal</Button>
+          <Button onClick={() => navigate('/sucursales/nuevo')}>Nueva sucursal</Button>
         </Can>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Buscar por nombre o código"
-          value={filters.search}
-          onChange={(e) => updateFilters({ search: e.target.value })}
-          className="max-w-xs"
-        />
-        <select
-          value={filters.locationType ?? ''}
-          onChange={(e) => updateFilters({ locationType: e.target.value || null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
-        >
-          <option value="">Todos los tipos</option>
-          {LOCATION_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filters.active === null ? '' : filters.active ? 'active' : 'inactive'}
-          onChange={(e) =>
-            updateFilters({
-              active: e.target.value === '' ? null : e.target.value === 'active',
-            })
-          }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
-        >
-          <option value="">Todos los estados</option>
-          <option value="active">Activas</option>
-          <option value="inactive">Inactivas</option>
-        </select>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <LocationsTable
-          rows={locationsQuery.data?.rows ?? []}
-          loading={locationsQuery.isLoading}
-          error={locationsQuery.isError}
-          hasFilters={hasFilters}
-          sort={sort}
-          onSortChange={(next) => {
-            setSort(next)
+      <div className="shrink-0">
+        <ListToolbar
+          search={search}
+          onSearchChange={(v) => {
+            setSearch(v)
             setPage(0)
           }}
-          onRetry={() => void locationsQuery.refetch()}
-          onCreate={() => setDrawer({ mode: 'create' })}
-          onEdit={(location) => setDrawer({ mode: 'edit', location })}
-          onDelete={(location) => setDeleteTarget(location)}
+          searchPlaceholder="Buscar por nombre o código..."
+          dateRange={dateRange}
+          onDateRangeChange={(v) => {
+            setDateRange(v)
+            setPage(0)
+          }}
+          filters={advanced}
+          onFiltersChange={(f) => {
+            setAdvanced(f)
+            setPage(0)
+          }}
+          filterFields={FILTER_FIELDS}
+          groupFields={GROUP_FIELDS}
+          groupBy={groupBy}
+          onGroupByChange={(g) => {
+            setGroupBy(g)
+            setPage(0)
+          }}
         />
-        {!locationsQuery.isLoading && !locationsQuery.isError && (locationsQuery.data?.rows.length ?? 0) > 0 && (
-          <Pagination
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={locationsQuery.data?.count ?? 0}
-            onPageChange={setPage}
-          />
-        )}
       </div>
 
-      <Drawer
-        open={drawer !== null}
-        title={drawer?.mode === 'edit' ? 'Editar sucursal' : 'Nueva sucursal'}
-        onClose={() => setDrawer(null)}
-      >
-        <LocationForm
-          location={drawer?.mode === 'edit' ? drawer.location : undefined}
-          submitLabel={drawer?.mode === 'edit' ? 'Guardar cambios' : 'Crear sucursal'}
-          loading={createMutation.isPending || updateMutation.isPending}
-          onSubmit={handleFormSubmit}
-          onCancel={() => setDrawer(null)}
-        />
-      </Drawer>
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        title="Eliminar sucursal"
-        description={`¿Seguro que quieres eliminar "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        danger
-        loading={deleteMutation.isPending}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <TableScrollArea>
+          <LocationsTable
+            rows={locationsQuery.data?.rows ?? []}
+            loading={locationsQuery.isLoading}
+            error={locationsQuery.isError}
+            hasFilters={hasFilters}
+            sort={sort}
+            onSortChange={setSort}
+            onRetry={() => void locationsQuery.refetch()}
+            onCreate={() => navigate('/sucursales/nuevo')}
+            groupBy={groupBy}
+          />
+        </TableScrollArea>
+        {!groupBy && !locationsQuery.isLoading && !locationsQuery.isError && (locationsQuery.data?.rows.length ?? 0) > 0 && (
+          <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
+            <span>
+              {page * 20 + 1}–{Math.min((page + 1) * 20, locationsQuery.data?.count ?? 0)} de {locationsQuery.data?.count ?? 0}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={(page + 1) * 20 >= (locationsQuery.data?.count ?? 0)}
+                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-    </PageScroll>
   )
 }

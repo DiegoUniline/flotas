@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrg } from '@/context/OrgContext'
 import { useToast } from '@/context/ToastContext'
-import { supabase } from '@/lib/supabase'
-import type { Customer } from '@/features/customers/api/customersApi'
+import { fetchCustomerById } from '@/features/customers/api/customersApi'
 import {
   createCustomerLocation,
   deleteCustomerLocation,
@@ -11,12 +10,6 @@ import {
   type CustomerLocationInsert,
   type CustomerLocationUpdate,
 } from '@/features/customers/api/customerLocationsApi'
-
-export async function fetchCustomerById(id: string): Promise<Customer> {
-  const { data, error } = await supabase.from('customers').select('*').eq('id', id).single()
-  if (error) throw error
-  return data
-}
 
 export function useCustomer(customerId: string | undefined) {
   return useQuery({

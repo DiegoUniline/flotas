@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
+import type { DateRangeValue } from '@/lib/dateRanges'
 
 export type Driver = Tables<'drivers'>
 export type DriverInsert = Omit<TablesInsert<'drivers'>, 'organization_id'>
@@ -16,8 +18,9 @@ export type DriverSortColumn = 'first_name' | 'employee_number' | 'created_at'
 
 export interface DriverFilters {
   search: string
-  status: string | null
-  active: boolean | null
+  dateRange: DateRangeValue
+  advanced: AppliedFilter[]
+  groupBy: string | null
 }
 
 export interface DriverSort {
@@ -28,6 +31,8 @@ export interface DriverSort {
 function escapeIlikeTerm(value: string) {
   return value.replace(/[%,()]/g, ' ').trim()
 }
+
+const GROUPED_PAGE_SIZE = 300
 
 export async function fetchDrivers(
   organizationId: string,
@@ -48,16 +53,21 @@ export async function fetchDrivers(
       `first_name.ilike.%${search}%,last_name.ilike.%${search}%,employee_number.ilike.%${search}%,phone.ilike.%${search}%`,
     )
   }
-  if (filters.status) {
-    query = query.eq('status', filters.status)
-  }
-  if (filters.active !== null) {
-    query = query.eq('active', filters.active)
-  }
+  if (filters.dateRange.from) query = query.gte('created_at', filters.dateRange.from)
+  if (filters.dateRange.to) query = query.lte('created_at', `${filters.dateRange.to}T23:59:59`)
 
-  const from = page * pageSize
-  const to = from + pageSize - 1
-  query = query.order(sort.column, { ascending: sort.direction === 'asc' }).range(from, to)
+  query = applyFilters(query, filters.advanced)
+
+  const effectivePageSize = filters.groupBy ? GROUPED_PAGE_SIZE : pageSize
+  const effectivePage = filters.groupBy ? 0 : page
+  const from = effectivePage * effectivePageSize
+  const to = from + effectivePageSize - 1
+
+  const orderColumn = filters.groupBy ?? sort.column
+  query = query.order(orderColumn, { ascending: true }).range(from, to)
+  if (filters.groupBy) {
+    query = query.order(sort.column, { ascending: sort.direction === 'asc' })
+  }
 
   const { data, error, count } = await query
   if (error) throw error

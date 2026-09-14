@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
+import type { DateRangeValue } from '@/lib/dateRanges'
 
 export type Customer = Tables<'customers'>
 export type CustomerInsert = Omit<TablesInsert<'customers'>, 'organization_id'>
@@ -14,7 +16,9 @@ export type CustomerSortColumn = 'name' | 'code' | 'created_at'
 
 export interface CustomerFilters {
   search: string
-  status: string | null
+  dateRange: DateRangeValue
+  advanced: AppliedFilter[]
+  groupBy: string | null
 }
 
 export interface CustomerSort {
@@ -25,6 +29,8 @@ export interface CustomerSort {
 function escapeIlikeTerm(value: string) {
   return value.replace(/[%,()]/g, ' ').trim()
 }
+
+const GROUPED_PAGE_SIZE = 300
 
 export async function fetchCustomers(
   organizationId: string,
@@ -43,17 +49,31 @@ export async function fetchCustomers(
   if (search) {
     query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,phone.ilike.%${search}%`)
   }
-  if (filters.status) {
-    query = query.eq('status', filters.status)
-  }
+  if (filters.dateRange.from) query = query.gte('created_at', filters.dateRange.from)
+  if (filters.dateRange.to) query = query.lte('created_at', `${filters.dateRange.to}T23:59:59`)
 
-  const from = page * pageSize
-  const to = from + pageSize - 1
-  query = query.order(sort.column, { ascending: sort.direction === 'asc' }).range(from, to)
+  query = applyFilters(query, filters.advanced)
+
+  const effectivePageSize = filters.groupBy ? GROUPED_PAGE_SIZE : pageSize
+  const effectivePage = filters.groupBy ? 0 : page
+  const from = effectivePage * effectivePageSize
+  const to = from + effectivePageSize - 1
+
+  const orderColumn = filters.groupBy ?? sort.column
+  query = query.order(orderColumn, { ascending: true }).range(from, to)
+  if (filters.groupBy) {
+    query = query.order(sort.column, { ascending: sort.direction === 'asc' })
+  }
 
   const { data, error, count } = await query
   if (error) throw error
   return { rows: data ?? [], count: count ?? 0 }
+}
+
+export async function fetchCustomerById(id: string): Promise<Customer> {
+  const { data, error } = await supabase.from('customers').select('*').eq('id', id).single()
+  if (error) throw error
+  return data
 }
 
 export async function createCustomer(organizationId: string, input: CustomerInsert): Promise<Customer> {

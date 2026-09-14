@@ -27,10 +27,18 @@ import {
   unassignVehicle,
 } from '@/features/drivers/api/driverAssignmentsApi'
 
-export async function fetchDriverById(id: string): Promise<Driver> {
-  const { data, error } = await supabase.from('drivers').select('*').eq('id', id).single()
+export interface DriverWithRelations extends Driver {
+  locations: { name: string } | null
+}
+
+export async function fetchDriverById(id: string): Promise<DriverWithRelations> {
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('*, locations!drivers_primary_location_id_fkey(name)')
+    .eq('id', id)
+    .single()
   if (error) throw error
-  return data
+  return data as unknown as DriverWithRelations
 }
 
 export function useDriver(driverId: string | undefined) {

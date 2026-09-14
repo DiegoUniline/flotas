@@ -388,10 +388,15 @@ tienen) sin inventar uno nuevo.
 
 ### Pendiente inmediato
 
-Migrar al patrón nuevo, en este orden sugerido (del más simple al más
-grande): Sucursales → Operadores (ya tiene sub-recursos, buena prueba de
-Tabs) → Clientes → Rutas. **Pedidos ya se migró** (ver sección de
-paquetería abajo).
+~~Migrar al patrón nuevo: Sucursales → Operadores → Clientes → Rutas.~~
+**Completado** — ver "Migración completa al patrón Odoo" más abajo en
+este documento. Los cinco módulos reales (Vehículos, Pedidos, Sucursales,
+Operadores, Clientes, Rutas) ya están en el patrón nuevo; solo quedan
+pendientes los módulos del roadmap que todavía no tienen tabla propia
+(`implemented: false` en `navConfig.ts` — Dispositivos, Geocercas,
+Refacciones, etc., ver la sección de arriba sobre `navConfig.ts`), que
+no se construyen sin antes confirmar esquema/lógica de negocio con el
+usuario.
 
 ### `DetailSection` + `HistoryPanel` (agregado en esta fase)
 
@@ -1062,6 +1067,77 @@ quedan en `z-[1000]` (siguen sin problema, ya quedan por debajo de
 cualquier modal/diálogo). Si se agrega otra capa fija/absoluta nueva a
 futuro que deba convivir con mapas Leaflet en pantalla, usar esta misma
 escala (por encima de 1000) en vez de valores bajos tipo `z-40`/`z-50`.
+
+### Migración completa al patrón Odoo: Sucursales, Operadores, Clientes, Rutas (agregado en esta fase)
+
+Pedido explícito del usuario: "termina todo los módulos que quedan... no
+pares hasta terminar". Esto cierra el "Pendiente inmediato" que llevaba
+varias fases documentado arriba — los cuatro módulos que seguían en el
+patrón viejo (`Drawer` + formulario para alta/edición) ya están en el
+mismo patrón que Vehículos/Pedidos: lista 90/10 con `ListToolbar`/
+`TableScrollArea`, ficha de detalle con `DetailSection`/`InlineField`/
+`RelationSelect`/`SaveDiscardBar`/`HistoryPanel`, fila de tabla completa
+clickeable en vez de botones "Editar"/"Eliminar" en la lista. Mismo
+criterio en los cuatro: filtros/orden/paginado en el backend, nunca
+traer todo y paginar en cliente.
+
+- **Sucursales** (`features/locations`): `LocationsPage.tsx` migrada
+  (filtros: tipo, activa, ciudad, estado; agrupar por tipo/activa/
+  estado). Nueva `LocationDetailPage.tsx` (`/sucursales/:id`, no existía
+  ficha propia antes, solo Drawer) — secciones "Identificación" y
+  "Dirección" (con el mismo botón "Usar mi ubicación" que ya tenía el
+  formulario viejo). `LocationForm.tsx`/`LocationQuickCreate.tsx` **se
+  dejaron intactos** — los sigue usando `RelationSelect` en Vehículos/
+  Operadores/Rutas para crear una sucursal en contexto, es un uso
+  distinto (formulario corto en Drawer superpuesto) al de la ficha
+  principal.
+- **Operadores** (`features/drivers`): `DriversPage.tsx` migrada
+  (filtros: estado, activo, no. empleado). `DriverDetailPage.tsx`
+  reconstruida con secciones "Identificación"/"Contacto"/"Empleo"
+  (sucursal base vía `RelationSelect`)/"Notas", más `Tabs` con
+  "Vehículo asignado"/"Licencias"/"Certificaciones" — **se reutilizaron
+  tal cual** `DriverAssignmentSection`/`DriverLicensesSection`/
+  `DriverCertificationsSection` (ya eran tarjetas autocontenidas con su
+  propio CRUD en Drawer para sub-recursos cortos, no hacía falta
+  reescribirlas, solo se movieron de "siempre visibles apiladas" a
+  pestañas). `useDriverDetail.ts`: `fetchDriverById` ahora trae
+  `locations!drivers_primary_location_id_fkey(name)` para poder mostrar
+  el label de la sucursal base en el `RelationSelect` sin una query
+  aparte.
+- **Clientes** (`features/customers`): `CustomersPage.tsx` migrada
+  (filtro: estado, RFC). `CustomerDetailPage.tsx` reconstruida con
+  secciones "Identificación"/"Contacto"/"Notas" + `CustomerLocationsSection`
+  (domicilios, sin cambios, ya era una tarjeta autocontenida). Se movió
+  `fetchCustomerById` de `useCustomerDetail.ts` a `customersApi.ts` (mismo
+  lugar que el resto de los módulos migrados — `fetchXById` vive en el
+  `api/`, no en el hook de sub-recursos).
+- **Rutas** (`features/routes`): `RoutesPage.tsx` migrada — aquí **no**
+  se usó `ListToolbar`/`DateRangeFilter` como en los otros tres, a
+  propósito: una ruta es inherentemente de **un solo día** (planeación
+  operativa diaria), no un reporte histórico por rango de fechas, así
+  que se mantuvo el selector de fecha único en pastilla (como ya tenía)
+  en vez de forzar el componente de rango genérico. Sí se agregó
+  buscador real en base (`route_number`/`name`) vía un `search` opcional
+  nuevo en `RoutePlanFilters`/`fetchRoutePlans` (opcional para no romper
+  `ControlMapPage.tsx`, que sigue llamando `useRoutePlansQuery` sin
+  `search`). Nueva `RouteDetailPage.tsx` unificada (antes "crear" y
+  "editar" eran flujos distintos: Drawer con `RoutePlanForm.tsx` para
+  crear, la ficha vieja no editaba nada) — sección "Datos de la ruta"
+  con operador/vehículo/sucursal vía `RelationSelect` (con creación en
+  contexto), Paradas se dejó igual (agregar desde pedido sigue en
+  Drawer, es una lista corta de selección, no un formulario largo).
+  Se agregó **"Cancelar ruta"** (botón real, antes no existía en la UI
+  aunque el estado `cancelled` y el criterio "no se borran, se cancelan"
+  ya estaban documentados) — visible mientras la ruta no esté
+  `completed`/`cancelled`. `RoutePlanForm.tsx` (Drawer viejo de creación)
+  se eliminó del repo, ya no tenía ningún uso.
+- **Patrón para cuando se necesite de nuevo:** `fetchXById` va en
+  `api/xApi.ts`; el detalle es un solo componente que sirve para crear
+  (`id === 'nuevo'`) y editar (mismo `draft`/`original`/`dirty`/
+  `SaveDiscardBar`); sub-recursos ya construidos como tarjetas
+  autocontenidas (con su propio Drawer corto) se reutilizan tal cual
+  dentro de `Tabs`, no hace falta reescribirlos — la migración es del
+  *contenedor* (lista + ficha principal), no de cada sub-recurso.
 
 ## Formato de fechas (agregado en esta fase)
 

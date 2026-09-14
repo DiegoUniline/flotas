@@ -1,127 +1,115 @@
 import { useState } from 'react'
-import { Input } from '@/components/ui/Input'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Drawer } from '@/components/ui/Drawer'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Pagination } from '@/components/ui/Pagination'
+import { ListToolbar } from '@/components/ui/ListToolbar'
+import { TableScrollArea } from '@/components/ui/TableScrollArea'
 import { Can } from '@/components/Can'
 import { CustomersTable } from './components/CustomersTable'
-import { CustomerForm, toCustomerInsert, type CustomerFormValues } from './components/CustomerForm'
-import { useCreateCustomer, useCustomersQuery, useDeleteCustomer, useUpdateCustomer, PAGE_SIZE } from './hooks/useCustomers'
-import { CUSTOMER_STATUSES, type Customer, type CustomerFilters, type CustomerSort } from './api/customersApi'
-import { PageScroll } from '@/components/ui/PageScroll'
+import { useCustomersQuery } from './hooks/useCustomers'
+import { CUSTOMER_STATUSES, type CustomerFilters, type CustomerSort } from './api/customersApi'
+import { computeDateRange } from '@/lib/dateRanges'
+import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
-type DrawerState = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null
+const FILTER_FIELDS: FilterFieldDef[] = [
+  { key: 'status', label: 'Estado', type: 'select', options: CUSTOMER_STATUSES.map((s) => ({ value: s.value, label: s.label })) },
+  { key: 'tax_id', label: 'RFC', type: 'text' },
+]
+
+const GROUP_FIELDS: GroupFieldDef[] = [{ key: 'status', label: 'Estado' }]
 
 export function CustomersPage() {
-  const [filters, setFilters] = useState<CustomerFilters>({ search: '', status: null })
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
+  const [dateRange, setDateRange] = useState(computeDateRange('all'))
+  const [advanced, setAdvanced] = useState<AppliedFilter[]>([])
+  const [groupBy, setGroupBy] = useState<string | null>(null)
   const [sort, setSort] = useState<CustomerSort>({ column: 'name', direction: 'asc' })
   const [page, setPage] = useState(0)
-  const [drawer, setDrawer] = useState<DrawerState>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
 
+  const filters: CustomerFilters = { search, dateRange, advanced, groupBy }
   const customersQuery = useCustomersQuery(filters, sort, page)
-  const createMutation = useCreateCustomer()
-  const updateMutation = useUpdateCustomer()
-  const deleteMutation = useDeleteCustomer()
-
-  const hasFilters = filters.search.trim() !== '' || filters.status !== null
-
-  function updateFilters(patch: Partial<CustomerFilters>) {
-    setFilters((current) => ({ ...current, ...patch }))
-    setPage(0)
-  }
-
-  function handleFormSubmit(values: CustomerFormValues) {
-    const input = toCustomerInsert(values)
-    if (drawer?.mode === 'edit') {
-      updateMutation.mutate({ id: drawer.customer.id, input }, { onSuccess: () => setDrawer(null) })
-    } else {
-      createMutation.mutate(input, { onSuccess: () => setDrawer(null) })
-    }
-  }
-
-  function handleConfirmDelete() {
-    if (!deleteTarget) return
-    deleteMutation.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) })
-  }
+  const hasFilters = search.trim() !== '' || advanced.length > 0 || dateRange.preset !== 'all'
 
   return (
-    <PageScroll>
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
+    <div className="flex h-full flex-col gap-3 p-4">
+      <div className="flex shrink-0 items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-ink">Clientes</h1>
           <p className="text-sm text-gray-500">Clientes y domicilios de entrega.</p>
         </div>
         <Can permission="jobs.manage">
-          <Button onClick={() => setDrawer({ mode: 'create' })}>Nuevo cliente</Button>
+          <Button onClick={() => navigate('/clientes/nuevo')}>Nuevo cliente</Button>
         </Can>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Buscar por nombre, código o teléfono"
-          value={filters.search}
-          onChange={(e) => updateFilters({ search: e.target.value })}
-          className="max-w-xs"
-        />
-        <select
-          value={filters.status ?? ''}
-          onChange={(e) => updateFilters({ status: e.target.value || null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
-        >
-          <option value="">Todos los estados</option>
-          {CUSTOMER_STATUSES.map((status) => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-white">
-        <CustomersTable
-          rows={customersQuery.data?.rows ?? []}
-          loading={customersQuery.isLoading}
-          error={customersQuery.isError}
-          hasFilters={hasFilters}
-          sort={sort}
-          onSortChange={(next) => {
-            setSort(next)
+      <div className="shrink-0">
+        <ListToolbar
+          search={search}
+          onSearchChange={(v) => {
+            setSearch(v)
             setPage(0)
           }}
-          onRetry={() => void customersQuery.refetch()}
-          onCreate={() => setDrawer({ mode: 'create' })}
-          onEdit={(customer) => setDrawer({ mode: 'edit', customer })}
-          onDelete={(customer) => setDeleteTarget(customer)}
+          searchPlaceholder="Buscar por nombre, código o teléfono..."
+          dateRange={dateRange}
+          onDateRangeChange={(v) => {
+            setDateRange(v)
+            setPage(0)
+          }}
+          filters={advanced}
+          onFiltersChange={(f) => {
+            setAdvanced(f)
+            setPage(0)
+          }}
+          filterFields={FILTER_FIELDS}
+          groupFields={GROUP_FIELDS}
+          groupBy={groupBy}
+          onGroupByChange={(g) => {
+            setGroupBy(g)
+            setPage(0)
+          }}
         />
-        {!customersQuery.isLoading && !customersQuery.isError && (customersQuery.data?.rows.length ?? 0) > 0 && (
-          <Pagination page={page} pageSize={PAGE_SIZE} total={customersQuery.data?.count ?? 0} onPageChange={setPage} />
-        )}
       </div>
 
-      <Drawer open={drawer !== null} title={drawer?.mode === 'edit' ? 'Editar cliente' : 'Nuevo cliente'} onClose={() => setDrawer(null)}>
-        <CustomerForm
-          customer={drawer?.mode === 'edit' ? drawer.customer : undefined}
-          submitLabel={drawer?.mode === 'edit' ? 'Guardar cambios' : 'Crear cliente'}
-          loading={createMutation.isPending || updateMutation.isPending}
-          onSubmit={handleFormSubmit}
-          onCancel={() => setDrawer(null)}
-        />
-      </Drawer>
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        title="Eliminar cliente"
-        description={`¿Seguro que quieres eliminar "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        danger
-        loading={deleteMutation.isPending}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <TableScrollArea>
+          <CustomersTable
+            rows={customersQuery.data?.rows ?? []}
+            loading={customersQuery.isLoading}
+            error={customersQuery.isError}
+            hasFilters={hasFilters}
+            sort={sort}
+            onSortChange={setSort}
+            onRetry={() => void customersQuery.refetch()}
+            onCreate={() => navigate('/clientes/nuevo')}
+            groupBy={groupBy}
+          />
+        </TableScrollArea>
+        {!groupBy && !customersQuery.isLoading && !customersQuery.isError && (customersQuery.data?.rows.length ?? 0) > 0 && (
+          <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
+            <span>
+              {page * 20 + 1}–{Math.min((page + 1) * 20, customersQuery.data?.count ?? 0)} de {customersQuery.data?.count ?? 0}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={(page + 1) * 20 >= (customersQuery.data?.count ?? 0)}
+                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-    </PageScroll>
   )
 }

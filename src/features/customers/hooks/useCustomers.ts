@@ -60,9 +60,10 @@ export function useUpdateCustomer() {
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: CustomerUpdate }) => updateCustomer(id, input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['customers', activeOrg?.id] })
       void queryClient.invalidateQueries({ queryKey: ['customer-options', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['customer', variables.id] })
       showToast('Cliente actualizado', 'success')
     },
     onError: () => showToast('No se pudo actualizar el cliente', 'error'),

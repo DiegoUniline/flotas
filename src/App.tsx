@@ -12,6 +12,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
+import { LocationDetailPage } from '@/features/locations/LocationDetailPage'
 import { ControlMapPage } from '@/features/map/ControlMapPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { VehicleDetailPage } from '@/features/vehicles/VehicleDetailPage'
@@ -49,6 +50,7 @@ export function App() {
             <Route index element={<Navigate to="/centro-de-control" replace />} />
             <Route path="centro-de-control" element={<ControlMapPage />} />
             <Route path="sucursales" element={<LocationsPage />} />
+            <Route path="sucursales/:id" element={<LocationDetailPage />} />
             <Route path="vehiculos" element={<VehiclesPage />} />
             <Route path="vehiculos/:id" element={<VehicleDetailPage />} />
             <Route path="operadores" element={<DriversPage />} />

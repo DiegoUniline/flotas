@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
+import type { DateRangeValue } from '@/lib/dateRanges'
 
 export type Location = Tables<'locations'>
 export type LocationInsert = Omit<TablesInsert<'locations'>, 'organization_id'>
@@ -16,8 +18,9 @@ export type LocationSortColumn = 'name' | 'code' | 'city' | 'created_at'
 
 export interface LocationFilters {
   search: string
-  locationType: string | null
-  active: boolean | null
+  dateRange: DateRangeValue
+  advanced: AppliedFilter[]
+  groupBy: string | null
 }
 
 export interface LocationSort {
@@ -28,6 +31,8 @@ export interface LocationSort {
 function escapeIlikeTerm(value: string) {
   return value.replace(/[%,()]/g, ' ').trim()
 }
+
+const GROUPED_PAGE_SIZE = 300
 
 export async function fetchLocations(
   organizationId: string,
@@ -46,20 +51,31 @@ export async function fetchLocations(
   if (search) {
     query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%`)
   }
-  if (filters.locationType) {
-    query = query.eq('location_type', filters.locationType)
-  }
-  if (filters.active !== null) {
-    query = query.eq('active', filters.active)
-  }
+  if (filters.dateRange.from) query = query.gte('created_at', filters.dateRange.from)
+  if (filters.dateRange.to) query = query.lte('created_at', `${filters.dateRange.to}T23:59:59`)
 
-  const from = page * pageSize
-  const to = from + pageSize - 1
-  query = query.order(sort.column, { ascending: sort.direction === 'asc' }).range(from, to)
+  query = applyFilters(query, filters.advanced)
+
+  const effectivePageSize = filters.groupBy ? GROUPED_PAGE_SIZE : pageSize
+  const effectivePage = filters.groupBy ? 0 : page
+  const from = effectivePage * effectivePageSize
+  const to = from + effectivePageSize - 1
+
+  const orderColumn = filters.groupBy ?? sort.column
+  query = query.order(orderColumn, { ascending: true }).range(from, to)
+  if (filters.groupBy) {
+    query = query.order(sort.column, { ascending: sort.direction === 'asc' })
+  }
 
   const { data, error, count } = await query
   if (error) throw error
   return { rows: data ?? [], count: count ?? 0 }
+}
+
+export async function fetchLocationById(id: string): Promise<Location> {
+  const { data, error } = await supabase.from('locations').select('*').eq('id', id).single()
+  if (error) throw error
+  return data
 }
 
 export async function createLocation(organizationId: string, input: LocationInsert): Promise<Location> {

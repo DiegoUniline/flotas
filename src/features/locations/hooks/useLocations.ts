@@ -3,6 +3,7 @@ import { useOrg } from '@/context/OrgContext'
 import { useToast } from '@/context/ToastContext'
 import {
   createLocation,
+  fetchLocationById,
   fetchLocations,
   softDeleteLocation,
   updateLocation,
@@ -27,6 +28,14 @@ export function useLocationsQuery(filters: LocationFilters, sort: LocationSort, 
 
 export { PAGE_SIZE }
 
+export function useLocation(id: string | undefined) {
+  return useQuery({
+    queryKey: ['location', id],
+    queryFn: () => fetchLocationById(id!),
+    enabled: !!id,
+  })
+}
+
 export function useCreateLocation() {
   const { activeOrg } = useOrg()
   const queryClient = useQueryClient()
@@ -49,8 +58,9 @@ export function useUpdateLocation() {
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: LocationUpdate }) => updateLocation(id, input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['locations', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['location', variables.id] })
       showToast('Sucursal actualizada', 'success')
     },
     onError: () => showToast('No se pudo actualizar la sucursal', 'error'),

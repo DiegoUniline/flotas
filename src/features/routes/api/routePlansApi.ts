@@ -21,6 +21,13 @@ export const ROUTE_STATUSES = [
 export interface RoutePlanFilters {
   scheduledDate: string | null
   status: string | null
+  /** Búsqueda real en base sobre nombre/número de ruta — opcional, la usa
+   * `RoutesPage`; el Centro de control no la manda (filtra client-side). */
+  search?: string
+}
+
+function escapeIlikeTerm(value: string) {
+  return value.replace(/[%,()]/g, ' ').trim()
 }
 
 const ROUTE_PLAN_SELECT = '*, drivers(first_name, last_name, phone, photo_url), vehicles(economic_number, plate, image_url, brand, model)'
@@ -39,6 +46,10 @@ export async function fetchRoutePlans(
   }
   if (filters.status) {
     query = query.eq('status', filters.status)
+  }
+  const search = filters.search ? escapeIlikeTerm(filters.search) : ''
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,route_number.ilike.%${search}%`)
   }
 
   const { data, error } = await query.order('scheduled_date', { ascending: false })
