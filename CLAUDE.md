@@ -520,6 +520,31 @@ Migración `add_gps_capture_and_insurance_to_jobs`, extiende `jobs`:
   real, etc.), evaluar entonces si conviene persistir el monto — no se
   inventó esa parte.
 
+### Crear pedido: wizard en ventana emergente, no la ficha completa (agregado en esta fase)
+
+Pedido explícito del usuario: crear un pedido desde cero con las 4
+secciones completas en una sola página (Odoo-style, sin Drawer) obligaba
+a mucho scroll antes de terminar. **Excepción deliberada al patrón
+general "nunca modales para formularios largos":** crear un pedido nuevo
+(`/pedidos/nuevo`) ahora abre un wizard en `Modal` (nuevo componente
+`components/ui/Modal.tsx` — centrado y ancho, `max-w-2xl`, a diferencia
+de `Drawer` que es lateral y angosto `max-w-md`) con 4 pasos = las mismas
+4 `DetailSection` de siempre (Datos del pedido → Remitente y recolección
+→ Destinatario y entrega → Paquete y cobro/instrucciones), navegados con
+Atrás/Siguiente y puntos de progreso. **Editar un pedido existente sigue
+siendo la ficha completa de siempre** (todas las secciones + `Tabs` de
+Paquetes + `HistoryPanel`) — el wizard es solo para la creación, donde
+GPS/paquetes no aplican todavía (necesitan el `id` del pedido ya
+guardado). `JobDetailPage.tsx` construye las 4 secciones una sola vez
+como variables (`sectionDatos`, `sectionOrigen`, `sectionDestino`,
+`sectionPaquete`) y las reusa tanto en el wizard (`isNew`, una por paso)
+como en la ficha completa (`!isNew`, las 4 seguidas) — mismo estado
+(`draft`/`handleSave`), sin duplicar lógica. El wizard respeta el mismo
+guard de cambios sin guardar (`handleBack` con `ConfirmDialog`) que la
+ficha normal. Si algún otro módulo con muchos campos (Clientes, Rutas)
+tiene la misma queja de scroll al crear, replicar este mismo patrón en
+vez de inventar uno nuevo — pero solo para creación, no para edición.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

@@ -11,6 +11,8 @@ import { Tabs } from '@/components/ui/Tabs'
 import { RelationSelect } from '@/components/ui/RelationSelect'
 import { HistoryPanel } from '@/components/audit/HistoryPanel'
 import { GpsCaptureField } from '@/components/ui/GpsCaptureField'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { Can } from '@/components/Can'
 import { useOrg } from '@/context/OrgContext'
 import { searchCustomers } from '@/features/customers/api/customersApi'
@@ -154,6 +156,7 @@ export function JobDetailPage() {
   const [tab, setTab] = useState('paquetes')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  const [step, setStep] = useState(0)
 
   useEffect(() => {
     if (jobQuery.data) {
@@ -248,6 +251,331 @@ export function JobDetailPage() {
   const saving = createMutation.isPending || updateMutation.isPending
   const job = jobQuery.data
 
+  const sectionDatos = (
+    <DetailSection title="Datos del pedido" description="Identificación, cliente y programación.">
+      <DetailGrid>
+        <DetailField label="Número de pedido">
+          <InlineField value={draft.job_number} onChange={(v) => update('job_number', v)} placeholder="Agregar…" />
+        </DetailField>
+        <DetailField label="Tipo">
+          <InlineField type="select" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
+        </DetailField>
+
+        <DetailField label="Cliente">
+          <RelationSelect
+            value={draft.customer_id || null}
+            displayLabel={draft.customer_label || null}
+            placeholder="Selecciona un cliente"
+            onSearch={(query) => searchCustomers(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))}
+            onSelect={(option) => {
+              update('customer_id', option?.id ?? '')
+              update('customer_label', option?.label ?? '')
+              update('customer_location_id', '')
+              update('customer_location_label', '')
+              update('origin_customer_location_id', '')
+              update('origin_customer_location_label', '')
+            }}
+            createLabel="Cliente"
+            renderCreateForm={({ initialName, onCreated, onCancel }) => (
+              <CustomerQuickCreate initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
+            )}
+          />
+        </DetailField>
+        <DetailField label="Estado">
+          <InlineField type="select" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => update('status', v)} />
+        </DetailField>
+
+        <DetailField label="Prioridad">
+          <InlineField type="select" value={draft.priority} options={PRIORITY_OPTIONS} onChange={(v) => update('priority', v)} />
+        </DetailField>
+        <DetailField label="F. Programada">
+          <InlineField type="date" value={draft.scheduled_date} onChange={(v) => update('scheduled_date', v)} />
+        </DetailField>
+
+        <DetailField label="Ventana desde">
+          <InlineField type="time" value={draft.time_window_start} onChange={(v) => update('time_window_start', v)} />
+        </DetailField>
+        <DetailField label="Ventana hasta">
+          <InlineField type="time" value={draft.time_window_end} onChange={(v) => update('time_window_end', v)} />
+        </DetailField>
+      </DetailGrid>
+    </DetailSection>
+  )
+
+  const sectionOrigen = (
+    <DetailSection title="Remitente y recolección" description="Quién envía y de dónde se recoge el pedido.">
+      <DetailGrid>
+        <DetailField label="Remitente">
+          <InlineField value={draft.sender_name} onChange={(v) => update('sender_name', v)} placeholder="Quién envía…" />
+        </DetailField>
+        <DetailField label="Tel. remitente">
+          <InlineField value={draft.sender_phone} onChange={(v) => update('sender_phone', v)} />
+        </DetailField>
+
+        <DetailField label="Recolección">
+          <InlineField type="select" value={draft.origin_type} options={ORIGIN_TYPE_OPTIONS} onChange={(v) => update('origin_type', v)} />
+        </DetailField>
+        <DetailField label={draft.origin_type === 'branch' ? 'Sucursal de recolección' : 'Domicilio de recolección'}>
+          {draft.origin_type === 'branch' ? (
+            <RelationSelect
+              value={draft.origin_branch_location_id || null}
+              displayLabel={draft.origin_branch_location_label || null}
+              placeholder="Selecciona sucursal"
+              onSearch={(query) => searchLocations(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))}
+              onSelect={(option) => {
+                update('origin_branch_location_id', option?.id ?? '')
+                update('origin_branch_location_label', option?.label ?? '')
+              }}
+            />
+          ) : (
+            <RelationSelect
+              value={draft.origin_customer_location_id || null}
+              displayLabel={draft.origin_customer_location_label || null}
+              placeholder={draft.customer_id ? 'Selecciona domicilio' : 'Selecciona cliente primero'}
+              disabled={!draft.customer_id}
+              onSearch={(query) =>
+                searchCustomerLocations(draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+              }
+              onSelect={(option) => {
+                update('origin_customer_location_id', option?.id ?? '')
+                update('origin_customer_location_label', option?.label ?? '')
+              }}
+              createLabel="Domicilio"
+              renderCreateForm={
+                draft.customer_id
+                  ? ({ initialName, onCreated, onCancel }) => (
+                      <CustomerLocationQuickCreate
+                        customerId={draft.customer_id}
+                        initialName={initialName}
+                        onCreated={onCreated}
+                        onCancel={onCancel}
+                      />
+                    )
+                  : undefined
+              }
+            />
+          )}
+        </DetailField>
+        {draft.origin_type === 'pickup' && (
+          <DetailField label="GPS de recolección" full>
+            <GpsCaptureField
+              latitude={draft.pickup_latitude}
+              longitude={draft.pickup_longitude}
+              capturedAt={draft.pickup_captured_at}
+              onCapture={(lat, lng, capturedAt) => {
+                update('pickup_latitude', lat)
+                update('pickup_longitude', lng)
+                update('pickup_captured_at', capturedAt)
+              }}
+              label="Capturar GPS de recolección"
+            />
+          </DetailField>
+        )}
+      </DetailGrid>
+    </DetailSection>
+  )
+
+  const sectionDestino = (
+    <DetailSection title="Destinatario y entrega" description="Quién recibe y con qué operador/vehículo se entrega.">
+      <DetailGrid>
+        <DetailField label="Destinatario">
+          <InlineField value={draft.receiver_name} onChange={(v) => update('receiver_name', v)} placeholder="Quién recibe…" />
+        </DetailField>
+        <DetailField label="Tel. destinatario">
+          <InlineField value={draft.receiver_phone} onChange={(v) => update('receiver_phone', v)} />
+        </DetailField>
+
+        <DetailField label="Domicilio de entrega">
+          <RelationSelect
+            value={draft.customer_location_id || null}
+            displayLabel={draft.customer_location_label || null}
+            placeholder={draft.customer_id ? 'Selecciona domicilio' : 'Selecciona cliente primero'}
+            disabled={!draft.customer_id}
+            onSearch={(query) =>
+              searchCustomerLocations(draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+            }
+            onSelect={(option) => {
+              update('customer_location_id', option?.id ?? '')
+              update('customer_location_label', option?.label ?? '')
+            }}
+            createLabel="Domicilio"
+            renderCreateForm={
+              draft.customer_id
+                ? ({ initialName, onCreated, onCancel }) => (
+                    <CustomerLocationQuickCreate
+                      customerId={draft.customer_id}
+                      initialName={initialName}
+                      onCreated={onCreated}
+                      onCancel={onCancel}
+                    />
+                  )
+                : undefined
+            }
+          />
+        </DetailField>
+        <DetailField label="Operador asignado">
+          <RelationSelect
+            value={draft.assigned_driver_id || null}
+            displayLabel={draft.assigned_driver_label || null}
+            placeholder="Sin asignar"
+            onSearch={(query) =>
+              searchDrivers(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: `${r.first_name} ${r.last_name}` })))
+            }
+            onSelect={(option) => {
+              update('assigned_driver_id', option?.id ?? '')
+              update('assigned_driver_label', option?.label ?? '')
+            }}
+          />
+        </DetailField>
+
+        <DetailField label="Vehículo asignado">
+          <RelationSelect
+            value={draft.assigned_vehicle_id || null}
+            displayLabel={draft.assigned_vehicle_label || null}
+            placeholder="Sin asignar"
+            onSearch={(query) =>
+              searchVehicles(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.economic_number ?? r.plate ?? r.id })))
+            }
+            onSelect={(option) => {
+              update('assigned_vehicle_id', option?.id ?? '')
+              update('assigned_vehicle_label', option?.label ?? '')
+            }}
+          />
+        </DetailField>
+        <DetailField label="Tiempo de servicio (min)">
+          <InlineField type="number" value={draft.estimated_service_minutes} onChange={(v) => update('estimated_service_minutes', v)} />
+        </DetailField>
+        <DetailField label="GPS de entrega" full>
+          <GpsCaptureField
+            latitude={draft.delivery_latitude}
+            longitude={draft.delivery_longitude}
+            capturedAt={draft.delivery_captured_at}
+            onCapture={(lat, lng, capturedAt) => {
+              update('delivery_latitude', lat)
+              update('delivery_longitude', lng)
+              update('delivery_captured_at', capturedAt)
+            }}
+            label="Capturar GPS de entrega"
+          />
+        </DetailField>
+      </DetailGrid>
+    </DetailSection>
+  )
+
+  const sectionPaquete = (
+    <>
+      <DetailSection title="Paquete y cobro" description="Contenido, valor declarado, seguro y montos a cobrar.">
+        <DetailGrid>
+          <DetailField label="Contenido del paquete" full>
+            <InlineField
+              type="textarea"
+              value={draft.content_description}
+              onChange={(v) => update('content_description', v)}
+              placeholder="Qué se está enviando…"
+            />
+          </DetailField>
+
+          <DetailField label="Valor declarado">
+            <InlineField type="number" value={draft.declared_value} onChange={(v) => update('declared_value', v)} />
+          </DetailField>
+          <DetailField label="Cobro contra entrega">
+            <InlineField type="number" value={draft.cod_amount} onChange={(v) => update('cod_amount', v)} />
+          </DetailField>
+
+          <DetailField label="Con seguro">
+            <InlineField type="checkbox" value={draft.has_insurance ? 'true' : 'false'} onChange={(v) => update('has_insurance', v === 'true')} />
+          </DetailField>
+          <DetailField label="Seguro (%  del valor declarado)">
+            {draft.has_insurance ? (
+              <div className="flex items-center gap-2">
+                <div className="w-24">
+                  <InlineField type="number" value={draft.insurance_percentage} onChange={(v) => update('insurance_percentage', v)} />
+                </div>
+                <span className="text-sm text-gray-500">
+                  {(() => {
+                    const declared = toNullableNumber(draft.declared_value)
+                    const pct = toNullableNumber(draft.insurance_percentage)
+                    if (declared == null || pct == null) return '— importe del seguro'
+                    return `= ${formatCurrency((declared * pct) / 100)}`
+                  })()}
+                </span>
+              </div>
+            ) : (
+              <p className="px-1.5 py-1 text-sm text-gray-400">Sin seguro</p>
+            )}
+          </DetailField>
+
+          <DetailField label="Monto">
+            <InlineField type="number" value={draft.amount} onChange={(v) => update('amount', v)} />
+          </DetailField>
+          <DetailField label="Quién recibió">
+            <InlineField value={draft.received_by_name} onChange={(v) => update('received_by_name', v)} placeholder="Se captura al entregar" />
+          </DetailField>
+        </DetailGrid>
+      </DetailSection>
+
+      <DetailSection title="Instrucciones">
+        <DetailGrid>
+          <DetailField label="Instrucciones" full>
+            <InlineField type="textarea" value={draft.instructions} onChange={(v) => update('instructions', v)} />
+          </DetailField>
+        </DetailGrid>
+      </DetailSection>
+    </>
+  )
+
+  if (isNew) {
+    const WIZARD_STEPS = [
+      { title: 'Datos del pedido', node: sectionDatos },
+      { title: 'Remitente y recolección', node: sectionOrigen },
+      { title: 'Destinatario y entrega', node: sectionDestino },
+      { title: 'Paquete y cobro', node: sectionPaquete },
+    ]
+    const isLastStep = step === WIZARD_STEPS.length - 1
+
+    return (
+      <>
+        <Modal
+          open
+          title="Nuevo pedido"
+          description={`Paso ${step + 1} de ${WIZARD_STEPS.length}: ${WIZARD_STEPS[step].title}`}
+          onClose={handleBack}
+          footer={
+            <div className="flex items-center justify-between">
+              <Button variant="secondary" onClick={() => (step === 0 ? handleBack() : setStep((s) => s - 1))} disabled={saving}>
+                {step === 0 ? 'Cancelar' : 'Atrás'}
+              </Button>
+              <div className="flex gap-1.5">
+                {WIZARD_STEPS.map((_, i) => (
+                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === step ? 'bg-accent-500' : 'bg-gray-200'}`} />
+                ))}
+              </div>
+              {isLastStep ? (
+                <Button onClick={handleSave} loading={saving}>
+                  Crear pedido
+                </Button>
+              ) : (
+                <Button onClick={() => setStep((s) => s + 1)}>Siguiente</Button>
+              )}
+            </div>
+          }
+        >
+          {WIZARD_STEPS[step].node}
+        </Modal>
+
+        <ConfirmDialog
+          open={leaveConfirmOpen}
+          title="Cambios sin guardar"
+          description="Si sales ahora perderás los cambios que no has guardado. ¿Quieres continuar?"
+          confirmLabel="Salir sin guardar"
+          danger
+          onConfirm={() => navigate('/pedidos')}
+          onCancel={() => setLeaveConfirmOpen(false)}
+        />
+      </>
+    )
+  }
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -256,7 +584,7 @@ export function JobDetailPage() {
             <ArrowLeft size={15} strokeWidth={2} />
             Pedidos
           </button>
-          {!isNew && job && (
+          {job && (
             <Can permission="jobs.manage">
               <button type="button" onClick={() => setDeleteOpen(true)} className="text-sm font-medium text-red-600 hover:text-red-700">
                 Eliminar
@@ -267,303 +595,22 @@ export function JobDetailPage() {
 
         <div className="flex flex-1 overflow-hidden bg-white">
           <div className="flex-1 overflow-y-auto px-6 py-5">
-            {!isNew && jobQuery.isLoading && <Skeleton className="h-64" />}
-            {!isNew && jobQuery.isError && <ErrorState message="No se pudo cargar el pedido." onRetry={() => void jobQuery.refetch()} />}
+            {jobQuery.isLoading && <Skeleton className="h-64" />}
+            {jobQuery.isError && <ErrorState message="No se pudo cargar el pedido." onRetry={() => void jobQuery.refetch()} />}
 
-            {(isNew || job) && (
+            {job && (
               <div className="flex max-w-6xl flex-col gap-4">
                 <div>
-                  <h1 className="text-xl font-semibold text-ink">{draft.job_number || (isNew ? 'Nuevo pedido' : 'Pedido')}</h1>
+                  <h1 className="text-xl font-semibold text-ink">{draft.job_number || 'Pedido'}</h1>
                   <p className="text-sm text-gray-500">{draft.customer_label || 'Sin cliente'}</p>
                 </div>
 
-                <DetailSection title="Datos del pedido" description="Identificación, cliente y programación.">
-                  <DetailGrid>
-                    <DetailField label="Número de pedido">
-                      <InlineField value={draft.job_number} onChange={(v) => update('job_number', v)} placeholder="Agregar…" />
-                    </DetailField>
-                    <DetailField label="Tipo">
-                      <InlineField type="select" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
-                    </DetailField>
+                {sectionDatos}
+                {sectionOrigen}
+                {sectionDestino}
+                {sectionPaquete}
 
-                    <DetailField label="Cliente">
-                      <RelationSelect
-                        value={draft.customer_id || null}
-                        displayLabel={draft.customer_label || null}
-                        placeholder="Selecciona un cliente"
-                        onSearch={(query) =>
-                          searchCustomers(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                        }
-                        onSelect={(option) => {
-                          update('customer_id', option?.id ?? '')
-                          update('customer_label', option?.label ?? '')
-                          update('customer_location_id', '')
-                          update('customer_location_label', '')
-                          update('origin_customer_location_id', '')
-                          update('origin_customer_location_label', '')
-                        }}
-                        createLabel="Cliente"
-                        renderCreateForm={({ initialName, onCreated, onCancel }) => (
-                          <CustomerQuickCreate initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
-                        )}
-                      />
-                    </DetailField>
-                    <DetailField label="Estado">
-                      <InlineField type="select" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => update('status', v)} />
-                    </DetailField>
-
-                    <DetailField label="Prioridad">
-                      <InlineField type="select" value={draft.priority} options={PRIORITY_OPTIONS} onChange={(v) => update('priority', v)} />
-                    </DetailField>
-                    <DetailField label="F. Programada">
-                      <InlineField type="date" value={draft.scheduled_date} onChange={(v) => update('scheduled_date', v)} />
-                    </DetailField>
-
-                    <DetailField label="Ventana desde">
-                      <InlineField type="time" value={draft.time_window_start} onChange={(v) => update('time_window_start', v)} />
-                    </DetailField>
-                    <DetailField label="Ventana hasta">
-                      <InlineField type="time" value={draft.time_window_end} onChange={(v) => update('time_window_end', v)} />
-                    </DetailField>
-                  </DetailGrid>
-                </DetailSection>
-
-                <DetailSection title="Remitente y recolección" description="Quién envía y de dónde se recoge el pedido.">
-                  <DetailGrid>
-                    <DetailField label="Remitente">
-                      <InlineField value={draft.sender_name} onChange={(v) => update('sender_name', v)} placeholder="Quién envía…" />
-                    </DetailField>
-                    <DetailField label="Tel. remitente">
-                      <InlineField value={draft.sender_phone} onChange={(v) => update('sender_phone', v)} />
-                    </DetailField>
-
-                    <DetailField label="Recolección">
-                      <InlineField
-                        type="select"
-                        value={draft.origin_type}
-                        options={ORIGIN_TYPE_OPTIONS}
-                        onChange={(v) => update('origin_type', v)}
-                      />
-                    </DetailField>
-                    <DetailField label={draft.origin_type === 'branch' ? 'Sucursal de recolección' : 'Domicilio de recolección'}>
-                      {draft.origin_type === 'branch' ? (
-                        <RelationSelect
-                          value={draft.origin_branch_location_id || null}
-                          displayLabel={draft.origin_branch_location_label || null}
-                          placeholder="Selecciona sucursal"
-                          onSearch={(query) =>
-                            searchLocations(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                          }
-                          onSelect={(option) => {
-                            update('origin_branch_location_id', option?.id ?? '')
-                            update('origin_branch_location_label', option?.label ?? '')
-                          }}
-                        />
-                      ) : (
-                        <RelationSelect
-                          value={draft.origin_customer_location_id || null}
-                          displayLabel={draft.origin_customer_location_label || null}
-                          placeholder={draft.customer_id ? 'Selecciona domicilio' : 'Selecciona cliente primero'}
-                          disabled={!draft.customer_id}
-                          onSearch={(query) =>
-                            searchCustomerLocations(draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                          }
-                          onSelect={(option) => {
-                            update('origin_customer_location_id', option?.id ?? '')
-                            update('origin_customer_location_label', option?.label ?? '')
-                          }}
-                          createLabel="Domicilio"
-                          renderCreateForm={
-                            draft.customer_id
-                              ? ({ initialName, onCreated, onCancel }) => (
-                                  <CustomerLocationQuickCreate
-                                    customerId={draft.customer_id}
-                                    initialName={initialName}
-                                    onCreated={onCreated}
-                                    onCancel={onCancel}
-                                  />
-                                )
-                              : undefined
-                          }
-                        />
-                      )}
-                    </DetailField>
-                    {draft.origin_type === 'pickup' && (
-                      <DetailField label="GPS de recolección" full>
-                        <GpsCaptureField
-                          latitude={draft.pickup_latitude}
-                          longitude={draft.pickup_longitude}
-                          capturedAt={draft.pickup_captured_at}
-                          onCapture={(lat, lng, capturedAt) => {
-                            update('pickup_latitude', lat)
-                            update('pickup_longitude', lng)
-                            update('pickup_captured_at', capturedAt)
-                          }}
-                          label="Capturar GPS de recolección"
-                        />
-                      </DetailField>
-                    )}
-                  </DetailGrid>
-                </DetailSection>
-
-                <DetailSection title="Destinatario y entrega" description="Quién recibe y con qué operador/vehículo se entrega.">
-                  <DetailGrid>
-                    <DetailField label="Destinatario">
-                      <InlineField value={draft.receiver_name} onChange={(v) => update('receiver_name', v)} placeholder="Quién recibe…" />
-                    </DetailField>
-                    <DetailField label="Tel. destinatario">
-                      <InlineField value={draft.receiver_phone} onChange={(v) => update('receiver_phone', v)} />
-                    </DetailField>
-
-                    <DetailField label="Domicilio de entrega">
-                      <RelationSelect
-                        value={draft.customer_location_id || null}
-                        displayLabel={draft.customer_location_label || null}
-                        placeholder={draft.customer_id ? 'Selecciona domicilio' : 'Selecciona cliente primero'}
-                        disabled={!draft.customer_id}
-                        onSearch={(query) =>
-                          searchCustomerLocations(draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                        }
-                        onSelect={(option) => {
-                          update('customer_location_id', option?.id ?? '')
-                          update('customer_location_label', option?.label ?? '')
-                        }}
-                        createLabel="Domicilio"
-                        renderCreateForm={
-                          draft.customer_id
-                            ? ({ initialName, onCreated, onCancel }) => (
-                                <CustomerLocationQuickCreate
-                                  customerId={draft.customer_id}
-                                  initialName={initialName}
-                                  onCreated={onCreated}
-                                  onCancel={onCancel}
-                                />
-                              )
-                            : undefined
-                        }
-                      />
-                    </DetailField>
-                    <DetailField label="Operador asignado">
-                      <RelationSelect
-                        value={draft.assigned_driver_id || null}
-                        displayLabel={draft.assigned_driver_label || null}
-                        placeholder="Sin asignar"
-                        onSearch={(query) =>
-                          searchDrivers(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: `${r.first_name} ${r.last_name}` })))
-                        }
-                        onSelect={(option) => {
-                          update('assigned_driver_id', option?.id ?? '')
-                          update('assigned_driver_label', option?.label ?? '')
-                        }}
-                      />
-                    </DetailField>
-
-                    <DetailField label="Vehículo asignado">
-                      <RelationSelect
-                        value={draft.assigned_vehicle_id || null}
-                        displayLabel={draft.assigned_vehicle_label || null}
-                        placeholder="Sin asignar"
-                        onSearch={(query) =>
-                          searchVehicles(activeOrg!.id, query).then((rows) =>
-                            rows.map((r) => ({ id: r.id, label: r.economic_number ?? r.plate ?? r.id })),
-                          )
-                        }
-                        onSelect={(option) => {
-                          update('assigned_vehicle_id', option?.id ?? '')
-                          update('assigned_vehicle_label', option?.label ?? '')
-                        }}
-                      />
-                    </DetailField>
-                    <DetailField label="Tiempo de servicio (min)">
-                      <InlineField
-                        type="number"
-                        value={draft.estimated_service_minutes}
-                        onChange={(v) => update('estimated_service_minutes', v)}
-                      />
-                    </DetailField>
-                    <DetailField label="GPS de entrega" full>
-                      <GpsCaptureField
-                        latitude={draft.delivery_latitude}
-                        longitude={draft.delivery_longitude}
-                        capturedAt={draft.delivery_captured_at}
-                        onCapture={(lat, lng, capturedAt) => {
-                          update('delivery_latitude', lat)
-                          update('delivery_longitude', lng)
-                          update('delivery_captured_at', capturedAt)
-                        }}
-                        label="Capturar GPS de entrega"
-                      />
-                    </DetailField>
-                  </DetailGrid>
-                </DetailSection>
-
-                <DetailSection title="Paquete y cobro" description="Contenido, valor declarado, seguro y montos a cobrar.">
-                  <DetailGrid>
-                    <DetailField label="Contenido del paquete" full>
-                      <InlineField
-                        type="textarea"
-                        value={draft.content_description}
-                        onChange={(v) => update('content_description', v)}
-                        placeholder="Qué se está enviando…"
-                      />
-                    </DetailField>
-
-                    <DetailField label="Valor declarado">
-                      <InlineField type="number" value={draft.declared_value} onChange={(v) => update('declared_value', v)} />
-                    </DetailField>
-                    <DetailField label="Cobro contra entrega">
-                      <InlineField type="number" value={draft.cod_amount} onChange={(v) => update('cod_amount', v)} />
-                    </DetailField>
-
-                    <DetailField label="Con seguro">
-                      <InlineField
-                        type="checkbox"
-                        value={draft.has_insurance ? 'true' : 'false'}
-                        onChange={(v) => update('has_insurance', v === 'true')}
-                      />
-                    </DetailField>
-                    <DetailField label="Seguro (%  del valor declarado)">
-                      {draft.has_insurance ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-24">
-                            <InlineField type="number" value={draft.insurance_percentage} onChange={(v) => update('insurance_percentage', v)} />
-                          </div>
-                          <span className="text-sm text-gray-500">
-                            {(() => {
-                              const declared = toNullableNumber(draft.declared_value)
-                              const pct = toNullableNumber(draft.insurance_percentage)
-                              if (declared == null || pct == null) return '— importe del seguro'
-                              return `= ${formatCurrency((declared * pct) / 100)}`
-                            })()}
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="px-1.5 py-1 text-sm text-gray-400">Sin seguro</p>
-                      )}
-                    </DetailField>
-
-                    <DetailField label="Monto">
-                      <InlineField type="number" value={draft.amount} onChange={(v) => update('amount', v)} />
-                    </DetailField>
-                    <DetailField label="Quién recibió">
-                      <InlineField
-                        value={draft.received_by_name}
-                        onChange={(v) => update('received_by_name', v)}
-                        placeholder="Se captura al entregar"
-                      />
-                    </DetailField>
-                  </DetailGrid>
-                </DetailSection>
-
-                <DetailSection title="Instrucciones">
-                  <DetailGrid>
-                    <DetailField label="Instrucciones" full>
-                      <InlineField type="textarea" value={draft.instructions} onChange={(v) => update('instructions', v)} />
-                    </DetailField>
-                  </DetailGrid>
-                </DetailSection>
-
-                {!isNew && id && (
+                {id && (
                   <div>
                     <Tabs items={[{ key: 'paquetes', label: 'Paquetes', count: packagesQuery.data?.length }]} active={tab} onChange={setTab} />
                     {tab === 'paquetes' && <JobPackagesTab jobId={id} />}
@@ -573,7 +620,7 @@ export function JobDetailPage() {
             )}
           </div>
 
-          {!isNew && id && (
+          {id && (
             <Can permission="audit.view">
               <div className="w-80 shrink-0 border-l border-gray-200">
                 <HistoryPanel entityType="jobs" entityId={id} />
