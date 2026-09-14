@@ -572,6 +572,25 @@ consecutivo de 5 dígitos + `DDMMYY`).
   guardar" (todavía no existe, se ve hasta después de guardar), en modo
   edición muestra el valor real, nunca editable.
 
+### Buscador de direcciones en el mapa de GPS + mapa más grande (agregado en esta fase)
+
+Pedido explícito del usuario: poder escribir una dirección/colonia/
+municipio/estado y que el mapa salte ahí, en vez de solo depender del
+GPS del dispositivo o de tocar el mapa a ciegas. `GpsCaptureField.tsx`
+ahora tiene un buscador arriba del mapa (debounce 400ms, mínimo 3
+caracteres) que geocodifica con **Nominatim** (el geocodificador
+gratuito de OpenStreetMap, sin API key — mismo criterio ya usado para
+los tiles del mapa), acotado a México (`countrycodes=mx`); seleccionar
+un resultado de la lista posiciona el pin igual que capturar GPS o
+tocar el mapa. **Nota de escala:** Nominatim pide uso ligero (~1
+req/seg de fair use); si el volumen de la app crece, evaluar
+self-host de Nominatim o un proveedor con cuota (Mapbox/Google) — no
+se hizo esa evaluación en esta fase, es la opción correcta para
+empezar sin costo. El mapa también creció de `h-64 w-64` (256px) a
+`h-[420px] w-full` — deja de ser cuadrado pequeño para aprovechar el
+ancho completo del campo, más útil ahora que hay buscador y resultados
+arriba.
+
 ### Campos obligatorios marcados con asterisco + validación (agregado en esta fase)
 
 Pedido explícito del usuario: si un campo se genera solo (número de
