@@ -111,6 +111,128 @@ export type Database = {
           },
         ]
       }
+      customer_locations: {
+        Row: {
+          access_notes: string | null
+          active: boolean
+          address: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          organization_id: string
+          service_time_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          active?: boolean
+          address?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          organization_id: string
+          service_time_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          active?: boolean
+          address?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          organization_id?: string
+          service_time_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_locations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_locations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          code: string | null
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          id: string
+          legal_name: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          status: string
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          legal_name?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          status?: string
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          legal_name?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          status?: string
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_certifications: {
         Row: {
           certification_number: string | null
@@ -365,6 +487,111 @@ export type Database = {
           },
           {
             foreignKeyName: "entity_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          amount: number | null
+          assigned_driver_id: string | null
+          assigned_vehicle_id: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_location_id: string | null
+          deleted_at: string | null
+          estimated_service_minutes: number | null
+          id: string
+          instructions: string | null
+          job_number: string | null
+          job_type: string
+          organization_id: string
+          priority: string
+          scheduled_date: string | null
+          status: string
+          time_window_end: string | null
+          time_window_start: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          assigned_driver_id?: string | null
+          assigned_vehicle_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_location_id?: string | null
+          deleted_at?: string | null
+          estimated_service_minutes?: number | null
+          id?: string
+          instructions?: string | null
+          job_number?: string | null
+          job_type?: string
+          organization_id: string
+          priority?: string
+          scheduled_date?: string | null
+          status?: string
+          time_window_end?: string | null
+          time_window_start?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          assigned_driver_id?: string | null
+          assigned_vehicle_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_location_id?: string | null
+          deleted_at?: string | null
+          estimated_service_minutes?: number | null
+          id?: string
+          instructions?: string | null
+          job_number?: string | null
+          job_type?: string
+          organization_id?: string
+          priority?: string
+          scheduled_date?: string | null
+          status?: string
+          time_window_end?: string | null
+          time_window_start?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_assigned_vehicle_id_fkey"
+            columns: ["assigned_vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_customer_location_id_fkey"
+            columns: ["customer_location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -752,6 +979,168 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      route_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          driver_id: string | null
+          id: string
+          location_id: string | null
+          name: string | null
+          notes: string | null
+          organization_id: string
+          route_number: string | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string | null
+          id?: string
+          location_id?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id: string
+          route_number?: string | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          driver_id?: string | null
+          id?: string
+          location_id?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string
+          route_number?: string | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_plans_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_plans_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_plans_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      route_stops: {
+        Row: {
+          address: string | null
+          arrived_at: string | null
+          completed_at: string | null
+          created_at: string
+          estimated_arrival_at: string | null
+          id: string
+          job_id: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          notes: string | null
+          organization_id: string
+          route_plan_id: string
+          sequence: number
+          service_minutes: number | null
+          status: string
+          stop_type: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          arrived_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_arrival_at?: string | null
+          id?: string
+          job_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          notes?: string | null
+          organization_id: string
+          route_plan_id: string
+          sequence?: number
+          service_minutes?: number | null
+          status?: string
+          stop_type?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          arrived_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_arrival_at?: string | null
+          id?: string
+          job_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string
+          route_plan_id?: string
+          sequence?: number
+          service_minutes?: number | null
+          status?: string
+          stop_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_stops_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_stops_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_stops_route_plan_id_fkey"
+            columns: ["route_plan_id"]
+            isOneToOne: false
+            referencedRelation: "route_plans"
             referencedColumns: ["id"]
           },
         ]

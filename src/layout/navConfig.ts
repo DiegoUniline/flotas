@@ -20,6 +20,7 @@ import {
   Gauge,
   Building2,
   Users,
+  Contact,
   ShieldCheck,
   SlidersHorizontal,
   LayoutList,
@@ -51,7 +52,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Inicio', to: '/inicio', icon: Home, implemented: false },
       { label: 'Centro de control', to: '/centro-de-control', permission: 'locations.view', icon: Map, implemented: true },
       { label: 'Rutas', to: '/rutas', permission: 'routes.view', icon: Route, implemented: false },
-      { label: 'Trabajos', to: '/trabajos', permission: 'jobs.view', icon: ClipboardList, implemented: false },
+      { label: 'Pedidos', to: '/pedidos', permission: 'jobs.view', icon: ClipboardList, implemented: true },
+      { label: 'Clientes', to: '/clientes', permission: 'jobs.view', icon: Contact, implemented: true },
     ],
   },
   {

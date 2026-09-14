@@ -1,0 +1,59 @@
+import { supabase } from '@/lib/supabase'
+import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+
+export type CustomerLocation = Tables<'customer_locations'>
+export type CustomerLocationInsert = Omit<TablesInsert<'customer_locations'>, 'organization_id' | 'customer_id'>
+export type CustomerLocationUpdate = TablesUpdate<'customer_locations'>
+
+export async function fetchCustomerLocations(customerId: string): Promise<CustomerLocation[]> {
+  const { data, error } = await supabase
+    .from('customer_locations')
+    .select('*')
+    .eq('customer_id', customerId)
+    .eq('active', true)
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createCustomerLocation(
+  organizationId: string,
+  customerId: string,
+  input: CustomerLocationInsert,
+): Promise<CustomerLocation> {
+  const { data, error } = await supabase
+    .from('customer_locations')
+    .insert({ ...input, organization_id: organizationId, customer_id: customerId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateCustomerLocation(id: string, input: CustomerLocationUpdate): Promise<CustomerLocation> {
+  const { data, error } = await supabase.from('customer_locations').update(input).eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteCustomerLocation(id: string): Promise<void> {
+  const { error } = await supabase.from('customer_locations').update({ active: false }).eq('id', id)
+  if (error) throw error
+}
+
+export interface CustomerLocationOption {
+  id: string
+  name: string
+  address: string | null
+}
+
+export async function fetchCustomerLocationOptions(customerId: string): Promise<CustomerLocationOption[]> {
+  const { data, error } = await supabase
+    .from('customer_locations')
+    .select('id, name, address')
+    .eq('customer_id', customerId)
+    .eq('active', true)
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}

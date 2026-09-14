@@ -16,6 +16,9 @@ import { ControlMapPage } from '@/features/map/ControlMapPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { DriversPage } from '@/features/drivers/DriversPage'
 import { DriverDetailPage } from '@/features/drivers/DriverDetailPage'
+import { CustomersPage } from '@/features/customers/CustomersPage'
+import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
+import { JobsPage } from '@/features/jobs/JobsPage'
 
 const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
@@ -44,6 +47,9 @@ export function App() {
             <Route path="vehiculos" element={<VehiclesPage />} />
             <Route path="operadores" element={<DriversPage />} />
             <Route path="operadores/:id" element={<DriverDetailPage />} />
+            <Route path="clientes" element={<CustomersPage />} />
+            <Route path="clientes/:id" element={<CustomerDetailPage />} />
+            <Route path="pedidos" element={<JobsPage />} />
             {comingSoonItems.map((item) => (
               <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
             ))}
