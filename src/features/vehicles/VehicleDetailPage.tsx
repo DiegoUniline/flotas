@@ -276,7 +276,7 @@ export function VehicleDetailPage() {
                 <DetailSection title="Estado y asignación" description="Dónde está el vehículo y quién lo trae.">
                   <DetailGrid>
                     <DetailField label="Estado">
-                      <InlineField type="select" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => update('status', v)} />
+                      <InlineField type="buttons" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => update('status', v)} />
                     </DetailField>
                     <DetailField label="Sucursal base">
                       <RelationSelect
@@ -325,7 +325,7 @@ export function VehicleDetailPage() {
 
                     <DetailField label="Unidad">
                       <InlineField
-                        type="select"
+                        type="buttons"
                         value={draft.odometer_unit}
                         options={[
                           { value: 'km', label: 'km' },

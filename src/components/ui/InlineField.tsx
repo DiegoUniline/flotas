@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react'
 
-type InlineFieldType = 'text' | 'number' | 'date' | 'time' | 'select' | 'textarea' | 'checkbox'
+type InlineFieldType = 'text' | 'number' | 'date' | 'time' | 'select' | 'buttons' | 'textarea' | 'checkbox'
 
 interface InlineFieldOption {
   value: string
@@ -42,6 +42,24 @@ export function InlineField({ value, onChange, type = 'text', options, placehold
             </option>
           ))}
         </select>
+      ) : type === 'buttons' ? (
+        <div id={id} className="flex flex-wrap gap-1.5">
+          {options?.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              aria-pressed={value === option.value}
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                value === option.value
+                  ? 'border-accent-500 bg-accent-500 text-white'
+                  : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       ) : type === 'textarea' ? (
         <textarea id={id} value={value} onChange={handleChange} placeholder={placeholder} rows={2} className={GHOST_CLASSNAME} />
       ) : type === 'checkbox' ? (

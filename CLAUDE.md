@@ -572,6 +572,29 @@ consecutivo de 5 dígitos + `DDMMYY`).
   guardar" (todavía no existe, se ve hasta después de guardar), en modo
   edición muestra el valor real, nunca editable.
 
+### `InlineField` tipo `buttons`: menos clics en selects de pocas opciones (agregado en esta fase)
+
+Pedido explícito del usuario señalando el select de "Tipo" en Pedidos:
+un `<select>` nativo son 2 interacciones (abrir + elegir); con pocas
+opciones eso es fricción de más. Nuevo tipo `type="buttons"` en
+`InlineField` (mismo `options` que `select`): fila de píldoras, la
+activa en `accent-500` relleno, clic directo = 1 interacción. Aplicado
+donde el select tenía pocas opciones (revisé todos los `InlineField
+type="select"` del patrón nuevo, no solo el que se pidió, por el "analiza
+todo y optimiza"):
+
+- Pedidos: **Tipo** (4), **Prioridad** (4), **Recolección** (2 —
+  pickup/sucursal).
+- Vehículos: **Estado** (6), **Unidad** de odómetro (2 — km/mi).
+
+**Deliberadamente sigue como `select` nativo**: Estado de pedidos
+(`JOB_STATUSES`, 8 opciones) — con esa cantidad, una fila de botones
+estorba más de lo que ayuda; un dropdown sigue siendo mejor UX ahí.
+Regla para el futuro: **≤6 opciones → `buttons`, más → `select`**. Los
+selects de los formularios viejos en `Drawer` (Sucursales, Operadores,
+Clientes, Rutas) no usan `InlineField` — no se tocaron en esta pasada,
+aplicar el mismo criterio cuando se migren al patrón nuevo.
+
 ### Rediseño del wizard: sidebar de pasos en vez de modal casi-pantalla-completa vacío (agregado en esta fase)
 
 El usuario pidió el modal "casi pantalla completa" y, al verlo, señaló

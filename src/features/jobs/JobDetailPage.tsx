@@ -308,7 +308,7 @@ export function JobDetailPage() {
           </p>
         </DetailField>
         <DetailField label="Tipo">
-          <InlineField type="select" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
+          <InlineField type="buttons" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
         </DetailField>
 
         <DetailField label="Cliente">
@@ -336,7 +336,7 @@ export function JobDetailPage() {
         </DetailField>
 
         <DetailField label="Prioridad">
-          <InlineField type="select" value={draft.priority} options={PRIORITY_OPTIONS} onChange={(v) => update('priority', v)} />
+          <InlineField type="buttons" value={draft.priority} options={PRIORITY_OPTIONS} onChange={(v) => update('priority', v)} />
         </DetailField>
         <DetailField label="F. Programada">
           <InlineField type="date" value={draft.scheduled_date} onChange={(v) => update('scheduled_date', v)} />
@@ -363,7 +363,7 @@ export function JobDetailPage() {
         </DetailField>
 
         <DetailField label="Recolección">
-          <InlineField type="select" value={draft.origin_type} options={ORIGIN_TYPE_OPTIONS} onChange={(v) => update('origin_type', v)} />
+          <InlineField type="buttons" value={draft.origin_type} options={ORIGIN_TYPE_OPTIONS} onChange={(v) => update('origin_type', v)} />
         </DetailField>
         <DetailField label={draft.origin_type === 'branch' ? 'Sucursal de recolección' : 'Domicilio de recolección'}>
           {draft.origin_type === 'branch' ? (
