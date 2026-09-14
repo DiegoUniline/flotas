@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { LocateFixed } from 'lucide-react'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -72,6 +73,8 @@ interface LocationFormProps {
 
 export function LocationForm({ location, submitLabel, loading, onSubmit, onCancel }: LocationFormProps) {
   const [values, setValues] = useState<LocationFormValues>(() => toFormValues(location))
+  const [locating, setLocating] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
 
   function update<K extends keyof LocationFormValues>(key: K, value: LocationFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -80,6 +83,34 @@ export function LocationForm({ location, submitLabel, loading, onSubmit, onCance
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     onSubmit(values)
+  }
+
+  function handleUseCurrentLocation() {
+    if (!('geolocation' in navigator)) {
+      setLocationError('Tu navegador no soporta geolocalización.')
+      return
+    }
+    setLocationError(null)
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setValues((current) => ({
+          ...current,
+          latitude: String(position.coords.latitude),
+          longitude: String(position.coords.longitude),
+        }))
+        setLocating(false)
+      },
+      (error) => {
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? 'Permiso de ubicación denegado. Actívalo en tu navegador o teléfono.'
+            : 'No se pudo obtener tu ubicación.',
+        )
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
   }
 
   return (
@@ -160,9 +191,14 @@ export function LocationForm({ location, submitLabel, loading, onSubmit, onCance
           />
         </Field>
       </div>
-      <p className="-mt-2 text-xs text-gray-400">
-        Coordenadas para ubicar la sucursal en el mapa de gestión. Puedes copiarlas desde Google Maps.
-      </p>
+      <div className="-mt-2 flex items-center gap-3">
+        <Button type="button" variant="secondary" loading={locating} onClick={handleUseCurrentLocation}>
+          <LocateFixed size={15} strokeWidth={2} />
+          Usar mi ubicación
+        </Button>
+        <p className="text-xs text-gray-400">Toma el GPS de tu teléfono o computadora.</p>
+      </div>
+      {locationError && <p className="-mt-2 text-xs text-red-600">{locationError}</p>}
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input
           type="checkbox"
