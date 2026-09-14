@@ -109,6 +109,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       customer_locations: {

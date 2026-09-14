@@ -1,5 +1,6 @@
 import { History } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { useEntityHistory } from '@/features/audit/hooks/useAuditLog'
 import { diffAuditValues, formatValue } from '@/lib/auditDiff'
 import { formatDateTime } from '@/lib/format'
@@ -27,6 +28,10 @@ export function HistoryPanel({ entityType, entityId }: HistoryPanelProps) {
 
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {historyQuery.isLoading && <Skeleton className="h-32" />}
+
+        {historyQuery.isError && (
+          <ErrorState message="No se pudo cargar el historial." onRetry={() => void historyQuery.refetch()} />
+        )}
 
         {historyQuery.data && historyQuery.data.length === 0 && <p className="text-xs text-gray-400">Sin cambios registrados.</p>}
 

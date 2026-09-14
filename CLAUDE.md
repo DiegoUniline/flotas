@@ -1373,6 +1373,42 @@ ser catálogo, no texto libre** (para evitar duplicados tipo "Diesel" vs
   de Vehículos ni migrar datos de vehículos existentes; evaluarlo si se
   pide más adelante.
 
+### Bug real: `HistoryPanel` nunca mostraba nada, en ninguna ficha (corregido en esta fase)
+
+Reportado por el usuario: "Historial de cambios no estan guardando nada
+ya cree y no dice creado tal dia por tal persona". Causa real, verificada
+por SQL directo contra `audit_logs`: los eventos **sí se estaban
+registrando** (el trigger `audit_trigger()` nunca falló), el problema era
+puramente de lectura. `features/audit/api/auditLogApi.ts` pedía
+`profiles(first_name, last_name)` como embed de PostgREST sobre
+`audit_logs`, pero la única FK de `audit_logs.user_id` apuntaba a
+`auth.users(id)`, **no** a `public.profiles(id)` — sin una FK directa
+entre `audit_logs` y `profiles`, PostgREST no puede resolver ese embed y
+la query entera responde error. `HistoryPanel.tsx` nunca manejaba
+`historyQuery.isError` (solo `isLoading`/`data`), así que un error de
+PostgREST se veía como panel vacío y silencioso — nunca mostró "Creado"
+en ninguna ficha desde que se construyó (Vehículos, Pedidos, y todo lo
+que se le agregó después), no fue una regresión de esta fase.
+
+**Corrección de esquema** (migración
+`fix_audit_logs_user_fk_to_profiles`): se cambió la FK de
+`audit_logs.user_id` para apuntar a `public.profiles(id)` en vez de
+`auth.users(id)` — es el mismo espacio de valores (`profiles.id` ya
+referencia `auth.users(id)` 1:1, todo usuario con sesión tiene su fila
+en `profiles` vía `handle_new_user()`), así que el cambio no pierde
+integridad referencial y desbloquea el embed. Se verificó por SQL que,
+tras el cambio, el join real resuelve el nombre del usuario que creó el
+primer registro de prueba de Combustible. **Regla para cualquier FK
+nueva a un usuario/autor:** si en algún punto se necesita mostrar
+nombre/datos del usuario vía PostgREST embed, la FK debe apuntar a
+`public.profiles`, no a `auth.users` (esquema `auth` no es embebible
+desde el cliente de todas formas).
+- **`HistoryPanel.tsx`** también ganó manejo de `historyQuery.isError`
+  (`ErrorState` con reintentar) — antes un error de este tipo no tenía
+  ninguna señal visible; ahora se ve un mensaje real en vez de un panel
+  vacío, consistente con el resto de la app (mismo patrón de
+  `ErrorState`/`onRetry` que toda tabla y ficha ya usa).
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
