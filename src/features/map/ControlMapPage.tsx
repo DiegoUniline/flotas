@@ -28,7 +28,7 @@ import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
 import { JOB_STATUSES } from '@/features/jobs/api/jobsApi'
 import { useRouteDriverOptions, useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
 import { fetchRoutePlanIdForJob } from '@/features/routes/api/routeStopsApi'
-import { useControlKpis, useDayJobs, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
+import { useControlKpis, useDayJobs, useLiveVehiclePositions, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
 import { PageScroll } from '@/components/ui/PageScroll'
 
 const LOCATION_TYPE_LABELS = Object.fromEntries(LOCATION_TYPES.map((t) => [t.value, t.label]))
@@ -76,6 +76,19 @@ const ROUTE_STATUS_TONE: Record<string, string> = {
 function formatTime(iso: string | null): string | null {
   if (!iso) return null
   return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Posiciones más viejas que esto se consideran obsoletas y no se pintan
+ * como "en vivo" — el operador dejó de compartir o cerró la pestaña. */
+const LIVE_POSITION_STALE_MS = 20 * 60 * 1000
+
+function formatAgo(iso: string): string {
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+  if (seconds < 60) return `hace ${seconds}s`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `hace ${minutes} min`
+  const hours = Math.round(minutes / 60)
+  return `hace ${hours} h`
 }
 
 function vehicleLabel(vehicle: { brand: string | null; model: string | null } | null | undefined): string | null {
@@ -195,6 +208,7 @@ export function ControlMapPage() {
   const dayJobsQuery = useDayJobs(date)
   const routesQuery = useRoutePlansQuery({ scheduledDate: date, status: null })
   const allDriversQuery = useRouteDriverOptions()
+  const liveVehiclesQuery = useLiveVehiclePositions()
   const selectedRouteQuery = useRoutePlan(selectedRouteId ?? undefined)
   const selectedStopsQuery = useRouteStops(selectedRouteId ?? undefined)
 
@@ -287,8 +301,26 @@ export function ControlMapPage() {
         href: `/pedidos/${job.id}`,
       }))
 
-    return [...locationMarkers, ...stopMarkers, ...jobMarkers]
-  }, [mappedQuery.data, stops, dayJobs])
+    // Posición real compartida desde el celular del operador (vía
+    // update_my_vehicle_position). Se ignoran lecturas viejas (nadie
+    // comparte hace rato) y se respeta el filtro de repartidor.
+    const liveMarkers: MapMarker[] = (liveVehiclesQuery.data ?? [])
+      .filter((v) => Date.now() - new Date(v.last_position_at).getTime() <= LIVE_POSITION_STALE_MS)
+      .filter((v) => !driverFilter || v.assigned_driver_id === driverFilter)
+      .map((v) => {
+        const name = v.drivers ? `${v.drivers.first_name} ${v.drivers.last_name}` : v.economic_number ?? v.plate ?? 'Vehículo'
+        return {
+          id: `live-${v.id}`,
+          lat: v.last_latitude,
+          lng: v.last_longitude,
+          label: `🟢 ${name}`,
+          description: `Ubicación en vivo · ${formatAgo(v.last_position_at)}`,
+          color: '#16a34a',
+        }
+      })
+
+    return [...locationMarkers, ...stopMarkers, ...jobMarkers, ...liveMarkers]
+  }, [mappedQuery.data, stops, dayJobs, liveVehiclesQuery.data, driverFilter])
 
   const routePolyline = useMemo(
     () =>
@@ -437,6 +469,15 @@ export function ControlMapPage() {
               <>
                 <Map className="h-[620px] w-full" markers={markers} polyline={routePolyline} onMarkerClick={handleMarkerClick} />
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
+                  {(liveVehiclesQuery.data?.length ?? 0) > 0 && (
+                    <>
+                      <span className="flex items-center gap-1 font-medium text-status-active">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-status-active" />
+                        {liveVehiclesQuery.data!.length} en vivo
+                      </span>
+                      <span className="h-3 w-px bg-gray-200" />
+                    </>
+                  )}
                   <span className="font-medium text-gray-400">Pedidos:</span>
                   {JOB_STATUSES.map((s) => (
                     <span key={s.value} className="flex items-center gap-1">

@@ -1,10 +1,13 @@
-import { LogOut, PanelLeft } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { LocateFixed, LogOut, PanelLeft } from 'lucide-react'
 import { OrgSwitcher } from '@/components/OrgSwitcher'
 import { useAuth } from '@/context/AuthContext'
 import { signOut } from '@/features/auth/api/authApi'
+import { useMyDriverProfile } from '@/features/tracking/hooks/useTracking'
 
 export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const { user } = useAuth()
+  const { data: driverProfile } = useMyDriverProfile()
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4">
@@ -20,6 +23,15 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         <OrgSwitcher />
       </div>
       <div className="flex items-center gap-4">
+        {driverProfile && (
+          <Link
+            to="/mi-ubicacion"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-accent-600 hover:bg-accent-50"
+          >
+            <LocateFixed size={16} strokeWidth={2} />
+            Compartir mi ubicación
+          </Link>
+        )}
         <span className="text-sm text-gray-500">{user?.email}</span>
         <button
           type="button"

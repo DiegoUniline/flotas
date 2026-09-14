@@ -1607,6 +1607,10 @@ export type Database = {
       }
       is_org_member: { Args: { p_org: string }; Returns: boolean }
       unassign_vehicle: { Args: { p_vehicle_id: string }; Returns: undefined }
+      update_my_vehicle_position: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: undefined
+      }
       user_org_ids: { Args: never; Returns: string[] }
     }
     Enums: {

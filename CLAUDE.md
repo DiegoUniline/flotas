@@ -934,6 +934,81 @@ reales, ninguno inventado:
   reasignación de ruta construida (reasignar hoy es editar la ficha
   completa en `/rutas/:id`).
 
+### Tracking en vivo por el celular del operador, no por dispositivo GPS dedicado (decisión del usuario, agregado en esta fase)
+
+Pedido explícito del usuario: "hagámoslo por el celular... que lo
+tomemos con eso" — resuelve la decisión pendiente documentada desde el
+inicio del proyecto sobre `vehicles.last_latitude/longitude/last_position_at`
+("Decisiones pendientes... protocolo/proveedor de los GPS"). **Ya no se
+va a comprar/integrar un dispositivo GPS dedicado (Traccar/Wialon/etc.)
+para esto** — la posición en vivo se captura con la geolocalización del
+navegador del celular del propio operador, el mismo mecanismo ya usado en
+`GpsCaptureField`/"Usar mi ubicación". Preguntas de mecanismo resueltas
+con el usuario (`AskUserQuestion`): comparte el **operador con su propia
+cuenta**, guardado **cada ~15s**, el Centro de control se actualiza por
+**Supabase Realtime** (primera vez que se usa Realtime en el proyecto).
+
+- **Migración `driver_phone_position_sharing`**: RPC
+  `update_my_vehicle_position(p_latitude, p_longitude)` (`SECURITY
+  DEFINER`) — resuelve el `driver` del `auth.uid()` que llama, busca el
+  vehículo con `assigned_driver_id` = ese operador, y actualiza
+  `last_latitude/last_longitude/last_position_at = now()`. Se hizo como
+  RPC angosta (no dándole `vehicles.edit` al operador) porque un
+  operador solo debe poder escribir la posición de **su propio**
+  vehículo asignado, nunca editar cualquier vehículo — mismo criterio
+  que `assign_vehicle_to_driver`. También: `alter table vehicles
+  replica identity full` + `alter publication supabase_realtime add
+  table vehicles`, requisito para que Realtime mande el row completo en
+  cada `UPDATE`.
+- **`features/tracking/`** (nuevo): `api/trackingApi.ts`
+  (`fetchMyDriverProfile` — resuelve si el usuario logueado es un
+  operador vía `drivers.user_id = auth.uid()` y su vehículo asignado;
+  `updateMyVehiclePosition`), `hooks/useTracking.ts`
+  (`useMyDriverProfile`, y `useShareLocation` — envuelve
+  `navigator.geolocation.watchPosition` con throttle a 15s en un `ref`,
+  porque el navegador puede disparar el callback mucho más seguido),
+  `MiUbicacionPage.tsx` (`/mi-ubicacion`, pensada para abrirse en el
+  celular del operador: botón "Compartir mi ubicación"/"Dejar de
+  compartir", hora de la última posición guardada, mini-mapa con su
+  propio punto). **No es tracking en segundo plano ni app nativa** —
+  solo funciona mientras esa pestaña sigue abierta y el navegador tiene
+  permiso de ubicación otorgado; eso es una limitación real del enfoque
+  "por el celular" elegido, no un bug.
+- **Header**: nuevo link "Compartir mi ubicación" → `/mi-ubicacion`,
+  **solo visible si `useMyDriverProfile()` encuentra un operador
+  vinculado** a la cuenta logueada — un admin que no es operador no lo ve.
+- **Centro de control**: `fetchLiveVehiclePositions` +
+  `useLiveVehiclePositions` (`controlApi.ts`/`useControlMap.ts`) traen
+  los vehículos con posición real conocida y se suscriben a un canal
+  Realtime de `vehicles` filtrado por organización — cualquier `UPDATE`
+  (o sea, cualquier posición nueva) invalida la query y el mapa se
+  redibuja solo, sin polling. Se pintan como marcador verde pulsante
+  (`live-<id>`) con el nombre del operador y "hace Xs/min/h"
+  (`formatAgo`, nuevo helper local). **Se ignoran posiciones de más de
+  20 minutos** (`LIVE_POSITION_STALE_MS`) para no dejar un pin fantasma
+  de un operador que ya cerró la pestaña — es un corte de frescura real,
+  no un dato inventado. Contador "N en vivo" en la leyenda del mapa.
+- **Limitación real pendiente, no resuelta en esta fase:** no existe
+  ninguna UI todavía para vincular un `drivers.user_id` a una cuenta de
+  login — de hecho **no existe ninguna pantalla de invitar/gestionar
+  miembros de la organización** en todo el proyecto (`organization_members`
+  solo se lee, nunca se escribe desde el frontend). Sin eso, un admin
+  tendría que vincular la cuenta a mano (SQL/consola de Supabase) para
+  que un operador pueda usar "Compartir mi ubicación" de verdad. Es un
+  features aparte y más grande (invitar usuarios, asignarles rol,
+  vincularlos a su ficha de operador) — no se inventó aquí porque no fue
+  lo que se pidió esta vez; es el siguiente paso lógico si se quiere que
+  el tracking por celular funcione de punta a punta sin tocar la base de
+  datos a mano.
+- **Sigue bloqueado, mismo motivo de siempre:** velocidad y batería del
+  dispositivo — la geolocalización del navegador puede traer
+  `coords.speed` en algunos dispositivos/navegadores pero no de forma
+  confiable (Safari/iOS normalmente no la da), así que no se guarda ni
+  se muestra para no mostrar un dato que a veces sí y a veces no es
+  real. Si se necesita velocidad real y confiable, evaluar calcularla
+  del propio historial de posiciones (distancia/tiempo entre lecturas)
+  — no se construyó en esta fase.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

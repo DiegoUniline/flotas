@@ -78,6 +78,34 @@ export async function fetchDayJobs(organizationId: string, date: string): Promis
   return (data ?? []) as unknown as DayJob[]
 }
 
+export interface LiveVehiclePosition {
+  id: string
+  economic_number: string | null
+  plate: string | null
+  last_latitude: number
+  last_longitude: number
+  last_position_at: string
+  assigned_driver_id: string | null
+  drivers: { first_name: string; last_name: string } | null
+}
+
+/** Vehículos con posición real conocida (compartida desde el celular del
+ * operador vía `update_my_vehicle_position`, o cualquier otra fuente que
+ * en el futuro escriba `last_latitude/longitude`) — no es una simulación,
+ * solo se pintan los que de verdad tienen una lectura guardada. */
+export async function fetchLiveVehiclePositions(organizationId: string): Promise<LiveVehiclePosition[]> {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .select('id, economic_number, plate, last_latitude, last_longitude, last_position_at, assigned_driver_id, drivers(first_name, last_name)')
+    .eq('organization_id', organizationId)
+    .is('deleted_at', null)
+    .not('last_latitude', 'is', null)
+    .not('last_longitude', 'is', null)
+    .not('last_position_at', 'is', null)
+  if (error) throw error
+  return (data ?? []) as unknown as LiveVehiclePosition[]
+}
+
 export async function fetchControlKpis(organizationId: string, date: string): Promise<ControlKpis> {
   const [vehiclesActiveRes, vehiclesTotalRes, today, yesterday] = await Promise.all([
     supabase
