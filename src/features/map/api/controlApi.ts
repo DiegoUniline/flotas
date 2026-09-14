@@ -56,7 +56,7 @@ export interface DayJob {
   customers: { name: string } | null
   customer_locations: { name: string; address: string | null; latitude: number | null; longitude: number | null } | null
   drivers: { first_name: string; last_name: string; phone: string | null; photo_url: string | null } | null
-  vehicles: { economic_number: string | null; plate: string | null } | null
+  vehicles: { economic_number: string | null; plate: string | null; brand: string | null; model: string | null } | null
 }
 
 /** Pedidos programados del día seleccionado, con la ubicación real de
@@ -68,7 +68,7 @@ export async function fetchDayJobs(organizationId: string, date: string): Promis
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, job_number, status, priority, amount, receiver_name, assigned_driver_id, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude), drivers(first_name, last_name, phone, photo_url), vehicles(economic_number, plate)',
+      'id, job_number, status, priority, amount, receiver_name, assigned_driver_id, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude), drivers(first_name, last_name, phone, photo_url), vehicles(economic_number, plate, brand, model)',
     )
     .eq('organization_id', organizationId)
     .eq('scheduled_date', date)

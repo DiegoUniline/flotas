@@ -901,6 +901,39 @@ mapa no es lado a lado". Dos problemas reales:
 3. El filtro de repartidor ahora también limpia la selección de pedido
    suelto al cambiar (mismo `useEffect` de auto-selección de ruta).
 
+### Panel de unidad: más campos reales de la referencia (agregado en esta fase)
+
+El usuario aceptó que velocidad/batería siguen bloqueados (sin GPS en
+vivo) pero pidió el resto de los campos del panel. Todos con datos
+reales, ninguno inventado:
+
+- **`vehicles.brand`/`model` ya existían** en el esquema pero no se
+  consultaban aquí — se agregaron a `ROUTE_PLAN_SELECT`
+  (`routePlansApi.ts`) y a `fetchDayJobs` (`controlApi.ts`) para poder
+  mostrar "Vehículo: {brand} {model}" real (helper `vehicleLabel()`).
+- **"ID #<economic_number>"**, **"Placas: <plate>"**: ya existían en el
+  esquema, solo faltaba mostrarlos como líneas propias bajo el
+  encabezado (antes solo se mostraba uno de los dos, pegado al badge de
+  estado).
+- **Pill de estado junto al nombre** (antes era un badge separado
+  debajo): `ROUTE_STATUS_TONE`/`JOB_STATUS_TONE` ya existían para las
+  demás pantallas, se reutilizan aquí.
+- **"Hora estimada de llegada" + "En tiempo"/"Retrasado"**: dato real,
+  no inventado — usa `route_stops.estimated_arrival_at` de la parada
+  actual (ya se guardaba, ya se usaba en el timeline de abajo, solo
+  faltaba mostrarlo aquí también) comparado contra la hora actual del
+  navegador. Si la parada no tiene estimado, muestra "Sin estimar" sin
+  inventar una hora.
+- **`InfoCell`** (componente local nuevo): celda con ícono + etiqueta +
+  valor + subtexto opcional + barra de progreso opcional — reemplaza los
+  bloques sueltos de texto por una grilla 2 columnas consistente, en
+  ambos paneles (ruta y pedido suelto).
+- **Sigue sin construirse (mismo motivo de siempre)**: velocidad actual y
+  batería del dispositivo — requieren telemetría en vivo real que hoy no
+  existe. Botón "Reasignar" tampoco — no hay una mutación rápida de
+  reasignación de ruta construida (reasignar hoy es editar la ficha
+  completa en `/rutas/:id`).
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

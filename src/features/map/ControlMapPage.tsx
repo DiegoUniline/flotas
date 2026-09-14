@@ -5,8 +5,11 @@ import {
   Calendar,
   CheckCircle2,
   Circle,
+  Clock,
   ClipboardList,
+  MapPin,
   MapPinOff,
+  Package,
   Phone,
   Route as RouteIcon,
   Truck,
@@ -60,6 +63,58 @@ const JOB_STATUS_TONE: Record<string, string> = {
   not_delivered: 'bg-status-delayed-bg text-status-delayed',
   rejected: 'bg-status-delayed-bg text-status-delayed',
   rescheduled: 'bg-status-stopped-bg text-status-stopped',
+}
+
+const ROUTE_STATUS_TONE: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-500',
+  planned: 'bg-status-progress-bg text-status-progress',
+  in_progress: 'bg-status-active-bg text-status-active',
+  completed: 'bg-status-active-bg text-status-active',
+  cancelled: 'bg-status-delayed-bg text-status-delayed',
+}
+
+function formatTime(iso: string | null): string | null {
+  if (!iso) return null
+  return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+}
+
+function vehicleLabel(vehicle: { brand: string | null; model: string | null } | null | undefined): string | null {
+  if (!vehicle) return null
+  const label = [vehicle.brand, vehicle.model].filter(Boolean).join(' ')
+  return label || null
+}
+
+function InfoCell({
+  icon: Icon,
+  label,
+  value,
+  sublabel,
+  subtone,
+  progress,
+}: {
+  icon: typeof Package
+  label: string
+  value: string
+  sublabel?: string
+  subtone?: 'ok' | 'late' | 'neutral'
+  progress?: number
+}) {
+  const subClass = subtone === 'late' ? 'text-status-delayed' : subtone === 'ok' ? 'text-status-active' : 'text-gray-400'
+  return (
+    <div className="rounded-md bg-gray-50 p-2.5">
+      <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+        <Icon size={12} strokeWidth={2} />
+        <p className="text-[11px] font-medium uppercase tracking-wide">{label}</p>
+      </div>
+      <p className="truncate text-sm font-semibold text-gray-900">{value}</p>
+      {sublabel && <p className={`mt-0.5 text-xs ${subClass}`}>{sublabel}</p>}
+      {progress != null && (
+        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+          <div className="h-full rounded-full bg-status-active" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+    </div>
+  )
 }
 
 function StatCard({
@@ -427,51 +482,61 @@ export function ControlMapPage() {
                         {routeDriverName ? initials(routeDriverName) : <User size={18} strokeWidth={2} />}
                       </span>
                     )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-ink">{routeDriverName ?? 'Sin operador'}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-sm font-semibold text-ink">{routeDriverName ?? 'Sin operador'}</p>
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${ROUTE_STATUS_TONE[route.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                          {ROUTE_STATUS_LABELS[route.status] ?? route.status}
+                        </span>
+                      </div>
                       <p className="truncate text-xs text-gray-500">{route.name ?? route.route_number ?? 'Ruta'}</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-600">
-                      {ROUTE_STATUS_LABELS[route.status] ?? route.status}
-                    </span>
-                    {(route.vehicles?.economic_number || route.vehicles?.plate) && (
-                      <span>{route.vehicles?.economic_number ?? route.vehicles?.plate}</span>
-                    )}
+                  <div className="space-y-0.5 text-xs text-gray-500">
+                    {route.vehicles?.economic_number && <p>ID #{route.vehicles.economic_number}</p>}
+                    {vehicleLabel(route.vehicles) && <p>Vehículo: {vehicleLabel(route.vehicles)}</p>}
+                    {route.vehicles?.plate && <p>Placas: {route.vehicles.plate}</p>}
                   </div>
 
-                  {currentStop?.jobs && (
-                    <div className="rounded-md bg-gray-50 p-2.5">
-                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Pedido actual</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {currentStop.jobs.job_number ?? '—'} {currentStop.jobs.customers?.name ? `· ${currentStop.jobs.customers.name}` : ''}
-                      </p>
-                    </div>
-                  )}
-
-                  {currentStop && (
-                    <div className="rounded-md bg-gray-50 p-2.5">
-                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Siguiente parada</p>
-                      <p className="text-sm font-medium text-gray-900">{currentStop.name ?? currentStop.jobs?.customers?.name ?? 'Parada'}</p>
-                      <p className="text-xs text-gray-500">{currentStop.address ?? 'Sin dirección'}</p>
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>Entregas completadas</span>
-                      <span>
-                        {completedStops} de {totalStops}
-                      </span>
-                    </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full rounded-full bg-status-active"
-                        style={{ width: totalStops > 0 ? `${(completedStops / totalStops) * 100}%` : '0%' }}
-                      />
-                    </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <InfoCell
+                      icon={Package}
+                      label="Pedido actual"
+                      value={currentStop?.jobs?.job_number ?? '—'}
+                      sublabel={currentStop?.jobs?.customers?.name}
+                    />
+                    <InfoCell
+                      icon={MapPin}
+                      label="Siguiente parada"
+                      value={currentStop?.name ?? currentStop?.jobs?.customers?.name ?? '—'}
+                      sublabel={currentStop?.address ?? undefined}
+                    />
+                    <InfoCell
+                      icon={Clock}
+                      label="Hora estimada de llegada"
+                      value={formatTime(currentStop?.estimated_arrival_at ?? null) ?? 'Sin estimar'}
+                      sublabel={
+                        currentStop?.estimated_arrival_at
+                          ? new Date(currentStop.estimated_arrival_at).getTime() < Date.now() && currentStop.status !== 'completed'
+                            ? 'Retrasado'
+                            : 'En tiempo'
+                          : undefined
+                      }
+                      subtone={
+                        currentStop?.estimated_arrival_at
+                          ? new Date(currentStop.estimated_arrival_at).getTime() < Date.now() && currentStop.status !== 'completed'
+                            ? 'late'
+                            : 'ok'
+                          : 'neutral'
+                      }
+                    />
+                    <InfoCell
+                      icon={CheckCircle2}
+                      label="Entregas completadas"
+                      value={`${completedStops} de ${totalStops}`}
+                      progress={totalStops > 0 ? (completedStops / totalStops) * 100 : 0}
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 pt-1">
@@ -507,39 +572,36 @@ export function ControlMapPage() {
                       {selectedJobDriverName ? initials(selectedJobDriverName) : <Building2 size={18} strokeWidth={2} />}
                     </span>
                   )}
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-ink">{selectedJobDriverName ?? 'Sin operador asignado'}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm font-semibold text-ink">{selectedJobDriverName ?? 'Sin operador asignado'}</p>
+                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${JOB_STATUS_TONE[selectedJob.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                        {JOB_STATUS_LABELS[selectedJob.status] ?? selectedJob.status}
+                      </span>
+                    </div>
                     <p className="truncate text-xs text-gray-500">
                       {selectedJob.job_number ?? 'Pedido'} · {selectedJob.customers?.name ?? 'Sin cliente'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
-                  <span className={`rounded-full px-2.5 py-1 font-medium ${JOB_STATUS_TONE[selectedJob.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                    {JOB_STATUS_LABELS[selectedJob.status] ?? selectedJob.status}
-                  </span>
-                  {(selectedJob.vehicles?.economic_number || selectedJob.vehicles?.plate) && (
-                    <span>{selectedJob.vehicles?.economic_number ?? selectedJob.vehicles?.plate}</span>
-                  )}
-                </div>
-
-                <div className="rounded-md bg-gray-50 p-2.5">
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Domicilio de entrega</p>
-                  <p className="text-sm font-medium text-gray-900">{selectedJob.customer_locations?.name ?? 'Sin domicilio'}</p>
-                  <p className="text-xs text-gray-500">{selectedJob.customer_locations?.address ?? 'Sin dirección'}</p>
-                </div>
-
-                {selectedJob.receiver_name && (
-                  <div className="rounded-md bg-gray-50 p-2.5">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Destinatario</p>
-                    <p className="text-sm font-medium text-gray-900">{selectedJob.receiver_name}</p>
+                {(selectedJob.vehicles?.economic_number || vehicleLabel(selectedJob.vehicles) || selectedJob.vehicles?.plate) && (
+                  <div className="space-y-0.5 text-xs text-gray-500">
+                    {selectedJob.vehicles?.economic_number && <p>ID #{selectedJob.vehicles.economic_number}</p>}
+                    {vehicleLabel(selectedJob.vehicles) && <p>Vehículo: {vehicleLabel(selectedJob.vehicles)}</p>}
+                    {selectedJob.vehicles?.plate && <p>Placas: {selectedJob.vehicles.plate}</p>}
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Monto</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedJob.amount != null ? formatCurrency(selectedJob.amount) : '—'}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <InfoCell
+                    icon={MapPin}
+                    label="Domicilio de entrega"
+                    value={selectedJob.customer_locations?.name ?? 'Sin domicilio'}
+                    sublabel={selectedJob.customer_locations?.address ?? undefined}
+                  />
+                  <InfoCell icon={User} label="Destinatario" value={selectedJob.receiver_name ?? '—'} />
+                  <InfoCell icon={Package} label="Monto" value={selectedJob.amount != null ? formatCurrency(selectedJob.amount) : '—'} />
                 </div>
 
                 <p className="text-xs text-gray-400">Sin ruta asignada todavía.</p>
