@@ -1,10 +1,7 @@
 import { Skeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useVehicleAssignmentHistory } from '@/features/vehicles/hooks/useVehicleDetail'
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
-}
+import { formatDateTime } from '@/lib/format'
 
 export function VehicleAssignmentHistoryTab({ vehicleId }: { vehicleId: string }) {
   const historyQuery = useVehicleAssignmentHistory(vehicleId)

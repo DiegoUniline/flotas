@@ -16,6 +16,7 @@ import {
   type DriverCertificationFormValues,
 } from './DriverCertificationForm'
 import { CERTIFICATION_STATUSES, type DriverCertification } from '@/features/drivers/api/driverCertificationsApi'
+import { formatDate } from '@/lib/format'
 
 const STATUS_LABELS = Object.fromEntries(CERTIFICATION_STATUSES.map((s) => [s.value, s.label]))
 const STATUS_TONE: Record<string, string> = {
@@ -67,7 +68,7 @@ export function DriverCertificationsSection({ driverId }: { driverId: string }) 
               <div>
                 <p className="font-medium text-gray-900">{certification.certification_type}</p>
                 <p className="text-xs text-gray-500">
-                  {certification.expires_at ? `Vence ${certification.expires_at}` : 'Sin fecha de vencimiento'}
+                  {certification.expires_at ? `Vence ${formatDate(certification.expires_at)}` : 'Sin fecha de vencimiento'}
                 </p>
               </div>
               <div className="flex items-center gap-3">

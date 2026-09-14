@@ -19,6 +19,7 @@ import {
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
 import { PageScroll } from '@/components/ui/PageScroll'
+import { formatDate } from '@/lib/format'
 
 const ROUTE_STATUS_LABELS = Object.fromEntries(ROUTE_STATUSES.map((s) => [s.value, s.label]))
 const STOP_STATUS_LABELS = Object.fromEntries(STOP_STATUSES.map((s) => [s.value, s.label]))
@@ -68,7 +69,7 @@ export function RouteDetailPage() {
                   {routeQuery.data.name ?? routeQuery.data.route_number ?? 'Ruta'}
                 </h1>
                 <p className="text-sm text-gray-500">
-                  {routeQuery.data.scheduled_date} ·{' '}
+                  {formatDate(routeQuery.data.scheduled_date)} ·{' '}
                   {routeQuery.data.drivers ? `${routeQuery.data.drivers.first_name} ${routeQuery.data.drivers.last_name}` : 'Sin operador'} ·{' '}
                   {routeQuery.data.vehicles?.economic_number ?? routeQuery.data.vehicles?.plate ?? 'Sin vehículo'}
                 </p>

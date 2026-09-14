@@ -5,7 +5,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDate } from '@/lib/format'
 import { groupRows } from '@/lib/groupRows'
 import { JOB_PRIORITIES, JOB_STATUSES, type JobSort, type JobSortColumn, type JobWithRelations } from '@/features/jobs/api/jobsApi'
 
@@ -113,7 +113,7 @@ export function JobsTable({ rows, loading, error, hasFilters, sort, onSortChange
     return (
       <tr onClick={() => navigate(`/pedidos/${job.id}`)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
         <td className="px-4 py-2 font-medium text-gray-900">{job.job_number ?? job.id.slice(0, 8)}</td>
-        <td className="px-4 py-2 text-gray-700">{job.scheduled_date ?? '—'}</td>
+        <td className="px-4 py-2 text-gray-700">{formatDate(job.scheduled_date)}</td>
         <td className="px-4 py-2 text-gray-700">{job.customers?.name ?? '—'}</td>
         <td className="px-4 py-2 text-gray-700">{job.receiver_name ?? '—'}</td>
         <td className="px-4 py-2 text-gray-700">{job.drivers ? `${job.drivers.first_name} ${job.drivers.last_name}` : '—'}</td>

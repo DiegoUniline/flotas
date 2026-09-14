@@ -13,6 +13,7 @@ import {
 } from '@/features/vehicles/hooks/useVehicleDetail'
 import { VehicleDocumentForm, toVehicleDocumentInsert, type VehicleDocumentFormValues } from './VehicleDocumentForm'
 import { DOCUMENT_STATUSES, VEHICLE_DOCUMENT_TYPES, type VehicleDocument } from '@/features/vehicles/api/vehicleDocumentsApi'
+import { formatDate } from '@/lib/format'
 
 const TYPE_LABELS = Object.fromEntries(VEHICLE_DOCUMENT_TYPES.map((t) => [t.value, t.label]))
 const STATUS_LABELS = Object.fromEntries(DOCUMENT_STATUSES.map((s) => [s.value, s.label]))
@@ -67,7 +68,7 @@ export function VehicleDocumentsTab({ vehicleId }: { vehicleId: string }) {
                   {TYPE_LABELS[document.document_type] ?? document.document_type}
                   {document.document_number && <span className="ml-1.5 text-gray-400">· {document.document_number}</span>}
                 </p>
-                <p className="text-xs text-gray-500">{document.expires_at ? `Vence ${document.expires_at}` : 'Sin fecha de vencimiento'}</p>
+                <p className="text-xs text-gray-500">{document.expires_at ? `Vence ${formatDate(document.expires_at)}` : 'Sin fecha de vencimiento'}</p>
               </div>
               <div className="flex items-center gap-3">
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[document.status] ?? 'bg-gray-100 text-gray-500'}`}>

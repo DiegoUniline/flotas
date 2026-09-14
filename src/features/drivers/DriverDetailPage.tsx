@@ -8,6 +8,7 @@ import { DriverLicensesSection } from './components/DriverLicensesSection'
 import { DriverCertificationsSection } from './components/DriverCertificationsSection'
 import { DriverAssignmentSection } from './components/DriverAssignmentSection'
 import { PageScroll } from '@/components/ui/PageScroll'
+import { formatDate } from '@/lib/format'
 
 const STATUS_LABELS = Object.fromEntries(DRIVER_STATUSES.map((s) => [s.value, s.label]))
 
@@ -45,7 +46,7 @@ export function DriverDetailPage() {
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm text-gray-600 sm:grid-cols-3">
               {driverQuery.data.phone && <p>Tel: {driverQuery.data.phone}</p>}
               {driverQuery.data.email && <p>Correo: {driverQuery.data.email}</p>}
-              {driverQuery.data.hire_date && <p>Ingreso: {driverQuery.data.hire_date}</p>}
+              {driverQuery.data.hire_date && <p>Ingreso: {formatDate(driverQuery.data.hire_date)}</p>}
             </div>
           </div>
 

@@ -16,6 +16,7 @@ import {
   type DriverLicenseFormValues,
 } from './DriverLicenseForm'
 import { LICENSE_STATUSES, type DriverLicense } from '@/features/drivers/api/driverLicensesApi'
+import { formatDate } from '@/lib/format'
 
 const STATUS_LABELS = Object.fromEntries(LICENSE_STATUSES.map((s) => [s.value, s.label]))
 const STATUS_TONE: Record<string, string> = {
@@ -71,7 +72,7 @@ export function DriverLicensesSection({ driverId }: { driverId: string }) {
                   {license.license_type && <span className="ml-1.5 text-gray-500">· {license.license_type}</span>}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {license.expires_at ? `Vence ${license.expires_at}` : 'Sin fecha de vencimiento'}
+                  {license.expires_at ? `Vence ${formatDate(license.expires_at)}` : 'Sin fecha de vencimiento'}
                 </p>
               </div>
               <div className="flex items-center gap-3">

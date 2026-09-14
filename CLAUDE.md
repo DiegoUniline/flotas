@@ -484,6 +484,32 @@ cliente y domicilio". Se extendió `jobs` (migración
   un cálculo automático a partir de `job_packages` (ya trae el peso real
   y volumétrico listos para eso).
 
+## Formato de fechas (agregado en esta fase)
+
+Pedido explícito del usuario: toda fecha visible en la UI se muestra en
+`dd/mm/yyyy` (con hora `dd/mm/yyyy HH:mm` cuando el dato es `timestamptz`,
+en hora local del navegador). Dos helpers en `src/lib/format.ts`,
+junto a `formatCurrency`:
+
+- **`formatDate(value)`**: para columnas `date` (sin hora) —
+  `scheduled_date`, `hire_date`, `expires_at`, `issued_at`, etc. Parsea el
+  string `YYYY-MM-DD` directamente con regex en vez de pasar por `Date`,
+  para no arrastrar corrimientos de zona horaria en fechas sin hora.
+- **`formatDateTime(value)`**: para columnas `timestamptz` —
+  `created_at`, `starts_at`/`ends_at` de historiales de asignación, etc.
+
+Se reemplazaron todos los renders crudos de fecha (`{job.scheduled_date}`,
+`Vence ${license.expires_at}`, etc.) y los `formatDateTime` locales
+duplicados que había en `DriverAssignmentSection.tsx`,
+`VehicleAssignmentHistoryTab.tsx` y `HistoryPanel.tsx` — ahora todos
+importan el mismo helper. **Cualquier fecha nueva que se muestre en texto
+debe usar `formatDate`/`formatDateTime`, nunca el string crudo de
+Supabase.** Los `<input type="date">` nativos (formularios, selector de
+fecha del Centro de control, rango personalizado de `DateRangeFilter`) se
+quedan como están — el formato de esos lo controla el navegador/SO, no se
+puede forzar sin reemplazar el input nativo por un date-picker propio, y
+eso no se construyó en esta fase.
+
 ## Sistema de diseño
 
 - Tipografía: Inter (cargada en `index.html` desde Google Fonts).

@@ -2,15 +2,12 @@ import { History } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useEntityHistory } from '@/features/audit/hooks/useAuditLog'
 import { diffAuditValues, formatValue } from '@/lib/auditDiff'
+import { formatDateTime } from '@/lib/format'
 
 const ACTION_LABELS: Record<string, string> = {
   create: 'Creado',
   update: 'Actualizado',
   delete: 'Eliminado',
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 interface HistoryPanelProps {
