@@ -76,6 +76,21 @@ export async function deleteRouteStop(id: string): Promise<void> {
   if (error) throw error
 }
 
+/** Busca si un pedido ya está como parada de alguna ruta (la más reciente),
+ * para que al hacer click en su punto en el mapa se pueda abrir el panel
+ * completo de la ruta en vez del panel simple del pedido suelto. */
+export async function fetchRoutePlanIdForJob(jobId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('route_stops')
+    .select('route_plan_id')
+    .eq('job_id', jobId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data?.route_plan_id ?? null
+}
+
 export async function markStopStatus(id: string, status: string): Promise<RouteStop> {
   const timestamps: RouteStopUpdate = { status }
   if (status === 'in_progress') timestamps.arrived_at = new Date().toISOString()

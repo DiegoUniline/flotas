@@ -24,6 +24,7 @@ import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
 import { JOB_STATUSES } from '@/features/jobs/api/jobsApi'
 import { useRouteDriverOptions, useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
+import { fetchRoutePlanIdForJob } from '@/features/routes/api/routeStopsApi'
 import { useControlKpis, useDayJobs, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
 import { PageScroll } from '@/components/ui/PageScroll'
 
@@ -130,6 +131,8 @@ export function ControlMapPage() {
   const [search, setSearch] = useState('')
   const [driverFilter, setDriverFilter] = useState('')
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null)
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const [resolvingJobRoute, setResolvingJobRoute] = useState(false)
 
   const mappedQuery = useMappedLocations()
   const countsQuery = useLocationCounts()
@@ -155,6 +158,7 @@ export function ControlMapPage() {
     if (autoSelectKeyRef.current === key) return
     autoSelectKeyRef.current = key
     const candidates = driverFilter ? routesQuery.data.filter((r) => r.driver_id === driverFilter) : routesQuery.data
+    setSelectedJobId(null)
     setSelectedRouteId(candidates[0]?.id ?? null)
   }, [date, driverFilter, routesQuery.data])
 
@@ -244,6 +248,33 @@ export function ControlMapPage() {
   const currentStop = stops.find((s) => s.status === 'in_progress') ?? stops.find((s) => s.status === 'pending')
   const route = selectedRouteQuery.data
   const routeDriverName = driverName(route?.drivers ?? null)
+  const selectedJob = selectedJobId ? dayJobs.find((j) => j.id === selectedJobId) ?? null : null
+  const selectedJobDriverName = selectedJob ? driverName(selectedJob.drivers) : null
+
+  function selectRoute(id: string | null) {
+    setSelectedJobId(null)
+    setSelectedRouteId(id)
+  }
+
+  async function handleMarkerClick(marker: MapMarker) {
+    if (marker.id.startsWith('job-')) {
+      const jobId = marker.id.slice('job-'.length)
+      setResolvingJobRoute(true)
+      try {
+        const routeId = await fetchRoutePlanIdForJob(jobId)
+        if (routeId) {
+          selectRoute(routeId)
+        } else {
+          setSelectedRouteId(null)
+          setSelectedJobId(jobId)
+        }
+      } finally {
+        setResolvingJobRoute(false)
+      }
+    }
+    // Las paradas ('stop-*') ya pertenecen a la ruta seleccionada — su
+    // info ya está en el panel. Las sucursales ('loc-*') solo abren popup.
+  }
 
   return (
     <PageScroll>
@@ -267,7 +298,7 @@ export function ControlMapPage() {
               <RouteIcon size={14} strokeWidth={2} className="text-gray-400" />
               <select
                 value={selectedRouteId ?? ''}
-                onChange={(e) => setSelectedRouteId(e.target.value || null)}
+                onChange={(e) => selectRoute(e.target.value || null)}
                 className="border-0 bg-transparent p-0 text-sm text-gray-900 focus:outline-none focus:ring-0"
               >
                 <option value="">Todas las rutas</option>
@@ -349,7 +380,7 @@ export function ControlMapPage() {
               <Skeleton className="h-[620px]" />
             ) : markers.length > 0 ? (
               <>
-                <Map className="h-[620px] w-full" markers={markers} polyline={routePolyline} />
+                <Map className="h-[620px] w-full" markers={markers} polyline={routePolyline} onMarkerClick={handleMarkerClick} />
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
                   <span className="font-medium text-gray-400">Pedidos:</span>
                   {JOB_STATUSES.map((s) => (
@@ -380,9 +411,11 @@ export function ControlMapPage() {
             )}
           </div>
 
-          {selectedRouteId && (
-            <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-96">
-              {selectedRouteQuery.isLoading ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-96">
+            {resolvingJobRoute ? (
+              <Skeleton className="h-32" />
+            ) : selectedRouteId ? (
+              selectedRouteQuery.isLoading ? (
                 <Skeleton className="h-32" />
               ) : route ? (
                 <>
@@ -459,9 +492,83 @@ export function ControlMapPage() {
                     )}
                   </div>
                 </>
-              ) : null}
-            </div>
-          )}
+              ) : null
+            ) : selectedJob ? (
+              <>
+                <div className="flex items-center gap-3">
+                  {selectedJob.drivers?.photo_url ? (
+                    <img
+                      src={selectedJob.drivers.photo_url}
+                      alt={selectedJobDriverName ?? ''}
+                      className="h-11 w-11 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-sm font-semibold text-accent-600">
+                      {selectedJobDriverName ? initials(selectedJobDriverName) : <Building2 size={18} strokeWidth={2} />}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-ink">{selectedJobDriverName ?? 'Sin operador asignado'}</p>
+                    <p className="truncate text-xs text-gray-500">
+                      {selectedJob.job_number ?? 'Pedido'} · {selectedJob.customers?.name ?? 'Sin cliente'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                  <span className={`rounded-full px-2.5 py-1 font-medium ${JOB_STATUS_TONE[selectedJob.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {JOB_STATUS_LABELS[selectedJob.status] ?? selectedJob.status}
+                  </span>
+                  {(selectedJob.vehicles?.economic_number || selectedJob.vehicles?.plate) && (
+                    <span>{selectedJob.vehicles?.economic_number ?? selectedJob.vehicles?.plate}</span>
+                  )}
+                </div>
+
+                <div className="rounded-md bg-gray-50 p-2.5">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Domicilio de entrega</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedJob.customer_locations?.name ?? 'Sin domicilio'}</p>
+                  <p className="text-xs text-gray-500">{selectedJob.customer_locations?.address ?? 'Sin dirección'}</p>
+                </div>
+
+                {selectedJob.receiver_name && (
+                  <div className="rounded-md bg-gray-50 p-2.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Destinatario</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedJob.receiver_name}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Monto</span>
+                  <span className="text-sm font-medium text-gray-900">{selectedJob.amount != null ? formatCurrency(selectedJob.amount) : '—'}</span>
+                </div>
+
+                <p className="text-xs text-gray-400">Sin ruta asignada todavía.</p>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Link
+                    to={`/pedidos/${selectedJob.id}`}
+                    className="flex-1 rounded-md bg-accent-500 px-3 py-1.5 text-center text-sm font-medium text-white hover:bg-accent-600"
+                  >
+                    Ver pedido completo
+                  </Link>
+                  {selectedJob.drivers?.phone && (
+                    <a
+                      href={`tel:${selectedJob.drivers.phone}`}
+                      title="Llamar"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+                    >
+                      <Phone size={14} strokeWidth={2} />
+                    </a>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center text-sm text-gray-400">
+                <MapPinOff size={22} strokeWidth={1.5} />
+                Selecciona una ruta o haz click en un pedido del mapa para ver su detalle aquí.
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-4">

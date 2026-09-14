@@ -24,6 +24,8 @@ interface MapProps {
   /** Línea que conecta las paradas de una ruta en secuencia (datos reales, no tracking en vivo). */
   polyline?: { lat: number; lng: number }[]
   polylineColor?: string
+  /** Se dispara al hacer click en un marcador, además de abrir su popup. */
+  onMarkerClick?: (marker: MapMarker) => void
 }
 
 function coloredDivIcon(color: string): L.DivIcon {
@@ -42,7 +44,7 @@ const STREET_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyri
 const SATELLITE_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const SATELLITE_ATTRIBUTION = 'Tiles &copy; Esri'
 
-export function Map({ markers, className = '', polyline, polylineColor = '#f97316' }: MapProps) {
+export function Map({ markers, className = '', polyline, polylineColor = '#f97316', onMarkerClick }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
@@ -51,6 +53,8 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
   const satelliteLayerRef = useRef<L.TileLayer | null>(null)
   const [satellite, setSatellite] = useState(false)
   const [locating, setLocating] = useState(false)
+  const onMarkerClickRef = useRef(onMarkerClick)
+  onMarkerClickRef.current = onMarkerClick
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -122,6 +126,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
         ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color) })
         : L.marker([marker.lat, marker.lng])
       leafletMarker.addTo(layer).bindPopup(popup)
+      leafletMarker.on('click', () => onMarkerClickRef.current?.(marker))
     }
 
     if (polyline && polyline.length > 1) {

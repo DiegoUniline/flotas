@@ -868,6 +868,39 @@ efecto real). Todo con datos reales, nada de tracking en vivo:
   después elige "Todas las rutas" a mano, se respeta (no se vuelve a
   auto-seleccionar hasta que cambie la fecha o el repartidor).
 
+### Panel lateral siempre visible + click en un punto del mapa selecciona su detalle (agregado en esta fase)
+
+Pedido explícito del usuario con la imagen de referencia otra vez:
+"presiono un pedido en el mapa y veo la info a la derecha y abajo... el
+mapa no es lado a lado". Dos problemas reales:
+
+1. El panel derecho solo se pintaba si había una ruta seleccionada por
+   dropdown — sin selección desaparecía por completo (no colapsaba a
+   "lado a lado" con contenido vacío, simplemente no existía esa
+   columna). Ahora **siempre se renderiza** (`lg:w-96`, al lado del
+   mapa) con tres estados: panel de ruta, panel de pedido suelto, o un
+   placeholder ("Selecciona una ruta o haz click en un pedido del mapa
+   para ver su detalle aquí.") — el layout de dos columnas es constante,
+   nunca cambia de forma.
+2. Los puntos del mapa no eran clickeables más allá del popup de
+   Leaflet. **`components/map/Map.tsx`** ganó `onMarkerClick?: (marker)
+   => void`, disparado además de abrir el popup normal. `ControlMapPage`
+   lo usa así: click en un pedido (`job-*`) → busca si ya tiene una
+   parada de ruta real (`fetchRoutePlanIdForJob`, nuevo en
+   `routeStopsApi.ts`, consulta `route_stops` por `job_id`) — si la
+   tiene, selecciona esa ruta (mismo panel + timeline de siempre, "y
+   abajo" también se actualiza); si no tiene ruta, selecciona el pedido
+   suelto y el panel derecho muestra su propia ficha resumida (operador/
+   vehículo asignado si los tiene, domicilio de entrega, destinatario,
+   monto, botón "Ver pedido completo" y "Llamar" si hay teléfono del
+   operador) — sin timeline abajo porque un pedido sin ruta no tiene
+   paradas reales que mostrar. `fetchDayJobs` se extendió con
+   `drivers(first_name, last_name, phone, photo_url)`,
+   `vehicles(economic_number, plate)` y `receiver_name` para poder pintar
+   ese panel sin una query aparte.
+3. El filtro de repartidor ahora también limpia la selección de pedido
+   suelto al cambiar (mismo `useEffect` de auto-selección de ruta).
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
