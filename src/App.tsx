@@ -49,14 +49,12 @@ export function App() {
             <Route path="centro-de-control" element={<ControlMapPage />} />
             <Route path="sucursales" element={<LocationsPage />} />
             <Route path="vehiculos" element={<VehiclesPage />} />
-            <Route path="vehiculos/nuevo" element={<VehicleDetailPage />} />
             <Route path="vehiculos/:id" element={<VehicleDetailPage />} />
             <Route path="operadores" element={<DriversPage />} />
             <Route path="operadores/:id" element={<DriverDetailPage />} />
             <Route path="clientes" element={<CustomersPage />} />
             <Route path="clientes/:id" element={<CustomerDetailPage />} />
             <Route path="pedidos" element={<JobsPage />} />
-            <Route path="pedidos/nuevo" element={<JobDetailPage />} />
             <Route path="pedidos/:id" element={<JobDetailPage />} />
             <Route path="rutas" element={<RoutesPage />} />
             <Route path="rutas/:id" element={<RouteDetailPage />} />

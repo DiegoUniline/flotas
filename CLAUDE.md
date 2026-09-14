@@ -545,6 +545,27 @@ ficha normal. Si algún otro módulo con muchos campos (Clientes, Rutas)
 tiene la misma queja de scroll al crear, replicar este mismo patrón en
 vez de inventar uno nuevo — pero solo para creación, no para edición.
 
+### Bug real encontrado: ruta estática `/nuevo` pisaba el param `:id` (corregido en esta fase)
+
+**Causa raíz de la pantalla en blanco al crear pedidos** (y del mismo bug,
+no reportado todavía, en "Nuevo vehículo"): `App.tsx` tenía DOS rutas para
+el mismo componente — `vehiculos/nuevo` (estática) y `vehiculos/:id`
+(dinámica), mismo patrón en `pedidos`. React Router prioriza la ruta
+estática por ser más específica, así que al navegar a `/pedidos/nuevo` la
+ruta que hacía match era la **estática**, que no tiene segmento `:id` —
+`useParams()` devolvía `id: undefined`, no `id: 'nuevo'`. Como
+`isNew = id === 'nuevo'` daba `false`, ni el wizard ni el formulario se
+mostraban: solo el encabezado de la ficha, sin contenido, sin ningún
+error de React (por eso "pantalla en blanco" sin nada en consola).
+**Corrección:** se eliminaron las rutas estáticas `vehiculos/nuevo` y
+`pedidos/nuevo` en `App.tsx` — con solo la ruta dinámica `:id`, navegar a
+`/pedidos/nuevo` hace match ahí y `id` sí llega como el string literal
+`'nuevo'`. **Nunca declarar una ruta estática `<módulo>/nuevo` junto a
+`<módulo>/:id` para el mismo componente** — basta la dinámica, que ya
+captura `'nuevo'` como valor de `id`. Si se migra otro módulo a este
+patrón (crear vía ruta en vez de Drawer), verificar que solo exista la
+ruta `:id`.
+
 ### Error boundary global (agregado en esta fase)
 
 La app **no tenía ningún React error boundary** — cualquier excepción de
