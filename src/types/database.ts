@@ -1217,6 +1217,193 @@ export type Database = {
           },
         ]
       }
+      maintenance_record_parts: {
+        Row: {
+          created_at: string
+          id: string
+          maintenance_record_id: string
+          notes: string | null
+          organization_id: string
+          part_id: string
+          quantity: number
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          maintenance_record_id: string
+          notes?: string | null
+          organization_id: string
+          part_id: string
+          quantity?: number
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          maintenance_record_id?: string
+          notes?: string | null
+          organization_id?: string
+          part_id?: string
+          quantity?: number
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_record_parts_maintenance_record_id_fkey"
+            columns: ["maintenance_record_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_record_parts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_record_parts_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_records: {
+        Row: {
+          completed_date: string | null
+          completed_odometer: number | null
+          cost: number | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          maintenance_type_id: string
+          notes: string | null
+          organization_id: string
+          provider: string | null
+          scheduled_date: string | null
+          scheduled_odometer: number | null
+          status: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          completed_date?: string | null
+          completed_odometer?: number | null
+          cost?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          maintenance_type_id: string
+          notes?: string | null
+          organization_id: string
+          provider?: string | null
+          scheduled_date?: string | null
+          scheduled_odometer?: number | null
+          status?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          completed_date?: string | null
+          completed_odometer?: number | null
+          cost?: number | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          maintenance_type_id?: string
+          notes?: string | null
+          organization_id?: string
+          provider?: string | null
+          scheduled_date?: string | null
+          scheduled_odometer?: number | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_records_maintenance_type_id_fkey"
+            columns: ["maintenance_type_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_records_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_types: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          deleted_at: string | null
+          estimated_cost: number | null
+          id: string
+          interval_days: number | null
+          interval_km: number | null
+          name: string
+          notes: string | null
+          organization_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          estimated_cost?: number | null
+          id?: string
+          interval_days?: number | null
+          interval_km?: number | null
+          name: string
+          notes?: string | null
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          estimated_cost?: number | null
+          id?: string
+          interval_days?: number | null
+          interval_km?: number | null
+          name?: string
+          notes?: string | null
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1378,6 +1565,68 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      parts: {
+        Row: {
+          active: boolean
+          category: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          min_stock: number | null
+          name: string
+          notes: string | null
+          organization_id: string
+          quantity_on_hand: number
+          sku: string | null
+          supplier: string | null
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          min_stock?: number | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          quantity_on_hand?: number
+          sku?: string | null
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          min_stock?: number | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          quantity_on_hand?: number
+          sku?: string | null
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {

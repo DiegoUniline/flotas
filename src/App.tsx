@@ -34,6 +34,12 @@ import { FuelLogDetailPage } from '@/features/fuel/FuelLogDetailPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { ExpenseDetailPage } from '@/features/expenses/ExpenseDetailPage'
 import { CostsPage } from '@/features/costs/CostsPage'
+import { MaintenanceRecordsPage } from '@/features/maintenance/MaintenanceRecordsPage'
+import { MaintenanceRecordDetailPage } from '@/features/maintenance/MaintenanceRecordDetailPage'
+import { MaintenanceTypesPage } from '@/features/maintenance/MaintenanceTypesPage'
+import { MaintenanceTypeDetailPage } from '@/features/maintenance/MaintenanceTypeDetailPage'
+import { PartsPage } from '@/features/parts/PartsPage'
+import { PartDetailPage } from '@/features/parts/PartDetailPage'
 
 const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
@@ -80,6 +86,12 @@ export function App() {
             <Route path="gastos" element={<ExpensesPage />} />
             <Route path="gastos/:id" element={<ExpenseDetailPage />} />
             <Route path="costos" element={<CostsPage />} />
+            <Route path="mantenimientos/tipos" element={<MaintenanceTypesPage />} />
+            <Route path="mantenimientos/tipos/:id" element={<MaintenanceTypeDetailPage />} />
+            <Route path="mantenimientos" element={<MaintenanceRecordsPage />} />
+            <Route path="mantenimientos/:id" element={<MaintenanceRecordDetailPage />} />
+            <Route path="refacciones" element={<PartsPage />} />
+            <Route path="refacciones/:id" element={<PartDetailPage />} />
             {comingSoonItems.map((item) => (
               <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
             ))}

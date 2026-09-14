@@ -1409,6 +1409,104 @@ desde el cliente de todas formas).
   vacío, consistente con el resto de la app (mismo patrón de
   `ErrorState`/`onRetry` que toda tabla y ficha ya usa).
 
+### Módulo Mantenimiento: servicios por km/tiempo, vencimientos, Refacciones (agregado en esta fase)
+
+Pedido explícito del usuario: "tiene que haber la parte de que servicios
+se le hacen cada X kilómetros, cuáles por tiempo, si ya se hicieron o no,
+o sea toda la gestión completa". Migración `maintenance_and_parts`:
+
+- **`maintenance_types`** (catálogo, mismo patrón que `vehicle_types`:
+  `organization_id null` = default del sistema — se sembraron 6 típicos
+  con intervalo real: Cambio de aceite y filtro (5,000 km / 180 días),
+  Rotación de llantas (10,000 km), Cambio de filtro de aire (15,000 km),
+  Servicio de frenos (20,000 km), Afinación mayor (40,000 km / 365 días),
+  Revisión general (180 días) — `organization_id` propio = tipo
+  personalizado). Cada tipo define `interval_km` y/o `interval_days`
+  (ambos opcionales pero se exige al menos uno al guardar) — así se
+  cubre explícitamente "cuáles por km, cuáles por tiempo": algunos
+  servicios solo aplican por kilometraje, otros solo por fecha, otros
+  ambos. Gestión completa en `/mantenimientos/tipos` (no está en
+  `navConfig.ts`, se llega por un link "Tipos de servicio" dentro de
+  Mantenimientos — mismo criterio que `vehicle_types` de no ocupar un
+  ítem de sidebar para un catálogo secundario) + creación rápida con
+  intervalo incluido desde `RelationSelect` (`MaintenanceTypeQuickForm.tsx`
+  — a diferencia de `VehicleTypeQuickForm` que solo pide nombre, aquí el
+  intervalo es el dato central, así que el quick-create también lo pide).
+- **`maintenance_records`**: el servicio en sí — `vehicle_id` +
+  `maintenance_type_id` obligatorios, `status` (programado/completado/
+  cancelado), `scheduled_date`/`scheduled_odometer` (cuándo se programó),
+  `completed_date`/`completed_odometer` (cuándo y a qué kilometraje se
+  hizo de verdad — **esto es el "si ya se hicieron o no"**: un registro
+  con `status = 'completed'` es un servicio realmente hecho, uno en
+  `scheduled` es solo un plan), `cost`, `provider` (taller/proveedor),
+  `notes`. Al cambiar el estado a "Completado" en la ficha, si no había
+  fecha de cierre se sella con hoy automáticamente (no obliga a
+  capturarla a mano, pero se puede corregir).
+- **Pestaña "Próximos vencimientos"** (`MaintenanceRecordsPage.tsx`,
+  segunda pestaña junto a "Historial", sin tabla nueva — se deriva en
+  vivo): `features/maintenance/api/maintenanceDueApi.ts` calcula, por
+  cada combinación vehículo × tipo de servicio con intervalo definido,
+  el último `maintenance_records` con `status = 'completed'` de ese
+  tipo para ese vehículo, y a partir de su fecha/km + el intervalo del
+  tipo obtiene el próximo vencimiento (por km usando
+  `vehicles.current_odometer` real, por fecha usando hoy). Estados:
+  **Vencido** (ya pasó el km o la fecha), **Próximo a vencer** (dentro
+  de 500 km o 15 días del límite — margen de aviso, no dato inventado),
+  **Al día**, **Sin historial** (nunca se ha registrado ese servicio
+  para ese vehículo — no se marca como "vencido" porque no hay manera
+  de saber si aplica desde cuándo). Botón "Programar" por fila que abre
+  `/mantenimientos/nuevo?vehicle_id=..&maintenance_type_id=..` — la
+  ficha de creación lee esos query params y precarga vehículo/tipo
+  (primer uso de prefill por query string en el proyecto; documentado
+  por si se replica en otro flujo similar). **No hay tabla de
+  "programación" separada** — el vencimiento siempre se deriva de los
+  `maintenance_records` reales, igual criterio que "no duplicar estado
+  que ya se puede calcular" usado en otras partes del proyecto.
+- **`parts` (Refacciones)**: catálogo de inventario — `sku`, `name`,
+  `category`, `unit` (pieza/litro/kg/juego), `unit_cost`,
+  `quantity_on_hand`, `min_stock` (badge "Stock bajo" en la tabla
+  cuando existencia ≤ mínimo), `supplier`. Mismo permiso
+  `maintenance.manage` que Mantenimientos (ya estaba así en
+  `navConfig.ts` desde el roadmap — señal de que ambos módulos se
+  diseñaron como el mismo dominio). **La existencia se ajusta a mano**
+  (editar `quantity_on_hand` directo en la ficha) — deliberadamente
+  **no** se construyó un descuento automático de inventario al usar una
+  refacción en un servicio ni una tabla de movimientos/kardex; eso es
+  un sistema de inventario aparte (entradas, salidas, ajustes con
+  motivo) que no se pidió y se prestaría a inventar reglas de negocio
+  no confirmadas.
+- **`maintenance_record_parts`**: pestaña "Refacciones" dentro de la
+  ficha de un servicio (`MaintenanceRecordPartsTab.tsx`, mismo patrón de
+  filas editables con commit en `onBlur` que `JobPackagesTab.tsx`) —
+  qué refacciones y cuántas se usaron en ese servicio, con costo
+  unitario capturado (puede diferir del costo de catálogo si cambió el
+  precio) y total calculado en UI. Solo informativo/de registro, no
+  mueve `parts.quantity_on_hand` automáticamente (mismo criterio de
+  arriba).
+- RLS de las 4 tablas nuevas: select por membresía de organización
+  (igual que `jobs`/`route_plans` — el permiso `.view` no se aplica a
+  nivel RLS, solo gatea qué se pinta en el sidebar vía `can()`, es el
+  patrón real de todo el proyecto verificado contra `jobs_select`);
+  insert/update/delete gateados por `maintenance.manage`. Se verificó
+  que todo rol con `maintenance.manage` también tiene `maintenance.view`
+  (no hizo falta el truco de ampliar el select con OR que sí fue
+  necesario en `expenses`, donde sí había un rol con permiso de crear
+  pero no de ver).
+- `navConfig.ts`: "Mantenimientos" y "Refacciones" pasaron a
+  `implemented: true`.
+- **Deliberadamente no construido en esta fase — "Inspecciones"** (el
+  tercer ítem de la sección "Mantenimiento" del sidebar, permiso
+  `inspections.perform`): el pedido del usuario fue específicamente
+  sobre servicios por km/tiempo y si ya se hicieron, no mencionó nada de
+  checklists de inspección. Es una feature distinta (motor de
+  plantillas de inspección con ítems tipo bien/mal por checklist,
+  típico DVIR) con su propio permiso separado, no comparte tablas con
+  Mantenimiento — construirla especulativamente sin ninguna señal de
+  cómo debe verse el checklist se prestaría a inventar una UI que no
+  sirva. Queda pendiente para cuando se pida explícitamente, con el
+  mismo criterio de "confirmar antes de construir" del resto del
+  proyecto.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
