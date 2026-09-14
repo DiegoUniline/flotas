@@ -7,7 +7,7 @@ import { volumetricWeightKg, type JobPackage, type JobPackageUpdate } from '@/fe
 import { useCreateJobPackage, useDeleteJobPackage, useJobPackages, useUpdateJobPackage } from '@/features/jobs/hooks/useJobDetail'
 
 const CELL_INPUT_CLASSNAME =
-  'w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-gray-900 transition-colors hover:border-gray-200 focus:border-accent-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-accent-500'
+  'w-full border-0 border-b-2 border-transparent bg-transparent px-1.5 py-1 text-sm text-gray-900 transition-colors hover:border-gray-200 focus:border-accent-500 focus:outline-none'
 
 function toNullableNumber(value: string): number | null {
   if (value.trim() === '') return null
