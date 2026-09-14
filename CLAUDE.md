@@ -802,6 +802,38 @@ nombre `Ferretería El Tornillo`/`Farmacia San Rafael`/`Abarrotes La
 Central`/`Distribuidora Citrícola del Sur`/`Papelería Escolar Autlán`/
 `Refaccionaria El Motor` y sus `jobs`/`customer_locations` relacionados.
 
+### Bug real: el Centro de control no mostraba ningún pedido sin ruta asignada (corregido en esta fase)
+
+Reportado por el usuario después de sembrar los 15 pedidos de prueba
+("en centro de control no se ve nadaaaa... nada de los pedidos"). Causa
+real: el mapa y las tarjetas del Centro de control solo pintaban paradas
+(`route_stops`) de la ruta seleccionada — un pedido sin ruta/parada
+asignada (el caso de los 15 de prueba, y de cualquier pedido recién
+creado) era invisible ahí aunque sí existiera y sí apareciera en el
+módulo Pedidos. No era falta de datos, era que la pantalla no los leía.
+
+- **`features/map/api/controlApi.ts`**: nueva `fetchDayJobs(organizationId,
+  date)` — trae los pedidos programados de la fecha seleccionada con el
+  domicilio real de entrega (`customer_locations!jobs_customer_location_id_fkey`,
+  con el hint de FK explícito porque `jobs` tiene dos relaciones a
+  `customer_locations` — `customer_location_id` y
+  `origin_customer_location_id` — y sin el hint PostgREST responde
+  "more than one relationship was found" y la query truena en silencio,
+  que es casi seguro por qué en un intento inicial de este mismo fix la
+  tarjeta seguía viéndose vacía). Hook `useDayJobs(date)` en
+  `hooks/useControlMap.ts`.
+- **Mapa**: ahora también grafica un marcador por cada pedido del día con
+  coordenadas reales de entrega, coloreado por `status` real del pedido
+  (`JOB_STATUS_COLOR`, mismos tonos que la tabla de Pedidos), **siempre
+  visible** — no solo cuando hay una ruta seleccionada. La leyenda del
+  mapa ahora es "Pedidos" (con los 8 estados reales de `JOB_STATUSES`) y,
+  solo si hay una ruta seleccionada, agrega también "Paradas" al lado.
+- **Tarjeta "Pedidos del día"** (nueva, siempre visible debajo del
+  mapa/panel de ruta): lista real de los pedidos de la fecha
+  seleccionada — número, cliente, domicilio, badge de estado, monto
+  (`formatCurrency`) — cada fila linkea a `/pedidos/:id`. Da visibilidad
+  inmediata de "sí se guardó" sin depender de que el pedido ya tenga ruta.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

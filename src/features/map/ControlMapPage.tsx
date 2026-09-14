@@ -18,23 +18,47 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Input } from '@/components/ui/Input'
-import { formatDateTime } from '@/lib/format'
+import { formatCurrency, formatDateTime } from '@/lib/format'
 import { LOCATION_TYPES } from '@/features/locations/api/locationsApi'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
+import { JOB_STATUSES } from '@/features/jobs/api/jobsApi'
 import { useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
-import { useControlKpis, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
+import { useControlKpis, useDayJobs, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
 import { PageScroll } from '@/components/ui/PageScroll'
 
 const LOCATION_TYPE_LABELS = Object.fromEntries(LOCATION_TYPES.map((t) => [t.value, t.label]))
 const ROUTE_STATUS_LABELS = Object.fromEntries(ROUTE_STATUSES.map((s) => [s.value, s.label]))
 const STOP_STATUS_LABELS = Object.fromEntries(STOP_STATUSES.map((s) => [s.value, s.label]))
+const JOB_STATUS_LABELS = Object.fromEntries(JOB_STATUSES.map((s) => [s.value, s.label]))
 
 const STOP_STATUS_COLOR: Record<string, string> = {
   pending: '#9ca3af',
   in_progress: '#6366f1',
   completed: '#16a34a',
   skipped: '#dc2626',
+}
+
+const JOB_STATUS_COLOR: Record<string, string> = {
+  pending: '#9ca3af',
+  en_route: '#6366f1',
+  arrived: '#6366f1',
+  delivered: '#16a34a',
+  partial: '#d97706',
+  not_delivered: '#dc2626',
+  rejected: '#dc2626',
+  rescheduled: '#d97706',
+}
+
+const JOB_STATUS_TONE: Record<string, string> = {
+  pending: 'bg-gray-100 text-gray-500',
+  en_route: 'bg-status-progress-bg text-status-progress',
+  arrived: 'bg-status-progress-bg text-status-progress',
+  delivered: 'bg-status-active-bg text-status-active',
+  partial: 'bg-status-stopped-bg text-status-stopped',
+  not_delivered: 'bg-status-delayed-bg text-status-delayed',
+  rejected: 'bg-status-delayed-bg text-status-delayed',
+  rescheduled: 'bg-status-stopped-bg text-status-stopped',
 }
 
 function StatCard({
@@ -110,6 +134,7 @@ export function ControlMapPage() {
   const mappedQuery = useMappedLocations()
   const countsQuery = useLocationCounts()
   const kpisQuery = useControlKpis(date)
+  const dayJobsQuery = useDayJobs(date)
   const routesQuery = useRoutePlansQuery({ scheduledDate: date, status: null })
   const selectedRouteQuery = useRoutePlan(selectedRouteId ?? undefined)
   const selectedStopsQuery = useRouteStops(selectedRouteId ?? undefined)
@@ -167,8 +192,25 @@ export function ControlMapPage() {
         color: STOP_STATUS_COLOR[stop.status] ?? '#9ca3af',
       }))
 
-    return [...locationMarkers, ...stopMarkers]
-  }, [mappedQuery.data, stops])
+    // Pedidos del día con domicilio de entrega real, sin importar si ya
+    // tienen una ruta/parada asignada — para que un pedido recién creado
+    // sea visible en el mapa de inmediato.
+    const jobMarkers: MapMarker[] = (dayJobsQuery.data ?? [])
+      .filter(
+        (job): job is typeof job & { customer_locations: { latitude: number; longitude: number; name: string; address: string | null } } =>
+          job.customer_locations?.latitude != null && job.customer_locations?.longitude != null,
+      )
+      .map((job) => ({
+        id: `job-${job.id}`,
+        lat: job.customer_locations.latitude,
+        lng: job.customer_locations.longitude,
+        label: `${job.job_number ?? 'Pedido'} · ${job.customers?.name ?? job.customer_locations.name}`,
+        description: `${JOB_STATUS_LABELS[job.status] ?? job.status}${job.customer_locations.address ? ` · ${job.customer_locations.address}` : ''}`,
+        color: JOB_STATUS_COLOR[job.status] ?? '#9ca3af',
+      }))
+
+    return [...locationMarkers, ...stopMarkers, ...jobMarkers]
+  }, [mappedQuery.data, stops, dayJobsQuery.data])
 
   const routePolyline = useMemo(
     () =>
@@ -290,13 +332,25 @@ export function ControlMapPage() {
               <>
                 <Map className="h-[480px] w-full" markers={markers} polyline={routePolyline} />
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
-                  <span className="font-medium text-gray-400">Estado de paradas:</span>
-                  {STOP_STATUSES.map((s) => (
+                  <span className="font-medium text-gray-400">Pedidos:</span>
+                  {JOB_STATUSES.map((s) => (
                     <span key={s.value} className="flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full" style={{ background: STOP_STATUS_COLOR[s.value] }} />
+                      <span className="h-2 w-2 rounded-full" style={{ background: JOB_STATUS_COLOR[s.value] }} />
                       {s.label}
                     </span>
                   ))}
+                  {selectedRouteId && (
+                    <>
+                      <span className="mx-1 h-3 w-px bg-gray-200" />
+                      <span className="font-medium text-gray-400">Paradas:</span>
+                      {STOP_STATUSES.map((s) => (
+                        <span key={s.value} className="flex items-center gap-1">
+                          <span className="h-2 w-2 rounded-full" style={{ background: STOP_STATUS_COLOR[s.value] }} />
+                          {s.label}
+                        </span>
+                      ))}
+                    </>
+                  )}
                 </div>
               </>
             ) : (
@@ -388,6 +442,39 @@ export function ControlMapPage() {
                 </>
               ) : null}
             </div>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink">Pedidos del día</p>
+            <span className="text-xs text-gray-500">{dayJobsQuery.data?.length ?? 0} pedido(s)</span>
+          </div>
+          {dayJobsQuery.isLoading ? (
+            <Skeleton className="h-24" />
+          ) : dayJobsQuery.data && dayJobsQuery.data.length > 0 ? (
+            <div className="flex flex-col divide-y divide-gray-100">
+              {dayJobsQuery.data.map((job) => (
+                <Link
+                  key={job.id}
+                  to={`/pedidos/${job.id}`}
+                  className="flex items-center justify-between gap-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-gray-900">
+                      {job.job_number ?? 'Sin número'} <span className="font-normal text-gray-500">· {job.customers?.name ?? 'Sin cliente'}</span>
+                    </p>
+                    <p className="truncate text-xs text-gray-500">{job.customer_locations?.name ?? job.customer_locations?.address ?? 'Sin domicilio'}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${JOB_STATUS_TONE[job.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {JOB_STATUS_LABELS[job.status] ?? job.status}
+                  </span>
+                  <span className="w-20 shrink-0 text-right text-xs text-gray-500">{job.amount != null ? formatCurrency(job.amount) : '—'}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Sin pedidos programados para esta fecha.</p>
           )}
         </div>
 

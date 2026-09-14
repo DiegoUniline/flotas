@@ -45,6 +45,33 @@ function previousDay(date: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+export interface DayJob {
+  id: string
+  job_number: string | null
+  status: string
+  priority: string
+  amount: number | null
+  customers: { name: string } | null
+  customer_locations: { name: string; address: string | null; latitude: number | null; longitude: number | null } | null
+}
+
+/** Pedidos programados del día seleccionado, con la ubicación real de
+ * entrega (`customer_locations`) para poder graficarlos en el mapa aunque
+ * todavía no tengan una ruta/parada asignada. */
+export async function fetchDayJobs(organizationId: string, date: string): Promise<DayJob[]> {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select(
+      'id, job_number, status, priority, amount, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude)',
+    )
+    .eq('organization_id', organizationId)
+    .eq('scheduled_date', date)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as DayJob[]
+}
+
 export async function fetchControlKpis(organizationId: string, date: string): Promise<ControlKpis> {
   const [vehiclesActiveRes, vehiclesTotalRes, today, yesterday] = await Promise.all([
     supabase
