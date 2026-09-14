@@ -25,6 +25,10 @@ import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { RoutesPage } from '@/features/routes/RoutesPage'
 import { RouteDetailPage } from '@/features/routes/RouteDetailPage'
 import { MiUbicacionPage } from '@/features/tracking/MiUbicacionPage'
+import { DevicesPage } from '@/features/devices/DevicesPage'
+import { DeviceDetailPage } from '@/features/devices/DeviceDetailPage'
+import { GeofencesPage } from '@/features/geofences/GeofencesPage'
+import { GeofenceDetailPage } from '@/features/geofences/GeofenceDetailPage'
 
 const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
@@ -62,6 +66,10 @@ export function App() {
             <Route path="rutas" element={<RoutesPage />} />
             <Route path="rutas/:id" element={<RouteDetailPage />} />
             <Route path="mi-ubicacion" element={<MiUbicacionPage />} />
+            <Route path="dispositivos" element={<DevicesPage />} />
+            <Route path="dispositivos/:id" element={<DeviceDetailPage />} />
+            <Route path="geocercas" element={<GeofencesPage />} />
+            <Route path="geocercas/:id" element={<GeofenceDetailPage />} />
             {comingSoonItems.map((item) => (
               <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
             ))}

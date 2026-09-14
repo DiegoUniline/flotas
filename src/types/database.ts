@@ -233,6 +233,69 @@ export type Database = {
           },
         ]
       }
+      devices: {
+        Row: {
+          active: boolean
+          created_at: string
+          deleted_at: string | null
+          device_type: string
+          id: string
+          install_date: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          serial_number: string | null
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          device_type?: string
+          id?: string
+          install_date?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          device_type?: string
+          id?: string
+          install_date?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devices_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_certifications: {
         Row: {
           certification_number: string | null
@@ -487,6 +550,69 @@ export type Database = {
           },
           {
             foreignKeyName: "entity_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      geofences: {
+        Row: {
+          active: boolean
+          center_latitude: number
+          center_longitude: number
+          color: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          location_id: string | null
+          name: string
+          organization_id: string
+          radius_meters: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          center_latitude: number
+          center_longitude: number
+          color?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          location_id?: string | null
+          name: string
+          organization_id: string
+          radius_meters?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          center_latitude?: number
+          center_longitude?: number
+          color?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          location_id?: string | null
+          name?: string
+          organization_id?: string
+          radius_meters?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geofences_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geofences_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

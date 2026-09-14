@@ -1139,6 +1139,84 @@ traer todo y paginar en cliente.
   dentro de `Tabs`, no hace falta reescribirlos — la migración es del
   *contenedor* (lista + ficha principal), no de cada sub-recurso.
 
+### Módulo Flota completo: Dispositivos + Geocercas (agregado en esta fase)
+
+Pedido explícito del usuario: "termina todo le modulo de flota completo
+todo" — la sección "Flota" del sidebar (`navConfig.ts`) solo tenía
+Vehículos y Operadores construidos; Dispositivos y Geocercas eran los
+últimos dos ítems `implemented: false` de esa sección. Se construyeron
+ambos completos (tabla + RLS + CRUD con el patrón Odoo, mismo criterio
+que el resto del módulo Flota), bajo permiso explícito ya otorgado por
+el usuario para ejecutar en Supabase sin preguntar.
+
+- **`devices`** (tabla nueva, migración `devices_and_geofences`, mismo
+  patrón RLS/triggers que el resto): inventario genérico de hardware
+  asignado a la flota — `device_type` texto libre (`DEVICE_TYPES`:
+  rastreador GPS/dashcam/sensor de combustible/tablet/otro, mismo
+  criterio que `vehicles.status`), `serial_number`, `status` (activo/
+  inactivo/en mantenimiento/perdido-robado), `vehicle_id` opcional (FK a
+  `vehicles`, un dispositivo puede no estar instalado en ningún
+  vehículo), `install_date`, `notes`. Write gateado por el permiso ya
+  sembrado `devices.manage` (no existe `devices.view` separado — mismo
+  criterio que otros módulos donde el permiso de escritura ya cubre
+  lectura vía RLS de `select`). **Decisión de alcance importante:** esta
+  tabla es inventario/activo fijo, **no** está conectada a ningún
+  mecanismo de posición en vivo — el tracking en vivo real de la flota
+  sigue siendo exclusivamente `vehicles.last_latitude/longitude/
+  last_position_at`, poblado solo por la RPC `update_my_vehicle_position`
+  (celular del operador, decisión de una fase anterior). Un
+  `device_type = 'gps_tracker'` en este catálogo es un registro de que
+  *existe* un rastreador físico instalado (útil para saber qué unidad
+  trae qué hardware, mantenimiento, garantías, etc.), no un origen de
+  datos de posición — si en el futuro se conecta un proveedor de
+  hardware real (Traccar/Wialon/webhook), ese proveedor seguiría
+  escribiendo en `vehicles.last_*`, no en `devices`.
+- **`geofences`** (tabla nueva, misma migración): zonas **circulares**
+  únicamente (`center_latitude`, `center_longitude`, `radius_meters`) —
+  se eligió círculo en vez de polígono a propósito, para no depender de
+  una librería de dibujo (Leaflet.draw u otra) que no es dependencia hoy;
+  si se necesita geometría arbitraria más adelante, evaluar entonces.
+  `color` (paleta fija `GEOFENCE_COLORS`, 5 opciones) para diferenciarlas
+  visualmente, `location_id` opcional (FK a `locations`, para relacionar
+  una geocerca con la sucursal que representa, ej. el radio de entrega
+  de una sucursal). Write gateado por `geofences.manage` (ya sembrado).
+  **Deliberadamente sin ninguna lógica de entrada/salida (enter/exit) ni
+  alertas** — eso requeriría correlacionar la geometría contra posición
+  en vivo de un vehículo, y (a) el motor de alertas genérico no existe
+  (Fase 6 del roadmap) y (b) la posición en vivo solo existe de forma
+  transitoria mientras un operador tiene la pestaña de "Compartir mi
+  ubicación" abierta — no hay una posición continua y confiable contra
+  la cual evaluar cruces de geocerca todavía. Estas tablas son hoy
+  puramente definición de zonas, sin comportamiento reactivo.
+- **`GeofenceMapField.tsx`** (`features/geofences/components/`): mismo
+  patrón que `GpsCaptureField` (mapa Leaflet + buscador de dirección con
+  Nominatim + click/arrastre para reposicionar) pero dibuja un
+  `L.circle` en vez de un pin suelto, con el radio/color sincronizados
+  en vivo desde el draft del formulario. Se extrajo `searchAddress` a
+  **`src/lib/geocode.ts`** (antes vivía solo dentro de
+  `GpsCaptureField.tsx`) para que ambos componentes lo compartan sin
+  duplicar el fetch a Nominatim — cualquier campo de mapa nuevo que
+  necesite buscador de dirección debe importar de ahí, no reimplementarlo.
+- Ambos módulos siguen el patrón Odoo estándar completo: `api/`
+  (filtros/orden/paginado server-side, `fetchXById`, CRUD, soft delete
+  vía `deleted_at`), `hooks/` (TanStack Query + toasts en español),
+  tabla 90/10 con fila completa clickeable, ficha con
+  `DetailSection`/`InlineField`/`RelationSelect`/`SaveDiscardBar`/
+  `HistoryPanel` (`entityType: 'devices'`/`'geofences'`, cubierto por
+  `audit_trigger()` como cualquier tabla). Validación de obligatorios:
+  Dispositivos exige **Nombre**; Geocercas exige **Nombre** y **centro
+  definido** (sin las coordenadas no hay zona real que guardar).
+- `navConfig.ts`: "Dispositivos" y "Geocercas" pasaron a
+  `implemented: true` — la sección "Flota" del sidebar queda completa
+  (Vehículos, Operadores, Dispositivos, Geocercas, los 4 ítems reales).
+- **No construido a propósito, mismo criterio de "no inventar sin
+  confirmar" de siempre:** UI de mapa que muestre todas las geocercas
+  superpuestas en el Centro de control (hoy cada geocerca solo se ve en
+  su propia ficha) y cualquier regla de negocio que use estas tablas
+  (ej. "no permitir entrega fuera de la geocerca del cliente",
+  "notificar si el vehículo sale de zona") — ambas son features
+  aparte que dependen de decisiones de producto no pedidas todavía.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

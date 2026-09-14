@@ -1,43 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import '@/lib/leafletIconFix'
-import { LocateFixed, Search } from 'lucide-react'
-import { formatDateTime } from '@/lib/format'
+import { Search } from 'lucide-react'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { searchAddress, type AddressResult } from '@/lib/geocode'
 
 const MEXICO_CENTER: [number, number] = [23.6345, -102.5528]
 
-interface GpsCaptureFieldProps {
+interface GeofenceMapFieldProps {
   latitude: number | null
   longitude: number | null
-  capturedAt: string | null
-  onCapture: (latitude: number, longitude: number, capturedAt: string) => void
-  label?: string
+  radiusMeters: number
+  color: string
+  onChangeCenter: (latitude: number, longitude: number) => void
 }
 
-/** Captura la ubicación GPS real del dispositivo al momento de recolectar o
- * entregar un pedido (geolocalización del navegador, mismo mecanismo que
- * "Usar mi ubicación" en domicilios de cliente — no requiere proveedor de
- * rastreo externo). Es una foto puntual, no tracking en vivo. El mapa con
- * pin arrastrable, más el buscador de direcciones, permiten corregir o fijar
- * la posición a mano si el GPS del dispositivo se equivocó o no aplica. */
-export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, label = 'Capturar ubicación actual' }: GpsCaptureFieldProps) {
-  const [locating, setLocating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+/** Mapa con un círculo (centro arrastrable + radio en metros) para definir
+ * una geocerca — mismo patrón de `GpsCaptureField` (buscador de dirección
+ * con Nominatim, click en el mapa reposiciona) pero dibuja un `L.circle`
+ * en vez de solo un pin, porque una geocerca es una zona, no un punto. */
+export function GeofenceMapField({ latitude, longitude, radiusMeters, color, onChangeCenter }: GeofenceMapFieldProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<AddressResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [resultsOpen, setResultsOpen] = useState(false)
   const debouncedQuery = useDebouncedValue(query, 400)
-  const containerRef = useRef<HTMLDivElement>(null)
   const searchBoxRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
-  const onCaptureRef = useRef(onCapture)
-  onCaptureRef.current = onCapture
+  const circleRef = useRef<L.Circle | null>(null)
+  const onChangeCenterRef = useRef(onChangeCenter)
+  onChangeCenterRef.current = onChangeCenter
 
   useClickOutside(searchBoxRef, () => setResultsOpen(false), resultsOpen)
 
@@ -46,31 +42,23 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
 
     const map = L.map(containerRef.current, { zoomControl: true }).setView(
       latitude != null && longitude != null ? [latitude, longitude] : MEXICO_CENTER,
-      latitude != null && longitude != null ? 15 : 5,
+      latitude != null && longitude != null ? 14 : 5,
     )
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map)
 
-    if (latitude != null && longitude != null) {
-      markerRef.current = L.marker([latitude, longitude], { draggable: true }).addTo(map)
-      markerRef.current.on('dragend', () => {
-        const pos = markerRef.current!.getLatLng()
-        onCaptureRef.current(pos.lat, pos.lng, new Date().toISOString())
-      })
-    }
-
     map.on('click', (e: L.LeafletMouseEvent) => {
-      onCaptureRef.current(e.latlng.lat, e.latlng.lng, new Date().toISOString())
+      onChangeCenterRef.current(e.latlng.lat, e.latlng.lng)
     })
 
     mapRef.current = map
-
     return () => {
       map.remove()
       mapRef.current = null
       markerRef.current = null
+      circleRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -80,10 +68,10 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
     if (!map) return
 
     if (latitude == null || longitude == null) {
-      if (markerRef.current) {
-        markerRef.current.remove()
-        markerRef.current = null
-      }
+      markerRef.current?.remove()
+      circleRef.current?.remove()
+      markerRef.current = null
+      circleRef.current = null
       return
     }
 
@@ -91,15 +79,29 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
       markerRef.current = L.marker([latitude, longitude], { draggable: true }).addTo(map)
       markerRef.current.on('dragend', () => {
         const pos = markerRef.current!.getLatLng()
-        onCaptureRef.current(pos.lat, pos.lng, new Date().toISOString())
+        onChangeCenterRef.current(pos.lat, pos.lng)
       })
     } else {
       markerRef.current.setLatLng([latitude, longitude])
     }
-    map.setView([latitude, longitude], Math.max(map.getZoom(), 15))
-    // También recalcula el tamaño del mapa por si el contenedor cambió de tamaño entre renders.
+
+    if (!circleRef.current) {
+      circleRef.current = L.circle([latitude, longitude], {
+        radius: radiusMeters,
+        color,
+        fillColor: color,
+        fillOpacity: 0.15,
+        weight: 2,
+      }).addTo(map)
+    } else {
+      circleRef.current.setLatLng([latitude, longitude])
+      circleRef.current.setRadius(radiusMeters)
+      circleRef.current.setStyle({ color, fillColor: color })
+    }
+
     map.invalidateSize()
-  }, [latitude, longitude])
+    map.fitBounds(circleRef.current.getBounds(), { maxZoom: 16 })
+  }, [latitude, longitude, radiusMeters, color])
 
   useEffect(() => {
     if (!debouncedQuery.trim() || debouncedQuery.trim().length < 3) {
@@ -110,15 +112,10 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
     let cancelled = false
     setSearching(true)
     setSearchError(null)
-    // Se abre desde ya (no solo al tener resultados) para que "Buscando…" y
-    // cualquier error de red/CORS sean visibles — antes se guardaban en
-    // estado pero el dropdown nunca se abría si la búsqueda fallaba, así
-    // que un error real se veía como "no hace nada".
     setResultsOpen(true)
     searchAddress(debouncedQuery)
       .then((found) => {
-        if (cancelled) return
-        setResults(found)
+        if (!cancelled) setResults(found)
       })
       .catch((err) => {
         console.error('Error buscando dirección:', err)
@@ -133,30 +130,10 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
   }, [debouncedQuery])
 
   function handleSelectResult(result: AddressResult) {
-    onCapture(result.lat, result.lng, new Date().toISOString())
+    onChangeCenter(result.lat, result.lng)
     setResultsOpen(false)
     setQuery('')
     setResults([])
-  }
-
-  function handleCapture() {
-    if (!('geolocation' in navigator)) {
-      setError('Tu navegador no soporta geolocalización.')
-      return
-    }
-    setError(null)
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        onCapture(position.coords.latitude, position.coords.longitude, new Date().toISOString())
-        setLocating(false)
-      },
-      () => {
-        setError('No se pudo obtener la ubicación.')
-        setLocating(false)
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    )
   }
 
   return (
@@ -164,24 +141,10 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
       {latitude != null && longitude != null ? (
         <p className="text-sm text-gray-700">
           {latitude.toFixed(5)}, {longitude.toFixed(5)}
-          {capturedAt && <span className="ml-1.5 text-xs text-gray-400">· {formatDateTime(capturedAt)}</span>}
         </p>
       ) : (
-        <p className="text-sm text-gray-400">Sin capturar — busca una dirección o toca el mapa</p>
+        <p className="text-sm text-gray-400">Sin centro definido — busca una dirección o toca el mapa</p>
       )}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={handleCapture}
-          disabled={locating}
-          className="flex w-fit items-center gap-1.5 text-xs font-medium text-accent-600 hover:text-accent-700 disabled:opacity-50"
-        >
-          <LocateFixed size={13} strokeWidth={2} />
-          {locating ? 'Ubicando…' : label}
-        </button>
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
 
       <div ref={searchBoxRef} className="relative">
         <div className="relative">
@@ -221,8 +184,8 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
         )}
       </div>
 
-      <div ref={containerRef} className="h-[420px] w-full rounded-md border border-gray-200" />
-      {latitude != null && longitude != null && <p className="text-xs text-gray-400">Arrastra el pin o toca el mapa para corregirlo.</p>}
+      <div ref={containerRef} className="h-[380px] w-full rounded-md border border-gray-200" />
+      {latitude != null && longitude != null && <p className="text-xs text-gray-400">Arrastra el pin o toca el mapa para mover el centro.</p>}
     </div>
   )
 }

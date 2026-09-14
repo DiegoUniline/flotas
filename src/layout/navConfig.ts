@@ -61,8 +61,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Vehículos', to: '/vehiculos', permission: 'vehicles.view', icon: Truck, implemented: true },
       { label: 'Operadores', to: '/operadores', permission: 'drivers.view', icon: IdCard, implemented: true },
-      { label: 'Dispositivos', to: '/dispositivos', permission: 'devices.manage', icon: Satellite, implemented: false },
-      { label: 'Geocercas', to: '/geocercas', permission: 'geofences.manage', icon: MapPinned, implemented: false },
+      { label: 'Dispositivos', to: '/dispositivos', permission: 'devices.manage', icon: Satellite, implemented: true },
+      { label: 'Geocercas', to: '/geocercas', permission: 'geofences.manage', icon: MapPinned, implemented: true },
     ],
   },
   {
