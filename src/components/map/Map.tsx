@@ -13,6 +13,9 @@ export interface MapMarker {
   description?: string
   /** Color hex opcional; si se omite usa el pin default de Leaflet. */
   color?: string
+  /** Ruta real (p. ej. `/pedidos/:id`) — si se define, el popup del marcador
+   * incluye un link "Ver detalle" hacia ahí. */
+  href?: string
 }
 
 interface MapProps {
@@ -107,6 +110,13 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
         description.className = 'text-xs text-gray-500'
         description.textContent = marker.description
         popup.appendChild(description)
+      }
+      if (marker.href) {
+        const link = document.createElement('a')
+        link.href = marker.href
+        link.textContent = 'Ver detalle →'
+        link.className = 'mt-1 inline-block text-xs font-medium text-accent-600 hover:text-accent-700'
+        popup.appendChild(link)
       }
       const leafletMarker = marker.color
         ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color) })

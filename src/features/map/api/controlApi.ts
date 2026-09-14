@@ -51,6 +51,7 @@ export interface DayJob {
   status: string
   priority: string
   amount: number | null
+  assigned_driver_id: string | null
   customers: { name: string } | null
   customer_locations: { name: string; address: string | null; latitude: number | null; longitude: number | null } | null
 }
@@ -62,7 +63,7 @@ export async function fetchDayJobs(organizationId: string, date: string): Promis
   const { data, error } = await supabase
     .from('jobs')
     .select(
-      'id, job_number, status, priority, amount, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude)',
+      'id, job_number, status, priority, amount, assigned_driver_id, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude)',
     )
     .eq('organization_id', organizationId)
     .eq('scheduled_date', date)

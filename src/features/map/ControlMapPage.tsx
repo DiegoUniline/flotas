@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
@@ -23,7 +23,7 @@ import { LOCATION_TYPES } from '@/features/locations/api/locationsApi'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
 import { JOB_STATUSES } from '@/features/jobs/api/jobsApi'
-import { useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
+import { useRouteDriverOptions, useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
 import { useControlKpis, useDayJobs, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
 import { PageScroll } from '@/components/ui/PageScroll'
 
@@ -136,20 +136,32 @@ export function ControlMapPage() {
   const kpisQuery = useControlKpis(date)
   const dayJobsQuery = useDayJobs(date)
   const routesQuery = useRoutePlansQuery({ scheduledDate: date, status: null })
+  const allDriversQuery = useRouteDriverOptions()
   const selectedRouteQuery = useRoutePlan(selectedRouteId ?? undefined)
   const selectedStopsQuery = useRouteStops(selectedRouteId ?? undefined)
 
   const withoutCoordinates =
     countsQuery.data && mappedQuery.data ? countsQuery.data.total - mappedQuery.data.length : 0
 
-  const driverOptions = useMemo(() => {
-    const byId: Record<string, string> = {}
-    for (const route of routesQuery.data ?? []) {
-      const name = driverName(route.drivers)
-      if (route.driver_id && name) byId[route.driver_id] = name
-    }
-    return Object.entries(byId)
-  }, [routesQuery.data])
+  // Selecciona automáticamente la primera ruta disponible (filtrada por
+  // repartidor si aplica) al cambiar de fecha/repartidor, para que el panel
+  // de la unidad se vea de inmediato como en la referencia — pero solo una
+  // vez por combinación fecha+repartidor, así no pisa una elección manual
+  // del usuario en el select de rutas.
+  const autoSelectKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!routesQuery.data) return
+    const key = `${date}|${driverFilter}`
+    if (autoSelectKeyRef.current === key) return
+    autoSelectKeyRef.current = key
+    const candidates = driverFilter ? routesQuery.data.filter((r) => r.driver_id === driverFilter) : routesQuery.data
+    setSelectedRouteId(candidates[0]?.id ?? null)
+  }, [date, driverFilter, routesQuery.data])
+
+  const driverOptions = useMemo(
+    () => (allDriversQuery.data ?? []).map((d) => [d.id, `${d.first_name} ${d.last_name}`] as const),
+    [allDriversQuery.data],
+  )
 
   const filteredRoutes = useMemo(() => {
     const routes = routesQuery.data ?? []
@@ -169,6 +181,11 @@ export function ControlMapPage() {
   }, [routesQuery.data, search, driverFilter])
 
   const stops = selectedStopsQuery.data ?? []
+
+  const dayJobs = useMemo(
+    () => (dayJobsQuery.data ?? []).filter((job) => !driverFilter || job.assigned_driver_id === driverFilter),
+    [dayJobsQuery.data, driverFilter],
+  )
 
   const markers: MapMarker[] = useMemo(() => {
     const locationMarkers: MapMarker[] = (mappedQuery.data ?? []).map((location) => ({
@@ -190,12 +207,13 @@ export function ControlMapPage() {
         label: stop.name ?? stop.jobs?.customers?.name ?? 'Parada',
         description: `${STOP_STATUS_LABELS[stop.status] ?? stop.status}${stop.address ? ` · ${stop.address}` : ''}`,
         color: STOP_STATUS_COLOR[stop.status] ?? '#9ca3af',
+        href: stop.job_id ? `/pedidos/${stop.job_id}` : undefined,
       }))
 
     // Pedidos del día con domicilio de entrega real, sin importar si ya
     // tienen una ruta/parada asignada — para que un pedido recién creado
-    // sea visible en el mapa de inmediato.
-    const jobMarkers: MapMarker[] = (dayJobsQuery.data ?? [])
+    // sea visible en el mapa de inmediato. Respeta el filtro de repartidor.
+    const jobMarkers: MapMarker[] = dayJobs
       .filter(
         (job): job is typeof job & { customer_locations: { latitude: number; longitude: number; name: string; address: string | null } } =>
           job.customer_locations?.latitude != null && job.customer_locations?.longitude != null,
@@ -207,10 +225,11 @@ export function ControlMapPage() {
         label: `${job.job_number ?? 'Pedido'} · ${job.customers?.name ?? job.customer_locations.name}`,
         description: `${JOB_STATUS_LABELS[job.status] ?? job.status}${job.customer_locations.address ? ` · ${job.customer_locations.address}` : ''}`,
         color: JOB_STATUS_COLOR[job.status] ?? '#9ca3af',
+        href: `/pedidos/${job.id}`,
       }))
 
     return [...locationMarkers, ...stopMarkers, ...jobMarkers]
-  }, [mappedQuery.data, stops, dayJobsQuery.data])
+  }, [mappedQuery.data, stops, dayJobs])
 
   const routePolyline = useMemo(
     () =>
@@ -327,10 +346,10 @@ export function ControlMapPage() {
             {mappedQuery.isError ? (
               <ErrorState message="No se pudo cargar el mapa." onRetry={() => void mappedQuery.refetch()} />
             ) : mappedQuery.isLoading ? (
-              <Skeleton className="h-[480px]" />
+              <Skeleton className="h-[620px]" />
             ) : markers.length > 0 ? (
               <>
-                <Map className="h-[480px] w-full" markers={markers} polyline={routePolyline} />
+                <Map className="h-[620px] w-full" markers={markers} polyline={routePolyline} />
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
                   <span className="font-medium text-gray-400">Pedidos:</span>
                   {JOB_STATUSES.map((s) => (
@@ -362,7 +381,7 @@ export function ControlMapPage() {
           </div>
 
           {selectedRouteId && (
-            <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-80">
+            <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-96">
               {selectedRouteQuery.isLoading ? (
                 <Skeleton className="h-32" />
               ) : route ? (
@@ -448,13 +467,13 @@ export function ControlMapPage() {
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">Pedidos del día</p>
-            <span className="text-xs text-gray-500">{dayJobsQuery.data?.length ?? 0} pedido(s)</span>
+            <span className="text-xs text-gray-500">{dayJobs.length} pedido(s)</span>
           </div>
           {dayJobsQuery.isLoading ? (
             <Skeleton className="h-24" />
-          ) : dayJobsQuery.data && dayJobsQuery.data.length > 0 ? (
+          ) : dayJobs.length > 0 ? (
             <div className="flex flex-col divide-y divide-gray-100">
-              {dayJobsQuery.data.map((job) => (
+              {dayJobs.map((job) => (
                 <Link
                   key={job.id}
                   to={`/pedidos/${job.id}`}

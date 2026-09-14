@@ -834,6 +834,40 @@ módulo Pedidos. No era falta de datos, era que la pantalla no los leía.
   (`formatCurrency`) — cada fila linkea a `/pedidos/:id`. Da visibilidad
   inmediata de "sí se guardó" sin depender de que el pedido ya tenga ruta.
 
+### Interactividad real: mapa más grande, click en un punto = ver detalle, filtro por repartidor funcional (agregado en esta fase)
+
+Pedido explícito del usuario: lo anterior corrigió que los pedidos
+aparecieran, pero seguía sin la interacción de la referencia (tamaño del
+mapa, click en un punto para ver detalle, filtro por repartidor con
+efecto real). Todo con datos reales, nada de tracking en vivo:
+
+- **Mapa más grande**: de `480px` a `620px` de alto (mapa protagonista,
+  como en la referencia), panel lateral de la unidad de `w-80` a `w-96`.
+- **`components/map/Map.tsx`**: `MapMarker` ganó `href?: string` — si se
+  define, el popup del marcador (que Leaflet ya abre al hacer click)
+  agrega un link real "Ver detalle →". Es un `<a>` normal, no un `Link`
+  de React Router, porque el popup es DOM plano fuera del árbol de React;
+  funciona por el rewrite de SPA que ya existe en `vercel.json`. Los
+  marcadores de pedidos (`job-*`) enlazan a `/pedidos/:id`; los de
+  paradas (`stop-*`) a `/pedidos/:id` del pedido de esa parada si tiene
+  (`stop.job_id`); los de sucursales no llevan link (todavía no tienen
+  ficha propia, siguen en el patrón `Drawer`).
+- **Filtro por repartidor con efecto real**: antes solo acortaba las
+  opciones del `<select>` de rutas. Ahora el dropdown lista **todos** los
+  repartidores activos de la organización (`useRouteDriverOptions`, no
+  solo los que ya tienen ruta hoy) y, al elegir uno: filtra los
+  marcadores/lista de "Pedidos del día" a solo los suyos
+  (`jobs.assigned_driver_id`) y selecciona automáticamente su ruta del
+  día si tiene una (mismo mecanismo de auto-selección de abajo).
+- **Auto-selección de ruta**: al cargar la página o cambiar de
+  fecha/repartidor, si hay rutas disponibles se selecciona la primera
+  automáticamente (una sola vez por combinación fecha+repartidor, vía
+  `autoSelectKeyRef`) para que el panel de la unidad y el timeline se
+  vean de inmediato sin tener que elegir manualmente — igual que en la
+  referencia, que siempre muestra una unidad seleccionada. Si el usuario
+  después elige "Todas las rutas" a mano, se respeta (no se vuelve a
+  auto-seleccionar hasta que cambie la fecha o el repartidor).
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
