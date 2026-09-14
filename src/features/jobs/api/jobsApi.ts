@@ -121,14 +121,37 @@ export interface JobOption {
   customers: { name: string } | null
 }
 
-export async function fetchPendingJobOptions(organizationId: string): Promise<JobOption[]> {
-  const { data, error } = await supabase
+export async function fetchPendingJobOptions(organizationId: string, scheduledDate?: string): Promise<JobOption[]> {
+  let query = supabase
     .from('jobs')
     .select('id, job_number, customers(name)')
     .eq('organization_id', organizationId)
     .eq('status', 'pending')
     .is('deleted_at', null)
-    .order('scheduled_date', { ascending: true })
+
+  if (scheduledDate) {
+    query = query.eq('scheduled_date', scheduledDate)
+  }
+
+  const { data, error } = await query.order('scheduled_date', { ascending: true })
   if (error) throw error
   return (data ?? []) as unknown as JobOption[]
+}
+
+export interface JobForStop {
+  id: string
+  job_number: string | null
+  job_type: string
+  estimated_service_minutes: number | null
+  customer_locations: { name: string; address: string | null; latitude: number | null; longitude: number | null } | null
+}
+
+export async function fetchJobForStop(jobId: string): Promise<JobForStop> {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('id, job_number, job_type, estimated_service_minutes, customer_locations(name, address, latitude, longitude)')
+    .eq('id', jobId)
+    .single()
+  if (error) throw error
+  return data as unknown as JobForStop
 }

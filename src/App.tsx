@@ -19,6 +19,8 @@ import { DriverDetailPage } from '@/features/drivers/DriverDetailPage'
 import { CustomersPage } from '@/features/customers/CustomersPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { JobsPage } from '@/features/jobs/JobsPage'
+import { RoutesPage } from '@/features/routes/RoutesPage'
+import { RouteDetailPage } from '@/features/routes/RouteDetailPage'
 
 const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
@@ -50,6 +52,8 @@ export function App() {
             <Route path="clientes" element={<CustomersPage />} />
             <Route path="clientes/:id" element={<CustomerDetailPage />} />
             <Route path="pedidos" element={<JobsPage />} />
+            <Route path="rutas" element={<RoutesPage />} />
+            <Route path="rutas/:id" element={<RouteDetailPage />} />
             {comingSoonItems.map((item) => (
               <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
             ))}

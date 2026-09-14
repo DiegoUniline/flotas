@@ -51,7 +51,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Inicio', to: '/inicio', icon: Home, implemented: false },
       { label: 'Centro de control', to: '/centro-de-control', permission: 'locations.view', icon: Map, implemented: true },
-      { label: 'Rutas', to: '/rutas', permission: 'routes.view', icon: Route, implemented: false },
+      { label: 'Rutas', to: '/rutas', permission: 'routes.view', icon: Route, implemented: true },
       { label: 'Pedidos', to: '/pedidos', permission: 'jobs.view', icon: ClipboardList, implemented: true },
       { label: 'Clientes', to: '/clientes', permission: 'jobs.view', icon: Contact, implemented: true },
     ],
