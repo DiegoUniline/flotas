@@ -497,8 +497,13 @@ Migración `add_gps_capture_and_insurance_to_jobs`, extiende `jobs`:
   como una foto puntual en el momento real de recolectar/entregar, prueba
   de dónde ocurrió cada evento (distinto de la dirección registrada del
   domicilio, que es solo la referencia). Componente reutilizable
-  `components/ui/GpsCaptureField.tsx` (coords + hora capturada +
-  botón "Capturar ubicación actual"). El campo "GPS de recolección" en la
+  `components/ui/GpsCaptureField.tsx` (coords + hora capturada + botón
+  "Capturar ubicación actual" + **mapa Leaflet con pin arrastrable** para
+  corregir la posición a mano si el GPS del dispositivo se equivocó —
+  clic en el mapa también reposiciona el pin). El fix de íconos default
+  de Leaflet (rutas rotas al bundlear con Vite) se extrajo a
+  `lib/leafletIconFix.ts` para reusarlo aquí y en `components/map/Map.tsx`
+  en vez de duplicarlo. El campo "GPS de recolección" en la
   ficha de Pedido **solo se muestra cuando `origin_type = 'pickup'`**
   (si el remitente lo entrega en sucursal no aplica recolección con GPS,
   tal como pidió el usuario con "cuando aplica"); "GPS de entrega" siempre
