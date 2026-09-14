@@ -108,6 +108,7 @@ export function VehicleDetailPage() {
   const [tab, setTab] = useState('documentos')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (vehicleQuery.data) {
@@ -129,6 +130,12 @@ export function VehicleDetailPage() {
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
+    setErrors((current) => {
+      if (!(key in current)) return current
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
   }
 
   function handleBack() {
@@ -140,6 +147,11 @@ export function VehicleDetailPage() {
   }
 
   function handleSave() {
+    if (!draft.vehicle_type_id) {
+      setErrors({ vehicle_type_id: 'Campo obligatorio' })
+      return
+    }
+
     const input = {
       economic_number: draft.economic_number || null,
       plate: draft.plate || null,
@@ -216,7 +228,7 @@ export function VehicleDetailPage() {
                     <DetailField label="Número económico">
                       <InlineField value={draft.economic_number} onChange={(v) => update('economic_number', v)} placeholder="Agregar…" />
                     </DetailField>
-                    <DetailField label="Tipo">
+                    <DetailField label="Tipo" required error={errors.vehicle_type_id}>
                       <RelationSelect
                         value={draft.vehicle_type_id || null}
                         displayLabel={draft.vehicle_type_label || null}

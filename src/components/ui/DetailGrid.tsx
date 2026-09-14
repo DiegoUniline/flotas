@@ -31,15 +31,23 @@ interface DetailFieldProps {
   /** Ocupa la fila completa (las 4 columnas visuales) en vez de la mitad. */
   full?: boolean
   htmlFor?: string
+  /** Marca la etiqueta con un asterisco rojo — campo obligatorio para guardar. */
+  required?: boolean
+  /** Mensaje de error a mostrar debajo del campo (validación de obligatorios). */
+  error?: string
 }
 
-export function DetailField({ label, children, full = false, htmlFor }: DetailFieldProps) {
+export function DetailField({ label, children, full = false, htmlFor, required, error }: DetailFieldProps) {
   return (
     <div className={`grid grid-cols-[120px_1fr] items-start gap-x-3 ${full ? 'sm:col-span-2' : ''}`}>
       <label htmlFor={htmlFor} className="pt-1.5 text-sm font-semibold text-gray-700">
         {label}
+        {required && <span className="ml-0.5 text-red-500">*</span>}
       </label>
-      <div>{children}</div>
+      <div>
+        {children}
+        {error && <p className="mt-0.5 text-xs text-red-600">{error}</p>}
+      </div>
     </div>
   )
 }

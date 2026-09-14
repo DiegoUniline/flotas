@@ -572,6 +572,36 @@ consecutivo de 5 dígitos + `DDMMYY`).
   guardar" (todavía no existe, se ve hasta después de guardar), en modo
   edición muestra el valor real, nunca editable.
 
+### Campos obligatorios marcados con asterisco + validación (agregado en esta fase)
+
+Pedido explícito del usuario: si un campo se genera solo (número de
+pedido), no debe pedirse ni mostrarse como paso — se quitó del wizard de
+creación (`sectionDatos`, solo se muestra ya en modo edición, de solo
+lectura). Y los campos realmente obligatorios deben marcarse con
+asterisco y no dejar guardar sin ellos.
+
+- **`DetailField`** ganó `required` (asterisco rojo junto a la etiqueta)
+  y `error` (mensaje rojo debajo del campo) — genérico, cualquier ficha
+  nueva puede usarlo.
+- **Pedidos**: obligatorios **Cliente**, **domicilio/sucursal de
+  recolección** (el que aplique según `origin_type`), **Destinatario**,
+  **Domicilio de entrega** — elegidos porque sin ellos el pedido no es
+  un envío real y procesable, no por una restricción de la base de
+  datos (`jobs` no tiene `NOT NULL` en estos campos a propósito, para no
+  bloquear a futuro un flujo de captura parcial/borrador). La validación
+  vive en `JobDetailPage.tsx`: `validateStep(i)` revisa el paso i,
+  `validateAll()` revisa los tres primero antes de guardar. El botón
+  "Siguiente" del wizard valida el paso actual antes de avanzar;
+  "Crear pedido"/Guardar valida todo y, si falta algo, salta al primer
+  paso con error (`setStep`) en vez de guardar a medias.
+- **Vehículos**: obligatorio solo **Tipo** (`vehicle_type_id`) — este sí
+  es `NOT NULL` real en la tabla `vehicles` (sin default), así que sin
+  esta validación el intento de guardar tronaba en la base de datos con
+  un error genérico; ahora se avisa antes de mandar la petición.
+- Patrón para replicar en otras fichas: estado `errors` (`Record<string,
+  string>`), `update()` limpia el error de esa llave al cambiar el
+  valor, y `handleSave` valida antes de armar el payload.
+
 ### `InlineField` tipo `buttons`: menos clics en selects de pocas opciones (agregado en esta fase)
 
 Pedido explícito del usuario señalando el select de "Tipo" en Pedidos:

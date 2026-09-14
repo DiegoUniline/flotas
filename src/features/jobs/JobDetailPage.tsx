@@ -196,6 +196,7 @@ export function JobDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
   const [step, setStep] = useState(() => (isNew ? (loadWizardDraft()?.step ?? 0) : 0))
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (isNew) saveWizardDraft({ draft, step })
@@ -221,6 +222,46 @@ export function JobDetailPage() {
 
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
+    setErrors((current) => {
+      if (!(key in current)) return current
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+  }
+
+  /** Devuelve, por paso del wizard, los errores de campos obligatorios sin
+   * llenar (mismos campos/pasos en modo edición, solo que ahí no hay pasos
+   * — se validan todos de una vez). */
+  function validateStep(stepIndex: number): Record<string, string> {
+    const stepErrors: Record<string, string> = {}
+    if (stepIndex === 0 && !draft.customer_id) {
+      stepErrors.customer_id = 'Campo obligatorio'
+    }
+    if (stepIndex === 1) {
+      if (draft.origin_type === 'branch' && !draft.origin_branch_location_id) {
+        stepErrors.origin_branch_location_id = 'Campo obligatorio'
+      }
+      if (draft.origin_type === 'pickup' && !draft.origin_customer_location_id) {
+        stepErrors.origin_customer_location_id = 'Campo obligatorio'
+      }
+    }
+    if (stepIndex === 2) {
+      if (!draft.receiver_name.trim()) stepErrors.receiver_name = 'Campo obligatorio'
+      if (!draft.customer_location_id) stepErrors.customer_location_id = 'Campo obligatorio'
+    }
+    return stepErrors
+  }
+
+  function validateAll(): { valid: boolean; firstInvalidStep: number } {
+    for (let i = 0; i < 3; i++) {
+      const stepErrors = validateStep(i)
+      if (Object.keys(stepErrors).length > 0) {
+        setErrors((current) => ({ ...current, ...stepErrors }))
+        return { valid: false, firstInvalidStep: i }
+      }
+    }
+    return { valid: true, firstInvalidStep: 0 }
   }
 
   function handleBack() {
@@ -233,6 +274,12 @@ export function JobDetailPage() {
   }
 
   function handleSave() {
+    const { valid, firstInvalidStep } = validateAll()
+    if (!valid) {
+      if (isNew) setStep(firstInvalidStep)
+      return
+    }
+
     const receivedAt =
       draft.status === 'delivered' && original.status !== 'delivered' && !draft.received_at
         ? new Date().toISOString()
@@ -302,16 +349,16 @@ export function JobDetailPage() {
   const sectionDatos = (
     <DetailSection title="Datos del pedido" description="Identificación, cliente y programación.">
       <DetailGrid>
-        <DetailField label="Número de pedido">
-          <p className="px-1.5 py-1 text-sm text-gray-500">
-            {isNew ? 'Se genera automáticamente al guardar' : draft.job_number || '—'}
-          </p>
-        </DetailField>
+        {!isNew && (
+          <DetailField label="Número de pedido">
+            <p className="px-1.5 py-1 text-sm text-gray-500">{draft.job_number || '—'}</p>
+          </DetailField>
+        )}
         <DetailField label="Tipo">
           <InlineField type="buttons" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
         </DetailField>
 
-        <DetailField label="Cliente">
+        <DetailField label="Cliente" required error={errors.customer_id}>
           <RelationSelect
             value={draft.customer_id || null}
             displayLabel={draft.customer_label || null}
@@ -365,7 +412,11 @@ export function JobDetailPage() {
         <DetailField label="Recolección">
           <InlineField type="buttons" value={draft.origin_type} options={ORIGIN_TYPE_OPTIONS} onChange={(v) => update('origin_type', v)} />
         </DetailField>
-        <DetailField label={draft.origin_type === 'branch' ? 'Sucursal de recolección' : 'Domicilio de recolección'}>
+        <DetailField
+          label={draft.origin_type === 'branch' ? 'Sucursal de recolección' : 'Domicilio de recolección'}
+          required
+          error={draft.origin_type === 'branch' ? errors.origin_branch_location_id : errors.origin_customer_location_id}
+        >
           {draft.origin_type === 'branch' ? (
             <RelationSelect
               value={draft.origin_branch_location_id || null}
@@ -428,14 +479,14 @@ export function JobDetailPage() {
   const sectionDestino = (
     <DetailSection title="Destinatario y entrega" description="Quién recibe y con qué operador/vehículo se entrega.">
       <DetailGrid>
-        <DetailField label="Destinatario">
+        <DetailField label="Destinatario" required error={errors.receiver_name}>
           <InlineField value={draft.receiver_name} onChange={(v) => update('receiver_name', v)} placeholder="Quién recibe…" />
         </DetailField>
         <DetailField label="Tel. destinatario">
           <InlineField value={draft.receiver_phone} onChange={(v) => update('receiver_phone', v)} />
         </DetailField>
 
-        <DetailField label="Domicilio de entrega">
+        <DetailField label="Domicilio de entrega" required error={errors.customer_location_id}>
           <RelationSelect
             value={draft.customer_location_id || null}
             displayLabel={draft.customer_location_label || null}
@@ -603,7 +654,18 @@ export function JobDetailPage() {
                   Crear pedido
                 </Button>
               ) : (
-                <Button onClick={() => setStep((s) => s + 1)}>Siguiente</Button>
+                <Button
+                  onClick={() => {
+                    const stepErrors = validateStep(step)
+                    if (Object.keys(stepErrors).length > 0) {
+                      setErrors((current) => ({ ...current, ...stepErrors }))
+                      return
+                    }
+                    setStep((s) => s + 1)
+                  }}
+                >
+                  Siguiente
+                </Button>
               )}
             </div>
           }
