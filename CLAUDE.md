@@ -545,6 +545,19 @@ ficha normal. Si algún otro módulo con muchos campos (Clientes, Rutas)
 tiene la misma queja de scroll al crear, replicar este mismo patrón en
 vez de inventar uno nuevo — pero solo para creación, no para edición.
 
+### Error boundary global (agregado en esta fase)
+
+La app **no tenía ningún React error boundary** — cualquier excepción de
+render no capturada tumbaba todo el árbol de React y dejaba la pantalla
+en blanco sin ningún mensaje (reportado por el usuario al crear un
+pedido). Se agregó `src/components/ErrorBoundary.tsx` envolviendo toda
+la app en `main.tsx` (fuera de `QueryClientProvider`/`BrowserRouter`):
+si algo truena, ahora se ve un mensaje con el error real + botón
+Recargar, en vez de blanco total. Esto no corrige la causa raíz de
+ningún bug puntual — es la red de seguridad para que un error futuro sea
+diagnosticable (leer el mensaje en pantalla o la consola) en vez de
+silencioso.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
