@@ -9,6 +9,7 @@ import { JobsTable } from './components/JobsTable'
 import { JobForm, toJobInsert, type JobFormValues } from './components/JobForm'
 import { useCreateJob, useDeleteJob, useJobsQuery, useUpdateJob, PAGE_SIZE } from './hooks/useJobs'
 import { JOB_STATUSES, type JobFilters, type JobSort, type JobWithRelations } from './api/jobsApi'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 type DrawerState = { mode: 'create' } | { mode: 'edit'; job: JobWithRelations } | null
 
@@ -49,6 +50,7 @@ export function JobsPage() {
   }
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -125,5 +127,6 @@ export function JobsPage() {
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+    </PageScroll>
   )
 }

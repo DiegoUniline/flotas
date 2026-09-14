@@ -4,12 +4,14 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { useCustomer } from '@/features/customers/hooks/useCustomerDetail'
 import { CustomerLocationsSection } from './components/CustomerLocationsSection'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>()
   const customerQuery = useCustomer(id)
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <Link to="/clientes" className="flex w-fit items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
         <ArrowLeft size={15} strokeWidth={2} />
@@ -36,5 +38,6 @@ export function CustomerDetailPage() {
         </>
       )}
     </div>
+    </PageScroll>
   )
 }

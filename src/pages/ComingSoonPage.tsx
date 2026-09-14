@@ -1,7 +1,9 @@
 import { EmptyState } from '@/components/ui/EmptyState'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 export function ComingSoonPage({ title }: { title: string }) {
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div>
         <h1 className="text-lg font-semibold text-ink">{title}</h1>
@@ -13,5 +15,6 @@ export function ComingSoonPage({ title }: { title: string }) {
         />
       </div>
     </div>
+    </PageScroll>
   )
 }

@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
+import type { DateRangeValue } from '@/lib/dateRanges'
 
 export type Vehicle = Tables<'vehicles'>
 export type VehicleInsert = Omit<TablesInsert<'vehicles'>, 'organization_id'>
@@ -9,6 +11,7 @@ export interface VehicleWithRelations extends Vehicle {
   vehicle_types: { name: string } | null
   vehicle_groups: { name: string } | null
   drivers: { first_name: string; last_name: string } | null
+  locations: { name: string } | null
 }
 
 export const VEHICLE_STATUSES = [
@@ -24,9 +27,9 @@ export type VehicleSortColumn = 'economic_number' | 'plate' | 'brand' | 'created
 
 export interface VehicleFilters {
   search: string
-  vehicleTypeId: string | null
-  status: string | null
-  active: boolean | null
+  dateRange: DateRangeValue
+  advanced: AppliedFilter[]
+  groupBy: string | null
 }
 
 export interface VehicleSort {
@@ -39,7 +42,11 @@ function escapeIlikeTerm(value: string) {
 }
 
 const VEHICLE_SELECT_WITH_RELATIONS =
-  '*, vehicle_types(name), vehicle_groups(name), drivers!vehicles_assigned_driver_id_fkey(first_name, last_name)'
+  '*, vehicle_types(name), vehicle_groups(name), drivers!vehicles_assigned_driver_id_fkey(first_name, last_name), locations(name)'
+
+/** Tamaño de página normal; cuando hay agrupación se trae un lote más grande
+ * para que los grupos no queden cortados a la mitad entre páginas. */
+const GROUPED_PAGE_SIZE = 300
 
 export async function fetchVehicles(
   organizationId: string,
@@ -58,23 +65,31 @@ export async function fetchVehicles(
   if (search) {
     query = query.or(`economic_number.ilike.%${search}%,plate.ilike.%${search}%,brand.ilike.%${search}%`)
   }
-  if (filters.vehicleTypeId) {
-    query = query.eq('vehicle_type_id', filters.vehicleTypeId)
-  }
-  if (filters.status) {
-    query = query.eq('status', filters.status)
-  }
-  if (filters.active !== null) {
-    query = query.eq('active', filters.active)
-  }
+  if (filters.dateRange.from) query = query.gte('created_at', filters.dateRange.from)
+  if (filters.dateRange.to) query = query.lte('created_at', `${filters.dateRange.to}T23:59:59`)
 
-  const from = page * pageSize
-  const to = from + pageSize - 1
-  query = query.order(sort.column, { ascending: sort.direction === 'asc' }).range(from, to)
+  query = applyFilters(query, filters.advanced)
+
+  const effectivePageSize = filters.groupBy ? GROUPED_PAGE_SIZE : pageSize
+  const effectivePage = filters.groupBy ? 0 : page
+  const from = effectivePage * effectivePageSize
+  const to = from + effectivePageSize - 1
+
+  const orderColumn = filters.groupBy ?? sort.column
+  query = query.order(orderColumn, { ascending: true }).range(from, to)
+  if (filters.groupBy) {
+    query = query.order(sort.column, { ascending: sort.direction === 'asc' })
+  }
 
   const { data, error, count } = await query
   if (error) throw error
   return { rows: (data ?? []) as unknown as VehicleWithRelations[], count: count ?? 0 }
+}
+
+export async function fetchVehicleById(id: string): Promise<VehicleWithRelations> {
+  const { data, error } = await supabase.from('vehicles').select(VEHICLE_SELECT_WITH_RELATIONS).eq('id', id).single()
+  if (error) throw error
+  return data as unknown as VehicleWithRelations
 }
 
 export async function createVehicle(organizationId: string, input: VehicleInsert): Promise<Vehicle> {
@@ -117,6 +132,29 @@ export async function fetchVehicleTypeOptions(organizationId: string): Promise<V
   return data ?? []
 }
 
+export async function searchVehicleTypes(organizationId: string, query: string): Promise<VehicleTypeOption[]> {
+  let q = supabase
+    .from('vehicle_types')
+    .select('id, name')
+    .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
+    .eq('active', true)
+
+  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+  const { data, error } = await q.order('name', { ascending: true }).limit(20)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createVehicleType(organizationId: string, name: string): Promise<VehicleTypeOption> {
+  const { data, error } = await supabase
+    .from('vehicle_types')
+    .insert({ organization_id: organizationId, name })
+    .select('id, name')
+    .single()
+  if (error) throw error
+  return data
+}
+
 export interface VehicleGroupOption {
   id: string
   name: string
@@ -131,6 +169,24 @@ export async function fetchVehicleGroupOptions(organizationId: string): Promise<
     .order('name', { ascending: true })
   if (error) throw error
   return data ?? []
+}
+
+export async function searchVehicleGroups(organizationId: string, query: string): Promise<VehicleGroupOption[]> {
+  let q = supabase.from('vehicle_groups').select('id, name').eq('organization_id', organizationId).eq('active', true)
+  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+  const { data, error } = await q.order('name', { ascending: true }).limit(20)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function createVehicleGroup(organizationId: string, name: string): Promise<VehicleGroupOption> {
+  const { data, error } = await supabase
+    .from('vehicle_groups')
+    .insert({ organization_id: organizationId, name })
+    .select('id, name')
+    .single()
+  if (error) throw error
+  return data
 }
 
 export interface VehicleOption {

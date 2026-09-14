@@ -40,7 +40,7 @@ export function AppShell() {
         <Header onToggleSidebar={() => setCollapsed((current) => !current)} />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar collapsed={collapsed} />
-          <main className="flex-1 overflow-y-auto bg-gray-50">
+          <main className="flex-1 overflow-hidden bg-gray-50">
             <Outlet />
           </main>
         </div>

@@ -275,6 +275,124 @@ activas" ni "ETA promedio"** — no existe motor de alertas (Fase 6 del
 roadmap) ni tracking en vivo, así que no hay dato real que mostrar ahí;
 agregarlas cuando esas piezas existan, no antes.
 
+## Patrón de interacción estilo Odoo (agregado en esta fase — reemplaza el anterior)
+
+Pedido explícito del usuario, con referencia directa a Odoo. Es el estándar
+global nuevo: listas densas 90/10, barra universal de fecha+búsqueda+filtros,
+vistas de detalle con edición en línea (nada de Drawer para crear/editar),
+4 columnas etiqueta/valor, selectores relacionales con creación en contexto,
+pestañas de información relacionada. **`features/locations` (Sucursales) ya
+NO es el patrón de referencia** — lo es **`features/vehicles`** (`VehiclesPage`
++ `VehicleDetailPage`), la primera migración completa a este sistema.
+Sucursales/Operadores/Clientes/Pedidos/Rutas siguen en el patrón viejo
+(Drawer + formulario) y **hay que migrarlos al nuevo** siguiendo exactamente
+la estructura de Vehículos — no eran incorrectos, son la fase anterior.
+
+### Piezas compartidas (`src/components/ui`, `src/lib`, `src/hooks`)
+
+- **`ListToolbar`** + **`DateRangeFilter`** + **`FilterPanel`**: la barra
+  universal (fecha | buscador | filtros), en ese orden. `DateRangeFilter`
+  usa `lib/dateRanges.ts` (presets Hoy/Ayer/Esta semana/Semana pasada/Este
+  mes/Mes pasado/Este año/Rango personalizado/Todas las fechas) — cada
+  módulo decide sobre qué columna de fecha filtra (pasa `dateRange` +
+  `onDateRangeChange`, y en su `fetch...` aplica `.gte()/.lte()` sobre esa
+  columna; Vehículos usa `created_at` por defecto). `FilterPanel` es
+  genérico por config: `FilterFieldDef[]` (campo+tipo: text/number/date/
+  select/boolean, con sus operadores en `lib/queryFilters.ts` →
+  `OPERATORS_BY_TYPE`) y `GroupFieldDef[]` para "Agrupar por". Los filtros
+  activos se aplican con `applyFilters(query, appliedFilters)` — genérico,
+  funciona sobre cualquier query de Supabase. Las etiquetas de filtros
+  activos y "Limpiar todo" ya vienen incluidas en `ListToolbar`.
+- **Agrupar por — limitación real, documentada a propósito:** agrupar
+  bucketiza en el cliente las filas ya traídas (`lib/groupRows.ts`), no hace
+  un `GROUP BY` en la base. Para que un grupo no quede cortado entre
+  páginas, cuando `groupBy` está activo el fetch trae un lote más grande
+  (`GROUPED_PAGE_SIZE = 300` en `vehiclesApi.ts`) en vez de paginar, y la
+  paginación se oculta. Con cientos de registros por organización (el caso
+  típico PyME) es correcto; si algún módulo crece más, revisar antes de
+  copiar el patrón tal cual.
+- **`TableScrollArea`**: da el 90/10 real — el `<thead>` de cada tabla debe
+  llevar `className="sticky top-0 z-10"` (ver `VehiclesTable.tsx`). Requiere
+  que la página raíz sea `<div className="flex h-full flex-col">` con el
+  header/toolbar en `shrink-0` y el contenedor de la tabla en
+  `flex-1 min-h-0 overflow-hidden`. Esto solo funciona porque **`AppShell`
+  cambió `<main>` de `overflow-y-auto` a `overflow-hidden`** — cada página
+  ahora es responsable de su propio scroll. Las páginas que NO usan el
+  layout de lista (fichas, "Próximamente") se envuelven en
+  **`<PageScroll>`** (`h-full overflow-y-auto`) para no quedar cortadas;
+  ya se aplicó a todas las páginas existentes menos Vehículos.
+- **`InlineField`**: el campo "se ve como texto, es un input real". No es
+  un div que se cambia por un input al hacer clic — siempre es el control
+  real (input/select/textarea) con borde transparente en reposo y borde
+  normal al enfocar. Así Tab funciona nativo entre campos sin lógica
+  adicional. `readOnly` para campos calculados/sin permiso (se ve texto
+  plano, nunca un input deshabilitado con aspecto de campo vacío).
+- **`DetailGrid` + `DetailField`**: cada `DetailField` es su propio par
+  etiqueta(120px)/valor(1fr); `DetailGrid` los acomoda 2 por fila
+  (`sm:grid-cols-2`) → el efecto visual es Etiqueta|Valor|Etiqueta|Valor.
+  `full` hace que un campo ocupe la fila completa (para notas, texto largo).
+  En móvil cae a 1 columna automáticamente.
+- **`SaveDiscardBar`**: no se autoguarda por campo. Cada detalle mantiene
+  un `draft` en estado local; el botón aparece solo si `draft` difiere del
+  original (`dirty`). Guardar dispara la mutación real; Descartar revierte
+  el draft (o navega atrás si es un registro nuevo sin guardar). Hay un
+  guard de `beforeunload` para cerrar pestaña/recargar con cambios sin
+  guardar. **Limitación real:** no hay bloqueo de navegación interna
+  (sidebar, atrás del navegador) más allá del botón "volver" explícito de
+  cada ficha — bloquear cualquier navegación de React Router requeriría
+  migrar de `<BrowserRouter>` a `createBrowserRouter` (data router) para
+  poder usar `useBlocker`, que no se hizo en esta fase.
+- **`Tabs`**: pestañas simples controladas (`items`, `active`, `onChange`),
+  con contador opcional. Cada ficha decide qué pestañas le aplican — nunca
+  mostrar una pestaña sin datos reales detrás.
+- **`RelationSelect`**: combobox genérico con búsqueda real en base
+  (`onSearch: (query) => Promise<RelationOption[]>`, `RelationOption =
+  {id, label}` — si la tabla de origen no tiene esa forma exacta, mapear
+  en el sitio de uso, ver `VehicleDetailPage.tsx`) y creación en contexto
+  opcional vía `renderCreateForm` (abre un `Drawer` con el formulario que
+  le pases; al llamar `onCreated({id,label})` se selecciona automáticamente
+  y se cierra todo). El draft del registro original NUNCA se pierde durante
+  este flujo porque la creación vive en un Drawer superpuesto, no en una
+  navegación — el estado del padre sigue montado. `onSearch` se guarda en
+  un `ref` internamente (no en las deps del efecto) porque casi siempre es
+  un closure nuevo en cada render del padre; si no fuera así, se dispararía
+  una búsqueda de más en cada tecleo de cualquier otro campo del formulario.
+  Reutilizar formularios de creación existentes en vez de duplicarlos: ver
+  `LocationQuickCreate.tsx`/`DriverQuickCreate.tsx` (envuelven
+  `LocationForm`/`DriverForm` + su mutación de creación real) y
+  `VehicleTypeQuickForm.tsx`/`VehicleGroupQuickForm.tsx` (catálogos
+  simples, solo nombre).
+- **Caso especial — relaciones con lógica de negocio propia:** el operador
+  asignado a un vehículo (`vehicles.assigned_driver_id`) **no** pasa por el
+  draft/Guardar genérico — usa `VehicleAssignmentField.tsx`, un
+  `RelationSelect` sin `renderCreateForm` que al seleccionar llama de
+  inmediato a las RPCs `assign_vehicle_to_driver`/`unassign_vehicle` (ver
+  sección de Fase 4 arriba). Si se hubiera dejado como campo normal del
+  draft, un `update` directo habría desincronizado
+  `vehicle_driver_assignments`. Cualquier relación con un efecto de negocio
+  además de "guardar el FK" necesita este mismo tratamiento: sacarla del
+  draft genérico y resolverla con su propia mutación inmediata.
+
+### Documentos del vehículo (lo que pediste sobre seguro/póliza)
+
+`features/vehicles/api/vehicleDocumentsApi.ts` usa la tabla genérica
+`entity_documents` ya existente, con `entity_type = 'vehicle'`. Tipos
+sugeridos en `VEHICLE_DOCUMENT_TYPES` (seguro, tarjeta de circulación,
+verificación, permiso, otro) — texto libre, no enum de Postgres, mismo
+criterio que en el resto del esquema. Pestaña "Documentos" en la ficha del
+vehículo, cada documento con su propio archivo real adjunto vía
+`AttachmentUploader` (`entity_type: 'vehicle_document'`, `entity_id` = id
+del documento). Mismo patrón exacto que licencias/certificaciones de
+operador — replicarlo para otras entidades (clientes, operadores ya lo
+tienen) sin inventar uno nuevo.
+
+### Pendiente inmediato
+
+Migrar al patrón nuevo, en este orden sugerido (del más simple al más
+grande): Sucursales → Operadores (ya tiene sub-recursos, buena prueba de
+Tabs) → Clientes → Pedidos (buen caso de `RelationSelect` sin creación,
+solo búsqueda, para cliente/domicilio/operador/vehículo) → Rutas.
+
 ## Sistema de diseño
 
 - Tipografía: Inter (cargada en `index.html` desde Google Fonts).

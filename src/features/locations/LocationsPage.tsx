@@ -15,6 +15,7 @@ import {
   PAGE_SIZE,
 } from './hooks/useLocations'
 import { LOCATION_TYPES, type Location, type LocationFilters, type LocationSort } from './api/locationsApi'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 type DrawerState = { mode: 'create' } | { mode: 'edit'; location: Location } | null
 
@@ -55,6 +56,7 @@ export function LocationsPage() {
   }
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -151,5 +153,6 @@ export function LocationsPage() {
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+    </PageScroll>
   )
 }

@@ -5,6 +5,9 @@ import { fetchLocationOptions } from '@/features/locations/api/locationsApi'
 import { fetchDriverOptions } from '@/features/drivers/api/driversApi'
 import {
   createVehicle,
+  createVehicleGroup,
+  createVehicleType,
+  fetchVehicleById,
   fetchVehicleGroupOptions,
   fetchVehicleTypeOptions,
   fetchVehicles,
@@ -30,6 +33,14 @@ export function useVehiclesQuery(filters: VehicleFilters, sort: VehicleSort, pag
 }
 
 export { PAGE_SIZE }
+
+export function useVehicle(id: string | undefined) {
+  return useQuery({
+    queryKey: ['vehicle', id],
+    queryFn: () => fetchVehicleById(id!),
+    enabled: !!id,
+  })
+}
 
 export function useLocationOptions() {
   const { activeOrg } = useOrg()
@@ -93,8 +104,9 @@ export function useUpdateVehicle() {
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: VehicleUpdate }) => updateVehicle(id, input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['vehicles', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['vehicle', variables.id] })
       showToast('Vehículo actualizado', 'success')
     },
     onError: () => showToast('No se pudo actualizar el vehículo', 'error'),
@@ -113,5 +125,29 @@ export function useDeleteVehicle() {
       showToast('Vehículo eliminado', 'success')
     },
     onError: () => showToast('No se pudo eliminar el vehículo', 'error'),
+  })
+}
+
+export function useCreateVehicleType() {
+  const { activeOrg } = useOrg()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (name: string) => createVehicleType(activeOrg!.id, name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vehicle-type-options', activeOrg?.id] })
+    },
+  })
+}
+
+export function useCreateVehicleGroup() {
+  const { activeOrg } = useOrg()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (name: string) => createVehicleGroup(activeOrg!.id, name),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vehicle-group-options', activeOrg?.id] })
+    },
   })
 }

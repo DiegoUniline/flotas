@@ -95,6 +95,21 @@ export async function fetchLocationOptions(organizationId: string): Promise<Loca
   return data ?? []
 }
 
+export async function searchLocations(organizationId: string, query: string): Promise<LocationOption[]> {
+  let q = supabase
+    .from('locations')
+    .select('id, name')
+    .eq('organization_id', organizationId)
+    .eq('active', true)
+    .is('deleted_at', null)
+
+  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+
+  const { data, error } = await q.order('name', { ascending: true }).limit(20)
+  if (error) throw error
+  return data ?? []
+}
+
 export async function softDeleteLocation(id: string): Promise<void> {
   const { error } = await supabase
     .from('locations')

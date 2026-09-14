@@ -36,6 +36,25 @@ export async function fetchAssignmentHistory(driverId: string): Promise<Assignme
   return (data ?? []) as unknown as AssignmentHistoryRow[]
 }
 
+export interface VehicleAssignmentHistoryRow {
+  id: string
+  starts_at: string
+  ends_at: string | null
+  active: boolean
+  notes: string | null
+  drivers: { first_name: string; last_name: string } | null
+}
+
+export async function fetchVehicleAssignmentHistory(vehicleId: string): Promise<VehicleAssignmentHistoryRow[]> {
+  const { data, error } = await supabase
+    .from('vehicle_driver_assignments')
+    .select('id, starts_at, ends_at, active, notes, drivers(first_name, last_name)')
+    .eq('vehicle_id', vehicleId)
+    .order('starts_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as unknown as VehicleAssignmentHistoryRow[]
+}
+
 export async function assignVehicleToDriver(vehicleId: string, driverId: string, notes?: string): Promise<void> {
   const { error } = await supabase.rpc('assign_vehicle_to_driver', {
     p_vehicle_id: vehicleId,

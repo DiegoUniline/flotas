@@ -7,6 +7,7 @@ import { DRIVER_STATUSES } from '@/features/drivers/api/driversApi'
 import { DriverLicensesSection } from './components/DriverLicensesSection'
 import { DriverCertificationsSection } from './components/DriverCertificationsSection'
 import { DriverAssignmentSection } from './components/DriverAssignmentSection'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 const STATUS_LABELS = Object.fromEntries(DRIVER_STATUSES.map((s) => [s.value, s.label]))
 
@@ -15,6 +16,7 @@ export function DriverDetailPage() {
   const driverQuery = useDriver(id)
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <Link to="/operadores" className="flex w-fit items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
         <ArrowLeft size={15} strokeWidth={2} />
@@ -53,5 +55,6 @@ export function DriverDetailPage() {
         </>
       )}
     </div>
+    </PageScroll>
   )
 }

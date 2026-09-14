@@ -9,6 +9,7 @@ import { CustomersTable } from './components/CustomersTable'
 import { CustomerForm, toCustomerInsert, type CustomerFormValues } from './components/CustomerForm'
 import { useCreateCustomer, useCustomersQuery, useDeleteCustomer, useUpdateCustomer, PAGE_SIZE } from './hooks/useCustomers'
 import { CUSTOMER_STATUSES, type Customer, type CustomerFilters, type CustomerSort } from './api/customersApi'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 type DrawerState = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null
 
@@ -46,6 +47,7 @@ export function CustomersPage() {
   }
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -120,5 +122,6 @@ export function CustomersPage() {
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+    </PageScroll>
   )
 }

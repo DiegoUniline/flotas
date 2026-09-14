@@ -11,6 +11,7 @@ import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
 import { useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
 import { useControlKpis, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 const LOCATION_TYPE_LABELS = Object.fromEntries(LOCATION_TYPES.map((t) => [t.value, t.label]))
 const ROUTE_STATUS_LABELS = Object.fromEntries(ROUTE_STATUSES.map((s) => [s.value, s.label]))
@@ -128,6 +129,7 @@ export function ControlMapPage() {
   const nextStop = (selectedStopsQuery.data ?? []).find((s) => s.status === 'pending' || s.status === 'in_progress')
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -293,5 +295,6 @@ export function ControlMapPage() {
         </p>
       )}
     </div>
+    </PageScroll>
   )
 }

@@ -10,6 +10,7 @@ import { Can } from '@/components/Can'
 import { useCreateRoutePlan, useRoutePlansQuery } from './hooks/useRoutes'
 import { RoutePlanForm, toRoutePlanInsert, type RoutePlanFormValues } from './components/RoutePlanForm'
 import { ROUTE_STATUSES, type RoutePlanFilters } from './api/routePlansApi'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 const STATUS_LABELS = Object.fromEntries(ROUTE_STATUSES.map((s) => [s.value, s.label]))
 const STATUS_TONE: Record<string, string> = {
@@ -39,6 +40,7 @@ export function RoutesPage() {
   }
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -126,5 +128,6 @@ export function RoutesPage() {
         <RoutePlanForm loading={createMutation.isPending} onSubmit={handleSubmit} onCancel={() => setDrawerOpen(false)} />
       </Drawer>
     </div>
+    </PageScroll>
   )
 }

@@ -18,6 +18,7 @@ import {
 } from '@/features/routes/hooks/useRoutes'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 const ROUTE_STATUS_LABELS = Object.fromEntries(ROUTE_STATUSES.map((s) => [s.value, s.label]))
 const STOP_STATUS_LABELS = Object.fromEntries(STOP_STATUSES.map((s) => [s.value, s.label]))
@@ -48,6 +49,7 @@ export function RouteDetailPage() {
   const nextStatus = routeQuery.data ? NEXT_ROUTE_STATUS[routeQuery.data.status] : undefined
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <Link to="/rutas" className="flex w-fit items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
         <ArrowLeft size={15} strokeWidth={2} />
@@ -190,5 +192,6 @@ export function RouteDetailPage() {
         )}
       </Drawer>
     </div>
+    </PageScroll>
   )
 }

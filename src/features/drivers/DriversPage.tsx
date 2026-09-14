@@ -9,6 +9,7 @@ import { DriversTable } from './components/DriversTable'
 import { DriverForm, toDriverInsert, type DriverFormValues } from './components/DriverForm'
 import { useCreateDriver, useDeleteDriver, useDriversQuery, useUpdateDriver, PAGE_SIZE } from './hooks/useDrivers'
 import { DRIVER_STATUSES, type Driver, type DriverFilters, type DriverSort } from './api/driversApi'
+import { PageScroll } from '@/components/ui/PageScroll'
 
 type DrawerState = { mode: 'create' } | { mode: 'edit'; driver: Driver } | null
 
@@ -46,6 +47,7 @@ export function DriversPage() {
   }
 
   return (
+    <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -133,5 +135,6 @@ export function DriversPage() {
         onCancel={() => setDeleteTarget(null)}
       />
     </div>
+    </PageScroll>
   )
 }
