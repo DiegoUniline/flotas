@@ -127,7 +127,7 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
         {locating ? 'Ubicando…' : label}
       </button>
       {error && <p className="text-xs text-red-600">{error}</p>}
-      <div ref={containerRef} className="h-40 w-full rounded-md border border-gray-200" />
+      <div ref={containerRef} className="h-64 w-64 max-w-full rounded-md border border-gray-200" />
       {latitude != null && longitude != null && <p className="text-xs text-gray-400">Arrastra el pin o toca el mapa para corregirlo.</p>}
     </div>
   )
