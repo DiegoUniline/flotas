@@ -5,20 +5,27 @@ export type Vehicle = Tables<'vehicles'>
 export type VehicleInsert = Omit<TablesInsert<'vehicles'>, 'organization_id'>
 export type VehicleUpdate = TablesUpdate<'vehicles'>
 
-export const VEHICLE_TYPES = [
-  { value: 'truck', label: 'Camión' },
-  { value: 'van', label: 'Van' },
-  { value: 'pickup', label: 'Pickup' },
-  { value: 'car', label: 'Automóvil' },
-  { value: 'trailer', label: 'Remolque' },
-  { value: 'other', label: 'Otro' },
+export interface VehicleWithRelations extends Vehicle {
+  vehicle_types: { name: string } | null
+  vehicle_groups: { name: string } | null
+  drivers: { first_name: string; last_name: string } | null
+}
+
+export const VEHICLE_STATUSES = [
+  { value: 'available', label: 'Disponible' },
+  { value: 'assigned', label: 'Asignado' },
+  { value: 'in_route', label: 'En ruta' },
+  { value: 'maintenance', label: 'En mantenimiento' },
+  { value: 'out_of_service', label: 'Fuera de servicio' },
+  { value: 'inactive', label: 'Inactivo' },
 ] as const
 
 export type VehicleSortColumn = 'economic_number' | 'plate' | 'brand' | 'created_at'
 
 export interface VehicleFilters {
   search: string
-  vehicleType: string | null
+  vehicleTypeId: string | null
+  status: string | null
   active: boolean | null
 }
 
@@ -31,16 +38,19 @@ function escapeIlikeTerm(value: string) {
   return value.replace(/[%,()]/g, ' ').trim()
 }
 
+const VEHICLE_SELECT_WITH_RELATIONS =
+  '*, vehicle_types(name), vehicle_groups(name), drivers!vehicles_assigned_driver_id_fkey(first_name, last_name)'
+
 export async function fetchVehicles(
   organizationId: string,
   filters: VehicleFilters,
   sort: VehicleSort,
   page: number,
   pageSize: number,
-): Promise<{ rows: Vehicle[]; count: number }> {
+): Promise<{ rows: VehicleWithRelations[]; count: number }> {
   let query = supabase
     .from('vehicles')
-    .select('*', { count: 'exact' })
+    .select(VEHICLE_SELECT_WITH_RELATIONS, { count: 'exact' })
     .eq('organization_id', organizationId)
     .is('deleted_at', null)
 
@@ -48,8 +58,11 @@ export async function fetchVehicles(
   if (search) {
     query = query.or(`economic_number.ilike.%${search}%,plate.ilike.%${search}%,brand.ilike.%${search}%`)
   }
-  if (filters.vehicleType) {
-    query = query.eq('vehicle_type', filters.vehicleType)
+  if (filters.vehicleTypeId) {
+    query = query.eq('vehicle_type_id', filters.vehicleTypeId)
+  }
+  if (filters.status) {
+    query = query.eq('status', filters.status)
   }
   if (filters.active !== null) {
     query = query.eq('active', filters.active)
@@ -61,7 +74,7 @@ export async function fetchVehicles(
 
   const { data, error, count } = await query
   if (error) throw error
-  return { rows: data ?? [], count: count ?? 0 }
+  return { rows: (data ?? []) as unknown as VehicleWithRelations[], count: count ?? 0 }
 }
 
 export async function createVehicle(organizationId: string, input: VehicleInsert): Promise<Vehicle> {
@@ -86,4 +99,36 @@ export async function softDeleteVehicle(id: string): Promise<void> {
     .update({ deleted_at: new Date().toISOString(), active: false })
     .eq('id', id)
   if (error) throw error
+}
+
+export interface VehicleTypeOption {
+  id: string
+  name: string
+}
+
+export async function fetchVehicleTypeOptions(organizationId: string): Promise<VehicleTypeOption[]> {
+  const { data, error } = await supabase
+    .from('vehicle_types')
+    .select('id, name')
+    .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
+    .eq('active', true)
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+export interface VehicleGroupOption {
+  id: string
+  name: string
+}
+
+export async function fetchVehicleGroupOptions(organizationId: string): Promise<VehicleGroupOption[]> {
+  const { data, error } = await supabase
+    .from('vehicle_groups')
+    .select('id, name')
+    .eq('organization_id', organizationId)
+    .eq('active', true)
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data ?? []
 }

@@ -2,9 +2,23 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
-import { VEHICLE_TYPES, type Vehicle, type VehicleSort, type VehicleSortColumn } from '@/features/vehicles/api/vehiclesApi'
+import {
+  VEHICLE_STATUSES,
+  type VehicleSort,
+  type VehicleSortColumn,
+  type VehicleWithRelations,
+} from '@/features/vehicles/api/vehiclesApi'
 
-const VEHICLE_TYPE_LABELS = Object.fromEntries(VEHICLE_TYPES.map((t) => [t.value, t.label]))
+const VEHICLE_STATUS_LABELS = Object.fromEntries(VEHICLE_STATUSES.map((s) => [s.value, s.label]))
+
+const STATUS_TONE: Record<string, string> = {
+  available: 'bg-status-active-bg text-status-active',
+  assigned: 'bg-status-progress-bg text-status-progress',
+  in_route: 'bg-status-progress-bg text-status-progress',
+  maintenance: 'bg-status-stopped-bg text-status-stopped',
+  out_of_service: 'bg-status-delayed-bg text-status-delayed',
+  inactive: 'bg-gray-100 text-gray-500',
+}
 
 interface Column {
   key: VehicleSortColumn
@@ -18,7 +32,7 @@ const COLUMNS: Column[] = [
 ]
 
 interface VehiclesTableProps {
-  rows: Vehicle[]
+  rows: VehicleWithRelations[]
   loading: boolean
   error: boolean
   hasFilters: boolean
@@ -26,8 +40,8 @@ interface VehiclesTableProps {
   onSortChange: (sort: VehicleSort) => void
   onRetry: () => void
   onCreate: () => void
-  onEdit: (vehicle: Vehicle) => void
-  onDelete: (vehicle: Vehicle) => void
+  onEdit: (vehicle: VehicleWithRelations) => void
+  onDelete: (vehicle: VehicleWithRelations) => void
 }
 
 export function VehiclesTable({
@@ -47,7 +61,7 @@ export function VehiclesTable({
   }
 
   if (loading) {
-    return <TableSkeleton columns={6} />
+    return <TableSkeleton columns={7} />
   }
 
   if (rows.length === 0) {
@@ -97,6 +111,7 @@ export function VehiclesTable({
             </th>
           ))}
           <th className="px-4 py-2">Tipo</th>
+          <th className="px-4 py-2">Operador</th>
           <th className="px-4 py-2">Estado</th>
           <th className="px-4 py-2" />
         </tr>
@@ -109,16 +124,15 @@ export function VehiclesTable({
             <td className="px-4 py-2 text-gray-700">
               {[vehicle.brand, vehicle.model].filter(Boolean).join(' ') || '—'}
             </td>
+            <td className="px-4 py-2 text-gray-700">{vehicle.vehicle_types?.name ?? '—'}</td>
             <td className="px-4 py-2 text-gray-700">
-              {VEHICLE_TYPE_LABELS[vehicle.vehicle_type] ?? vehicle.vehicle_type}
+              {vehicle.drivers ? `${vehicle.drivers.first_name} ${vehicle.drivers.last_name}` : '—'}
             </td>
             <td className="px-4 py-2">
               <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                  vehicle.active ? 'bg-status-active-bg text-status-active' : 'bg-gray-100 text-gray-500'
-                }`}
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[vehicle.status] ?? 'bg-gray-100 text-gray-500'}`}
               >
-                {vehicle.active ? 'Activo' : 'Inactivo'}
+                {VEHICLE_STATUS_LABELS[vehicle.status] ?? vehicle.status}
               </span>
             </td>
             <td className="px-4 py-2 text-right">

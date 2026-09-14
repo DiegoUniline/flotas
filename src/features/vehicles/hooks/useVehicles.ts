@@ -2,8 +2,11 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useOrg } from '@/context/OrgContext'
 import { useToast } from '@/context/ToastContext'
 import { fetchLocationOptions } from '@/features/locations/api/locationsApi'
+import { fetchDriverOptions } from '@/features/drivers/api/driversApi'
 import {
   createVehicle,
+  fetchVehicleGroupOptions,
+  fetchVehicleTypeOptions,
   fetchVehicles,
   softDeleteVehicle,
   updateVehicle,
@@ -34,6 +37,36 @@ export function useLocationOptions() {
   return useQuery({
     queryKey: ['location-options', activeOrg?.id],
     queryFn: () => fetchLocationOptions(activeOrg!.id),
+    enabled: !!activeOrg,
+  })
+}
+
+export function useVehicleTypeOptions() {
+  const { activeOrg } = useOrg()
+
+  return useQuery({
+    queryKey: ['vehicle-type-options', activeOrg?.id],
+    queryFn: () => fetchVehicleTypeOptions(activeOrg!.id),
+    enabled: !!activeOrg,
+  })
+}
+
+export function useVehicleGroupOptions() {
+  const { activeOrg } = useOrg()
+
+  return useQuery({
+    queryKey: ['vehicle-group-options', activeOrg?.id],
+    queryFn: () => fetchVehicleGroupOptions(activeOrg!.id),
+    enabled: !!activeOrg,
+  })
+}
+
+export function useVehicleDriverOptions() {
+  const { activeOrg } = useOrg()
+
+  return useQuery({
+    queryKey: ['driver-options', activeOrg?.id],
+    queryFn: () => fetchDriverOptions(activeOrg!.id),
     enabled: !!activeOrg,
   })
 }

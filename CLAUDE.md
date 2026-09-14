@@ -91,6 +91,65 @@ Los permisos `tracking.live`, `tracking.history`, `devices.manage`,
 `permissions` sin tablas correspondientes — mismo trato: no inventar esquema
 sin confirmar primero.
 
+### Fase 2a — Fleet core (agregada en esta fase)
+
+Siguiendo el roadmap de 195 puntos que definió el usuario para FLOTAA como
+SaaS completo (fases 0–10), esta fase cubre "Fleet core": catálogo de
+vehículos y operadores. Fase 0/1 (multitenancy) ya estaban completas desde
+el arranque del proyecto.
+
+Tablas nuevas, todas con RLS y triggers `set_updated_at`/`audit_trigger`:
+
+- **`vehicle_types`**: catálogo de tipos de vehículo. `organization_id null`
+  = default del sistema (sembrados: truck/van/pickup/car/trailer/other),
+  `organization_id` propio = tipo personalizado de esa empresa. Select:
+  default del sistema o de la propia org. Insert/update/delete de tipos
+  propios: `has_permission(org, 'settings.manage')` (no existe un permiso
+  `vehicle_types.manage` dedicado, se reutilizó el de configuración).
+- **`vehicle_groups`**: grupos jerárquicos (`parent_group_id`) por
+  organización, mismo permiso `settings.manage`.
+- **`drivers`**: operadores/conductores. Mismo patrón que `locations`
+  (soft delete, `active`). RLS con los permisos `drivers.create/edit/delete`
+  ya sembrados desde el inicio.
+- **`driver_licenses`**, **`driver_certifications`**: sub-recursos de un
+  operador. Insert/update/delete gateados por `drivers.edit` (no se creó un
+  permiso separado). **Sin UI todavía** — la tabla existe, el módulo
+  Operadores no las edita aún.
+- **`vehicle_driver_assignments`**: historial de qué operador tuvo cada
+  vehículo (`starts_at`/`ends_at`), separado de `vehicles.assigned_driver_id`
+  (que es solo el operador *actual*, para no depender de leer historial para
+  saber quién trae la unidad hoy). Gateado por `vehicles.edit`. **Sin UI
+  todavía**.
+- **`attachments`**: archivos genéricos (`entity_type`/`entity_id`
+  polimórfico) apuntando al bucket real de Supabase Storage `attachments`
+  (privado). RLS de `storage.objects` exige que el primer segmento del path
+  sea un `organization_id` al que el usuario pertenece — **la convención de
+  path obligatoria es `<organization_id>/<entity_type>/<entity_id>/archivo`**,
+  cualquier subida debe respetarla o la RLS la rechaza. Insert/select/delete
+  solo requieren membresía de la organización (no hay permiso por-módulo a
+  nivel de archivo; la autorización real vive en la fila que referencia el
+  archivo). **Sin UI de carga todavía**.
+- **`entity_documents`**: documentos con vencimiento (seguro, tarjeta de
+  circulación, etc.), referencia opcional a `attachments`. Mismo trato:
+  cualquier miembro de la org puede escribir. **Sin UI todavía**.
+
+`vehicles` se extendió: `vehicle_type_id` (reemplazó la columna de texto
+libre `vehicle_type`, migrada y eliminada), `vehicle_group_id`,
+`assigned_driver_id`, `status` (texto libre con opciones sugeridas en
+`VEHICLE_STATUSES`, no es un enum de Postgres — el propio roadmap pide no
+asumir los mismos estados para todos los clientes; si más adelante se pide
+un catálogo de estados personalizable por org, evaluar tabla dedicada en vez
+de texto libre), `current_odometer`, `odometer_unit`, `fuel_type`, `notes`,
+`image_url`.
+
+**No construido en esta fase (deliberado, evitar sobre-ingeniería):** UI
+para administrar `vehicle_types`/`vehicle_groups` personalizados, licencias,
+certificaciones, historial de asignación vehículo-operador, ni carga de
+archivos/documentos. `custom_field_definitions/values` y `saved_views`
+(Fase 2b del roadmap) tampoco se construyeron — son frameworks genéricos
+grandes, mejor esperar a que 2+ entidades reales los necesiten antes de
+construirlos, para no especular.
+
 ## Sistema de diseño
 
 - Tipografía: Inter (cargada en `index.html` desde Google Fonts).

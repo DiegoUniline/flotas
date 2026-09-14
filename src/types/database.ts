@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          organization_id: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          organization_id: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          organization_id?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -57,6 +104,267 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_certifications: {
+        Row: {
+          certification_number: string | null
+          certification_type: string
+          created_at: string
+          driver_id: string
+          expires_at: string | null
+          id: string
+          issued_at: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          certification_number?: string | null
+          certification_type: string
+          created_at?: string
+          driver_id: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          certification_number?: string | null
+          certification_type?: string
+          created_at?: string
+          driver_id?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_certifications_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_certifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_licenses: {
+        Row: {
+          created_at: string
+          driver_id: string
+          expires_at: string | null
+          id: string
+          issued_at: string | null
+          issuing_country: string | null
+          issuing_state: string | null
+          license_number: string
+          license_type: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          issuing_country?: string | null
+          issuing_state?: string | null
+          license_number: string
+          license_type?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          issuing_country?: string | null
+          issuing_state?: string | null
+          license_number?: string
+          license_type?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_licenses_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_licenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drivers: {
+        Row: {
+          active: boolean
+          birth_date: string | null
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employee_number: string | null
+          first_name: string
+          hire_date: string | null
+          id: string
+          last_name: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          photo_url: string | null
+          primary_location_id: string | null
+          status: string
+          termination_date: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          birth_date?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_number?: string | null
+          first_name: string
+          hire_date?: string | null
+          id?: string
+          last_name: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          photo_url?: string | null
+          primary_location_id?: string | null
+          status?: string
+          termination_date?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          birth_date?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employee_number?: string | null
+          first_name?: string
+          hire_date?: string | null
+          id?: string
+          last_name?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          photo_url?: string | null
+          primary_location_id?: string | null
+          status?: string
+          termination_date?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drivers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drivers_primary_location_id_fkey"
+            columns: ["primary_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_documents: {
+        Row: {
+          attachment_id: string | null
+          created_at: string
+          document_number: string | null
+          document_type: string
+          entity_id: string
+          entity_type: string
+          expires_at: string | null
+          id: string
+          issued_at: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_id?: string | null
+          created_at?: string
+          document_number?: string | null
+          document_type: string
+          entity_id: string
+          entity_type: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_id?: string | null
+          created_at?: string
+          document_number?: string | null
+          document_type?: string
+          entity_id?: string
+          entity_type?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_documents_attachment_id_fkey"
+            columns: ["attachment_id"]
+            isOneToOne: false
+            referencedRelation: "attachments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -448,65 +756,252 @@ export type Database = {
           },
         ]
       }
+      vehicle_driver_assignments: {
+        Row: {
+          active: boolean
+          assigned_by: string | null
+          assignment_type: string
+          created_at: string
+          driver_id: string
+          ends_at: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          starts_at: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          active?: boolean
+          assigned_by?: string | null
+          assignment_type?: string
+          created_at?: string
+          driver_id: string
+          ends_at?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          starts_at?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          active?: boolean
+          assigned_by?: string | null
+          assignment_type?: string
+          created_at?: string
+          driver_id?: string
+          ends_at?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          starts_at?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_driver_assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_driver_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_driver_assignments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_groups: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          parent_group_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          parent_group_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          parent_group_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_groups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_groups_parent_group_id_fkey"
+            columns: ["parent_group_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          icon: string | null
+          id: string
+          key: string | null
+          name: string
+          organization_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          icon?: string | null
+          id?: string
+          key?: string | null
+          name: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          icon?: string | null
+          id?: string
+          key?: string | null
+          name?: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           active: boolean
+          assigned_driver_id: string | null
           brand: string | null
           created_at: string
+          current_odometer: number | null
           deleted_at: string | null
           economic_number: string | null
+          fuel_type: string | null
           id: string
+          image_url: string | null
           last_latitude: number | null
           last_longitude: number | null
           last_position_at: string | null
           location_id: string | null
           model: string | null
+          notes: string | null
+          odometer_unit: string
           organization_id: string
           plate: string | null
+          status: string
           updated_at: string
-          vehicle_type: string
+          vehicle_group_id: string | null
+          vehicle_type_id: string
           vin: string | null
           year: number | null
         }
         Insert: {
           active?: boolean
+          assigned_driver_id?: string | null
           brand?: string | null
           created_at?: string
+          current_odometer?: number | null
           deleted_at?: string | null
           economic_number?: string | null
+          fuel_type?: string | null
           id?: string
+          image_url?: string | null
           last_latitude?: number | null
           last_longitude?: number | null
           last_position_at?: string | null
           location_id?: string | null
           model?: string | null
+          notes?: string | null
+          odometer_unit?: string
           organization_id: string
           plate?: string | null
+          status?: string
           updated_at?: string
-          vehicle_type?: string
+          vehicle_group_id?: string | null
+          vehicle_type_id: string
           vin?: string | null
           year?: number | null
         }
         Update: {
           active?: boolean
+          assigned_driver_id?: string | null
           brand?: string | null
           created_at?: string
+          current_odometer?: number | null
           deleted_at?: string | null
           economic_number?: string | null
+          fuel_type?: string | null
           id?: string
+          image_url?: string | null
           last_latitude?: number | null
           last_longitude?: number | null
           last_position_at?: string | null
           location_id?: string | null
           model?: string | null
+          notes?: string | null
+          odometer_unit?: string
           organization_id?: string
           plate?: string | null
+          status?: string
           updated_at?: string
-          vehicle_type?: string
+          vehicle_group_id?: string | null
+          vehicle_type_id?: string
           vin?: string | null
           year?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicles_assigned_driver_id_fkey"
+            columns: ["assigned_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicles_location_id_fkey"
             columns: ["location_id"]
@@ -519,6 +1014,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_vehicle_group_id_fkey"
+            columns: ["vehicle_group_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_vehicle_type_id_fkey"
+            columns: ["vehicle_type_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_types"
             referencedColumns: ["id"]
           },
         ]

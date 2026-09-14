@@ -1,4 +1,4 @@
-import { Map, Building2, Truck, type LucideIcon } from 'lucide-react'
+import { Map, Building2, Truck, IdCard, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   label: string
@@ -19,7 +19,10 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: 'Flota',
-    items: [{ label: 'Vehículos', to: '/vehiculos', permission: 'vehicles.view', icon: Truck }],
+    items: [
+      { label: 'Vehículos', to: '/vehiculos', permission: 'vehicles.view', icon: Truck },
+      { label: 'Operadores', to: '/operadores', permission: 'drivers.view', icon: IdCard },
+    ],
   },
   { label: 'Mantenimiento', items: [] },
   { label: 'Costos', items: [] },

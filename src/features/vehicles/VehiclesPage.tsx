@@ -12,25 +12,31 @@ import {
   useDeleteVehicle,
   useVehiclesQuery,
   useUpdateVehicle,
+  useVehicleTypeOptions,
   PAGE_SIZE,
 } from './hooks/useVehicles'
-import { VEHICLE_TYPES, type Vehicle, type VehicleFilters, type VehicleSort } from './api/vehiclesApi'
+import { VEHICLE_STATUSES, type VehicleFilters, type VehicleSort, type VehicleWithRelations } from './api/vehiclesApi'
 
-type DrawerState = { mode: 'create' } | { mode: 'edit'; vehicle: Vehicle } | null
+type DrawerState = { mode: 'create' } | { mode: 'edit'; vehicle: VehicleWithRelations } | null
+
+const SELECT_CLASSNAME =
+  'rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500'
 
 export function VehiclesPage() {
-  const [filters, setFilters] = useState<VehicleFilters>({ search: '', vehicleType: null, active: null })
+  const [filters, setFilters] = useState<VehicleFilters>({ search: '', vehicleTypeId: null, status: null, active: null })
   const [sort, setSort] = useState<VehicleSort>({ column: 'economic_number', direction: 'asc' })
   const [page, setPage] = useState(0)
   const [drawer, setDrawer] = useState<DrawerState>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<VehicleWithRelations | null>(null)
 
   const vehiclesQuery = useVehiclesQuery(filters, sort, page)
+  const typeOptions = useVehicleTypeOptions()
   const createMutation = useCreateVehicle()
   const updateMutation = useUpdateVehicle()
   const deleteMutation = useDeleteVehicle()
 
-  const hasFilters = filters.search.trim() !== '' || filters.vehicleType !== null || filters.active !== null
+  const hasFilters =
+    filters.search.trim() !== '' || filters.vehicleTypeId !== null || filters.status !== null || filters.active !== null
 
   function updateFilters(patch: Partial<VehicleFilters>) {
     setFilters((current) => ({ ...current, ...patch }))
@@ -71,14 +77,22 @@ export function VehiclesPage() {
           className="max-w-xs"
         />
         <select
-          value={filters.vehicleType ?? ''}
-          onChange={(e) => updateFilters({ vehicleType: e.target.value || null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          value={filters.vehicleTypeId ?? ''}
+          onChange={(e) => updateFilters({ vehicleTypeId: e.target.value || null })}
+          className={SELECT_CLASSNAME}
         >
           <option value="">Todos los tipos</option>
-          {VEHICLE_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
+          {typeOptions.data?.map((type) => (
+            <option key={type.id} value={type.id}>
+              {type.name}
+            </option>
+          ))}
+        </select>
+        <select value={filters.status ?? ''} onChange={(e) => updateFilters({ status: e.target.value || null })} className={SELECT_CLASSNAME}>
+          <option value="">Todos los estados</option>
+          {VEHICLE_STATUSES.map((status) => (
+            <option key={status.value} value={status.value}>
+              {status.label}
             </option>
           ))}
         </select>
@@ -89,9 +103,9 @@ export function VehiclesPage() {
               active: e.target.value === '' ? null : e.target.value === 'active',
             })
           }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          className={SELECT_CLASSNAME}
         >
-          <option value="">Todos los estados</option>
+          <option value="">Activos e inactivos</option>
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
         </select>
