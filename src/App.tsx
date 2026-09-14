@@ -10,6 +10,7 @@ import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
+import { ControlMapPage } from '@/features/map/ControlMapPage'
 
 export function App() {
   return (
@@ -30,7 +31,8 @@ export function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/sucursales" replace />} />
+            <Route index element={<Navigate to="/centro-de-control" replace />} />
+            <Route path="centro-de-control" element={<ControlMapPage />} />
             <Route path="sucursales" element={<LocationsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

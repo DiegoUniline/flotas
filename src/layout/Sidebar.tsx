@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useMemo } from 'react'
+import { Truck } from 'lucide-react'
 import { NAV_SECTIONS } from './navConfig'
 import { usePermissions } from '@/context/PermissionsContext'
 
@@ -17,13 +18,22 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
 
   return (
     <aside
-      className={`flex h-full flex-col border-r border-gray-200 bg-white transition-all ${collapsed ? 'w-14' : 'w-56'}`}
+      className={`flex h-full flex-col border-r border-gray-200 bg-white transition-all ${collapsed ? 'w-16' : 'w-60'}`}
     >
-      <nav className="flex-1 overflow-y-auto py-3">
+      {!collapsed && (
+        <div className="flex items-center gap-2 px-4 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-500 text-white">
+            <Truck size={18} strokeWidth={2.25} />
+          </span>
+          <span className="text-base font-extrabold tracking-tight text-ink">FLOTAA</span>
+        </div>
+      )}
+
+      <nav className="flex-1 overflow-y-auto px-2 py-2">
         {sections.map((section) => (
-          <div key={section.label} className="mb-4 px-2">
+          <div key={section.label} className="mb-5">
             {!collapsed && (
-              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                 {section.label}
               </p>
             )}
@@ -34,14 +44,15 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
                     to={item.to}
                     title={collapsed ? item.label : undefined}
                     className={({ isActive }) =>
-                      `block rounded-md px-2 py-1.5 text-sm font-medium ${
+                      `group flex items-center gap-2.5 rounded-lg border-l-[3px] px-2.5 py-2 text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-gray-900 text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      } ${collapsed ? 'text-center' : ''}`
+                          ? 'border-accent-500 bg-accent-50 text-accent-600'
+                          : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-ink'
+                      } ${collapsed ? 'justify-center' : ''}`
                     }
                   >
-                    {collapsed ? item.label.charAt(0) : item.label}
+                    <item.icon size={18} strokeWidth={2} className="shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
                   </NavLink>
                 </li>
               ))}

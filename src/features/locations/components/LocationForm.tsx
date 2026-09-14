@@ -15,6 +15,8 @@ export interface LocationFormValues {
   state: string
   postal_code: string
   country: string
+  latitude: string
+  longitude: string
   active: boolean
 }
 
@@ -30,8 +32,16 @@ function toFormValues(location?: Location): LocationFormValues {
     state: location?.state ?? '',
     postal_code: location?.postal_code ?? '',
     country: location?.country ?? 'MX',
+    latitude: location?.latitude != null ? String(location.latitude) : '',
+    longitude: location?.longitude != null ? String(location.longitude) : '',
     active: location?.active ?? true,
   }
+}
+
+function toNullableNumber(value: string): number | null {
+  if (value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 export function toLocationInsert(values: LocationFormValues): LocationInsert {
@@ -46,6 +56,8 @@ export function toLocationInsert(values: LocationFormValues): LocationInsert {
     state: values.state || null,
     postal_code: values.postal_code || null,
     country: values.country || null,
+    latitude: toNullableNumber(values.latitude),
+    longitude: toNullableNumber(values.longitude),
     active: values.active,
   }
 }
@@ -84,7 +96,7 @@ export function LocationForm({ location, submitLabel, loading, onSubmit, onCance
             id="location_type"
             value={values.location_type}
             onChange={(e) => update('location_type', e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           >
             {LOCATION_TYPES.map((type) => (
               <option key={type.value} value={type.value}>
@@ -126,6 +138,31 @@ export function LocationForm({ location, submitLabel, loading, onSubmit, onCance
           onChange={(e) => update('postal_code', e.target.value)}
         />
       </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Latitud" htmlFor="latitude">
+          <Input
+            id="latitude"
+            type="number"
+            step="any"
+            placeholder="19.4326"
+            value={values.latitude}
+            onChange={(e) => update('latitude', e.target.value)}
+          />
+        </Field>
+        <Field label="Longitud" htmlFor="longitude">
+          <Input
+            id="longitude"
+            type="number"
+            step="any"
+            placeholder="-99.1332"
+            value={values.longitude}
+            onChange={(e) => update('longitude', e.target.value)}
+          />
+        </Field>
+      </div>
+      <p className="-mt-2 text-xs text-gray-400">
+        Coordenadas para ubicar la sucursal en el mapa de gestión. Puedes copiarlas desde Google Maps.
+      </p>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input
           type="checkbox"

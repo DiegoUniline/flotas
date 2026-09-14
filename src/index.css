@@ -1,4 +1,26 @@
 @import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --color-accent-50: #fff4ed;
+  --color-accent-100: #ffe6d5;
+  --color-accent-500: #ff6a3d;
+  --color-accent-600: #f0522a;
+  --color-accent-700: #c73f1e;
+
+  --color-ink: #111827;
+
+  --color-status-active: #16a34a;
+  --color-status-active-bg: #dcfce7;
+  --color-status-stopped: #f97316;
+  --color-status-stopped-bg: #ffedd5;
+  --color-status-progress: #6366f1;
+  --color-status-progress-bg: #e0e7ff;
+  --color-status-delayed: #dc2626;
+  --color-status-delayed-bg: #fee2e2;
+}
 
 :root {
   color-scheme: light;
@@ -12,11 +34,7 @@ body,
 
 body {
   margin: 0;
-  font-family:
-    system-ui,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  color: #1f2328;
-  background: #f6f7f8;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: #f7f7f8;
 }

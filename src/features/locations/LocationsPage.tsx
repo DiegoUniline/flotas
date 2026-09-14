@@ -76,7 +76,7 @@ export function LocationsPage() {
         <select
           value={filters.locationType ?? ''}
           onChange={(e) => updateFilters({ locationType: e.target.value || null })}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
         >
           <option value="">Todos los tipos</option>
           {LOCATION_TYPES.map((type) => (
@@ -92,7 +92,7 @@ export function LocationsPage() {
               active: e.target.value === '' ? null : e.target.value === 'active',
             })
           }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
         >
           <option value="">Todos los estados</option>
           <option value="active">Activas</option>

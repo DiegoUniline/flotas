@@ -66,6 +66,32 @@ mcp__Supabase__generate_typescript_types (project_id: aqjscndhwedlwkpjgwol)
 
 Pegar el resultado en `src/types/database.ts`. No editar ese archivo a mano.
 
+### Pendiente: tracking de vehículos en vivo
+
+Los permisos `vehicles.*`, `tracking.live`, `tracking.history`, `devices.manage`,
+`geofences.manage`, `routes.*`, `jobs.*`, `alerts.*` ya están sembrados en
+`permissions`, pero **no existen las tablas** (`vehicles`, posiciones GPS,
+`geofences`, `routes`, `jobs`, `alerts`). El Centro de control hoy solo
+grafica `locations` (sucursales) porque es el único dato geográfico real
+disponible. Antes de construir el mapa con vehículos en vivo hace falta
+decidir con el usuario: proveedor/protocolo de los GPS (webhook propio,
+Traccar, Wialon, etc.), estrategia de almacenamiento de posiciones
+(tabla de último punto vs. serie de tiempo) y mecanismo de actualización en
+vivo (Supabase Realtime vs. polling). No inventar este esquema sin confirmar.
+
+## Sistema de diseño
+
+- Tipografía: Inter (cargada en `index.html` desde Google Fonts).
+- Tokens Tailwind v4 en `src/index.css` (`@theme`): `accent-50/500/600/700`
+  (naranja, color de marca), `ink` (texto principal), y colores de estado
+  `status-active/stopped/progress/delayed` (con su variante `-bg`) pensados
+  para usarse en el futuro con vehículos/rutas/alertas — no usarlos para otra
+  cosa que no sea estado operativo real.
+- Iconos: `lucide-react`.
+- Mapas: Leaflet + tiles de OpenStreetMap (sin API key). Componente genérico
+  en `src/components/map/Map.tsx` (recibe `markers`), pensado para
+  reutilizarse cuando exista tracking de vehículos.
+
 ## Estructura de carpetas
 
 ```
