@@ -572,6 +572,23 @@ consecutivo de 5 dígitos + `DDMMYY`).
   guardar" (todavía no existe, se ve hasta después de guardar), en modo
   edición muestra el valor real, nunca editable.
 
+### Rediseño del wizard: sidebar de pasos en vez de modal casi-pantalla-completa vacío (agregado en esta fase)
+
+El usuario pidió el modal "casi pantalla completa" y, al verlo, señaló
+correctamente que se veía mal: una sola tarjeta de campos flotando en un
+mar de blanco abajo, porque el contenido de cada paso no llenaba una caja
+forzada a `95vh`. Corrección de diseño (no solo devolver el tamaño
+anterior): **`Modal` vuelve a tener alto automático** (`max-h-[88vh]`,
+ya no `h-[95vh]` fijo) — se ajusta al contenido de cada paso en vez de
+dejar espacio muerto, `max-w-5xl` de ancho. Y el wizard de pedido ahora
+usa ese ancho con propósito: un **sidebar vertical de pasos** a la
+izquierda (números en círculo, ✓ en los completados, resaltado el
+actual, clic en cualquiera para saltar directo a ese paso) en vez de los
+puntitos de progreso en el footer — patrón estándar de wizard (Stripe
+checkout, onboarding de apps SaaS), no un experimento nuevo. El footer
+conserva Atrás/Cancelar y Siguiente/Crear pedido, con "Paso X de 4" como
+texto discreto en medio.
+
 ### Wizard de "Nuevo pedido": más ancho, no se cierra por accidente, sobrevive a un recargo (agregado en esta fase)
 
 Pedido explícito del usuario tras ver el wizard funcionando:

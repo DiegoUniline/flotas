@@ -588,7 +588,6 @@ export function JobDetailPage() {
         <Modal
           open
           title="Nuevo pedido"
-          description={`Paso ${step + 1} de ${WIZARD_STEPS.length}: ${WIZARD_STEPS[step].title}`}
           onClose={handleBack}
           closeOnBackdrop={false}
           footer={
@@ -596,11 +595,9 @@ export function JobDetailPage() {
               <Button variant="secondary" onClick={() => (step === 0 ? handleBack() : setStep((s) => s - 1))} disabled={saving}>
                 {step === 0 ? 'Cancelar' : 'Atrás'}
               </Button>
-              <div className="flex gap-1.5">
-                {WIZARD_STEPS.map((_, i) => (
-                  <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === step ? 'bg-accent-500' : 'bg-gray-200'}`} />
-                ))}
-              </div>
+              <p className="text-xs text-gray-400">
+                Paso {step + 1} de {WIZARD_STEPS.length}
+              </p>
               {isLastStep ? (
                 <Button onClick={handleSave} loading={saving}>
                   Crear pedido
@@ -611,7 +608,34 @@ export function JobDetailPage() {
             </div>
           }
         >
-          {WIZARD_STEPS[step].node}
+          <div className="flex gap-6">
+            <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-gray-100 pr-5">
+              {WIZARD_STEPS.map((s, i) => (
+                <button
+                  key={s.title}
+                  type="button"
+                  onClick={() => setStep(i)}
+                  className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
+                    i === step ? 'bg-accent-50 font-medium text-accent-700' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+                      i < step
+                        ? 'bg-accent-500 text-white'
+                        : i === step
+                          ? 'border-2 border-accent-500 text-accent-600'
+                          : 'border border-gray-300 text-gray-400'
+                    }`}
+                  >
+                    {i < step ? '✓' : i + 1}
+                  </span>
+                  {s.title}
+                </button>
+              ))}
+            </nav>
+            <div className="min-w-0 flex-1">{WIZARD_STEPS[step].node}</div>
+          </div>
         </Modal>
 
         <ConfirmDialog
