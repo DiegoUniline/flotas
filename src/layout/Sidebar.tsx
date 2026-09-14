@@ -11,7 +11,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     () =>
       NAV_SECTIONS.map((section) => ({
         ...section,
-        items: section.items.filter((item) => can(item.permission)),
+        items: section.items.filter((item) => !item.permission || can(item.permission)),
       })).filter((section) => section.items.length > 0),
     [can],
   )
@@ -52,7 +52,16 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
                     }
                   >
                     <item.icon size={18} strokeWidth={2} className="shrink-0" />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {!collapsed && (
+                      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                        <span className="truncate">{item.label}</span>
+                        {!item.implemented && (
+                          <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
+                            Próximamente
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </NavLink>
                 </li>
               ))}

@@ -5,6 +5,8 @@ import { ToastProvider } from '@/context/ToastContext'
 import { ToastViewport } from '@/components/ui/ToastViewport'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { AppShell } from '@/layout/AppShell'
+import { NAV_SECTIONS } from '@/layout/navConfig'
+import { ComingSoonPage } from '@/pages/ComingSoonPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
@@ -14,6 +16,8 @@ import { ControlMapPage } from '@/features/map/ControlMapPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { DriversPage } from '@/features/drivers/DriversPage'
 import { DriverDetailPage } from '@/features/drivers/DriverDetailPage'
+
+const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
 export function App() {
   return (
@@ -40,6 +44,9 @@ export function App() {
             <Route path="vehiculos" element={<VehiclesPage />} />
             <Route path="operadores" element={<DriversPage />} />
             <Route path="operadores/:id" element={<DriverDetailPage />} />
+            {comingSoonItems.map((item) => (
+              <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
+            ))}
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

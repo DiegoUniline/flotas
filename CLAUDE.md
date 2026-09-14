@@ -13,8 +13,17 @@ Supabase (Postgres + Auth), proyecto ref `aqjscndhwedlwkpjgwol`.
   `organization_id` (p. ej. para insertar un registro, o para mostrar solo los
   datos de la empresa activa en un usuario multi-org), es un filtro de UX, no
   de seguridad — la seguridad la sigue dando RLS.
-- **Cero datos falsos.** Nada de mocks, placeholders, ni secciones de menú que
-  apunten a módulos sin implementar. Si no existe, no aparece en la UI.
+- **Cero datos falsos.** Nada de mocks, placeholders, ni datos inventados en
+  pantallas reales. **Excepción explícita pedida por el usuario:** el menú
+  completo del roadmap (`layout/navConfig.ts`) sí está siempre visible desde
+  esta fase — los ítems de módulos no construidos abren una página
+  "Próximamente" (`src/pages/ComingSoonPage.tsx`) en vez de datos simulados.
+  Cada `NavItem` tiene `implemented: boolean`; al construir un módulo de
+  verdad, cambiar a `implemented: true` y darle su propia ruta/página en
+  `App.tsx` (que genera rutas automáticamente para todo lo que siga en
+  `implemented: false`, no hay que tocar `App.tsx` a mano para los
+  placeholders). Esto es la única excepción — sigue prohibido simular datos
+  *dentro* de una pantalla ya construida.
 - **Nada de `localStorage`** para permisos, configuración o preferencias. La
   organización activa del usuario vive en `profiles.active_organization_id`
   (columna agregada en esta fase, ver abajo). Estado de UI efímero (ej.
@@ -177,6 +186,42 @@ Lo que arriba quedó pendiente sí se construyó:
 - Ficha de operador también muestra el vehículo asignado actual (vía
   `vehicles.assigned_driver_id`, no re-derivado de `vehicle_driver_assignments`
   para evitar una query extra) con historial de asignaciones debajo.
+
+### Menú completo del roadmap (agregado en esta fase)
+
+`layout/navConfig.ts` ya tiene los ~30 ítems de la navegación propuesta en el
+punto 120 del roadmap (Operación/Flota/Mantenimiento/Costos/Seguridad/
+Analítica/Configuración), no solo los 4 módulos reales. Cada `NavItem`:
+
+- `implemented: true` (Centro de control, Vehículos, Operadores, Sucursales)
+  → ruta real definida a mano en `App.tsx`.
+- `implemented: false` (todo lo demás) → `App.tsx` genera su ruta
+  automáticamente apuntando a `<ComingSoonPage title={item.label} />`; no
+  hay que agregar nada en `App.tsx` al dejar un módulo como pendiente.
+- `permission` es **opcional**: si se omite (caso de "Inicio"), el ítem es
+  visible para cualquier miembro de la organización sin gate. Si se define,
+  el sidebar lo oculta con `can(permission)` igual que siempre.
+
+Varios ítems `implemented: false` usan un permiso **aproximado** porque el
+módulo real (y su tabla) no existe todavía, así que no hay un permiso
+`*.view` dedicado — está reutilizando el más cercano semánticamente
+(documentado por si hace falta ajustarlo cuando se construya el módulo de
+verdad):
+
+- Dispositivos → `devices.manage`, Geocercas → `geofences.manage`,
+  Refacciones → `maintenance.manage` (no hay permiso propio de refacciones).
+- Inspecciones → `inspections.perform` (no existe `inspections.view`).
+- Costos (vista agregada) → `reports.view`, Indicadores → `reports.view`.
+- Incidentes → `alerts.view` (no existe permiso propio de incidentes).
+- Documentos → `drivers.view` (la mayoría de documentos que ya existen en
+  el esquema — `driver_licenses`/`entity_documents` — son de operador).
+- Campos personalizados y Vistas → `settings.manage`.
+- Integraciones y API → `api.manage`.
+- Empresa → `organization.view`, Suscripción → `billing.manage`.
+
+Al construir cualquiera de estos módulos en serio, revisar primero si el
+permiso reutilizado sigue teniendo sentido o si conviene sembrar uno nuevo
+en `permissions` (documentarlo aquí igual que con `vehicle_types`/`settings.manage`).
 
 ## Sistema de diseño
 
