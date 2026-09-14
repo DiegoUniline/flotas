@@ -1304,6 +1304,75 @@ no fue una decisión de producto inventada aquí, ya estaba en la base.
 - `navConfig.ts`: "Combustible"/"Gastos"/"Costos" pasaron a
   `implemented: true` — sección "Costos" del sidebar completa.
 
+### Combustible completo: catálogos de gasolinera/tipo, factura, fotos (agregado en esta fase)
+
+Pedido explícito del usuario tras probar el módulo con un registro real
+("Gasolinera Lupita", diésel, 150 L): faltaba foto del ticket, si lleva/ya
+se facturó, foto del odómetro, y **gasolinera/tipo de combustible debían
+ser catálogo, no texto libre** (para evitar duplicados tipo "Diesel" vs
+"Diésel" y poder agrupar/reportar por gasolinera real). Migración
+`fuel_stations_and_types_catalog`:
+
+- **`fuel_stations`**: catálogo **por organización únicamente** (sin
+  default del sistema — a diferencia de `vehicle_types`, no existe una
+  lista universal razonable de gasolineras, cada empresa arma la suya
+  sobre la marcha). Write gateado por `fuel.manage`. Índice único
+  `(organization_id, name)` para no duplicar el nombre dentro de la
+  misma organización.
+- **`fuel_types`**: mismo patrón que `vehicle_types` —
+  `organization_id null` = default del sistema (sembrados: Gasolina
+  Regular (87), Gasolina Premium (91), Diésel, Gas LP, Eléctrico),
+  `organization_id` propio = tipo personalizado. Mismo permiso
+  `fuel.manage` para altas propias de la org.
+- **`fuel_logs.station`/`fuel_type` (texto libre) se eliminaron** y se
+  reemplazaron por `fuel_station_id`/`fuel_type_id` (FK, ambas
+  nullable). **Migración de datos reales, no solo de esquema:** ya
+  existía 1 registro real capturado por el usuario antes de este
+  cambio — el backfill de la misma migración creó las filas de catálogo
+  correspondientes (`fuel_stations`/`fuel_types` por organización) a
+  partir del texto que ya tenía guardado y reapuntó ese registro a los
+  nuevos IDs antes de tirar las columnas viejas; se verificó por SQL que
+  el dato sobrevivió intacto. **Nunca botar una columna con datos reales
+  sin backfillear primero** — mismo criterio que
+  `add_active_organization_to_profiles` y la migración de
+  `vehicle_type` texto libre a `vehicle_type_id` de Fase 2a.
+- **`has_invoice` (boolean) + `invoiced` (boolean)**: "si lleva factura"
+  y "si ya se facturó" son preguntas distintas (una gasolinera puede no
+  dar factura fiscal; y si la da, el CFDI casi nunca llega en el momento
+  de la carga, se procesa después) — dos campos separados, no uno. El
+  campo "Ya facturado" **solo se muestra en la UI si "Lleva factura" está
+  activo** (mismo criterio que el GPS de recolección condicional en
+  Pedidos); al guardar, `invoiced` se fuerza a `false` si `has_invoice`
+  es `false`, para que nunca quede un estado contradictorio en la base.
+- **Fotos de ticket y odómetro**: se reutilizó tal cual el sistema
+  genérico de `attachments`/`AttachmentUploader` ya existente (mismo
+  patrón que licencias/certificaciones/documentos de vehículo) —
+  `entity_type: 'fuel_log_receipt'` y `entity_type: 'fuel_log_odometer'`,
+  `entity_id` = id de la carga. **No se agregaron columnas de foto** a
+  `fuel_logs` a propósito, siguiendo la regla ya documentada de no
+  duplicar el patrón de attachments. Igual que en el resto del proyecto,
+  el uploader solo aparece al editar (necesita el `id` ya guardado).
+- **`RelationSelect` con creación en contexto** para ambos catálogos
+  (`FuelStationQuickForm.tsx`/`FuelTypeQuickForm.tsx`, mismo patrón que
+  `VehicleTypeQuickForm.tsx`) — capturar una carga nueva no bloquea al
+  usuario si la gasolinera o el tipo de combustible no existen todavía
+  en el catálogo, los crea al vuelo sin perder el borrador.
+- Tabla de Combustible ganó columnas "Gasolinera" y "Factura" (badge:
+  Sin factura/Por facturar/Facturado); filtros de lista cambiaron de
+  texto libre (`fuel_type`/`station`) a booleanos (`has_invoice`/
+  `invoiced`/`full_tank`) y se agregó agrupar por gasolinera/tipo de
+  combustible. El buscador de la lista ahora busca en **notas** en vez
+  de en `station` (ya no es texto libre en esa tabla).
+- **No construido a propósito:** número/folio de factura o UUID de CFDI
+  como campo propio — el usuario pidió el booleano de si ya se facturó,
+  no un módulo de conciliación fiscal; si se necesita capturar el folio
+  real, agregar un campo `invoice_number` cuando se pida. Tampoco se
+  tocó `vehicles.fuel_type` (sigue como texto libre en la ficha de
+  Vehículos) — el catálogo `fuel_types` nuevo es específico del flujo de
+  captura de cargas de combustible, no se pidió unificarlo con el campo
+  de Vehículos ni migrar datos de vehículos existentes; evaluarlo si se
+  pide más adelante.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

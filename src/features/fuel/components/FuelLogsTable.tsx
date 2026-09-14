@@ -31,6 +31,10 @@ function groupLabel(row: FuelLogWithRelations, groupBy: string): string {
       return vehicleLabel(row.vehicles)
     case 'full_tank':
       return row.full_tank ? 'Tanque lleno' : 'Carga parcial'
+    case 'fuel_station_id':
+      return row.fuel_stations?.name ?? 'Sin gasolinera'
+    case 'fuel_type_id':
+      return row.fuel_types?.name ?? 'Sin tipo'
     default:
       return '—'
   }
@@ -57,7 +61,7 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
   }
 
   if (loading) {
-    return <TableSkeleton columns={5} />
+    return <TableSkeleton columns={7} />
   }
 
   if (rows.length === 0) {
@@ -107,6 +111,20 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
         <td className="px-4 py-2 text-gray-700">{formatCurrency(log.total_cost)}</td>
         <td className="px-4 py-2 text-gray-700">{vehicleLabel(log.vehicles)}</td>
         <td className="px-4 py-2 text-gray-700">{log.drivers ? `${log.drivers.first_name} ${log.drivers.last_name}` : '—'}</td>
+        <td className="px-4 py-2 text-gray-700">{log.fuel_stations?.name ?? '—'}</td>
+        <td className="px-4 py-2">
+          {log.has_invoice ? (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                log.invoiced ? 'bg-status-active-bg text-status-active' : 'bg-status-delayed-bg text-status-delayed'
+              }`}
+            >
+              {log.invoiced ? 'Facturado' : 'Por facturar'}
+            </span>
+          ) : (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">Sin factura</span>
+          )}
+        </td>
       </tr>
     )
   }
@@ -123,6 +141,8 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
       ))}
       <th className="px-4 py-2">Vehículo</th>
       <th className="px-4 py-2">Operador</th>
+      <th className="px-4 py-2">Gasolinera</th>
+      <th className="px-4 py-2">Factura</th>
     </tr>
   )
 
@@ -139,7 +159,7 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
-                <td colSpan={5} className="px-4 py-1.5">
+                <td colSpan={7} className="px-4 py-1.5">
                   <button type="button" onClick={() => toggleGroup(group.key)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
                     {collapsed.has(group.key) ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
                     {group.label}

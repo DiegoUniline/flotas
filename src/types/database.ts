@@ -638,15 +638,17 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           driver_id: string | null
-          fuel_type: string | null
+          fuel_station_id: string | null
+          fuel_type_id: string | null
           full_tank: boolean
+          has_invoice: boolean
           id: string
+          invoiced: boolean
           liters: number
           logged_at: string
           notes: string | null
           odometer: number | null
           organization_id: string
-          station: string | null
           total_cost: number
           updated_at: string
           vehicle_id: string
@@ -655,15 +657,17 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           driver_id?: string | null
-          fuel_type?: string | null
+          fuel_station_id?: string | null
+          fuel_type_id?: string | null
           full_tank?: boolean
+          has_invoice?: boolean
           id?: string
+          invoiced?: boolean
           liters: number
           logged_at?: string
           notes?: string | null
           odometer?: number | null
           organization_id: string
-          station?: string | null
           total_cost: number
           updated_at?: string
           vehicle_id: string
@@ -672,15 +676,17 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           driver_id?: string | null
-          fuel_type?: string | null
+          fuel_station_id?: string | null
+          fuel_type_id?: string | null
           full_tank?: boolean
+          has_invoice?: boolean
           id?: string
+          invoiced?: boolean
           liters?: number
           logged_at?: string
           notes?: string | null
           odometer?: number | null
           organization_id?: string
-          station?: string | null
           total_cost?: number
           updated_at?: string
           vehicle_id?: string
@@ -691,6 +697,20 @@ export type Database = {
             columns: ["driver_id"]
             isOneToOne: false
             referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_logs_fuel_station_id_fkey"
+            columns: ["fuel_station_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_logs_fuel_type_id_fkey"
+            columns: ["fuel_type_id"]
+            isOneToOne: false
+            referencedRelation: "fuel_types"
             referencedColumns: ["id"]
           },
           {
@@ -705,6 +725,85 @@ export type Database = {
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_stations: {
+        Row: {
+          active: boolean
+          address: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_stations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          organization_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          organization_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

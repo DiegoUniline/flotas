@@ -9,11 +9,16 @@ import { InlineField } from '@/components/ui/InlineField'
 import { RelationSelect } from '@/components/ui/RelationSelect'
 import { SaveDiscardBar } from '@/components/ui/SaveDiscardBar'
 import { HistoryPanel } from '@/components/audit/HistoryPanel'
+import { AttachmentUploader } from '@/components/attachments/AttachmentUploader'
 import { Can } from '@/components/Can'
 import { useOrg } from '@/context/OrgContext'
 import { formatCurrency } from '@/lib/format'
 import { searchVehicles } from '@/features/vehicles/api/vehiclesApi'
 import { searchDrivers } from '@/features/drivers/api/driversApi'
+import { searchFuelStations } from '@/features/fuel/api/fuelStationsApi'
+import { searchFuelTypes } from '@/features/fuel/api/fuelTypesApi'
+import { FuelStationQuickForm } from '@/features/fuel/components/FuelStationQuickForm'
+import { FuelTypeQuickForm } from '@/features/fuel/components/FuelTypeQuickForm'
 import type { FuelLogWithRelations } from '@/features/fuel/api/fuelLogsApi'
 import { useCreateFuelLog, useDeleteFuelLog, useFuelLog, useUpdateFuelLog } from '@/features/fuel/hooks/useFuelLogs'
 
@@ -26,9 +31,13 @@ interface Draft {
   liters: string
   total_cost: string
   odometer: string
-  station: string
-  fuel_type: string
+  fuel_station_id: string
+  fuel_station_label: string
+  fuel_type_id: string
+  fuel_type_label: string
   full_tank: boolean
+  has_invoice: boolean
+  invoiced: boolean
   notes: string
 }
 
@@ -50,9 +59,13 @@ function toDraft(log?: FuelLogWithRelations): Draft {
     liters: log ? String(log.liters) : '',
     total_cost: log ? String(log.total_cost) : '',
     odometer: log?.odometer != null ? String(log.odometer) : '',
-    station: log?.station ?? '',
-    fuel_type: log?.fuel_type ?? '',
+    fuel_station_id: log?.fuel_station_id ?? '',
+    fuel_station_label: log?.fuel_stations?.name ?? '',
+    fuel_type_id: log?.fuel_type_id ?? '',
+    fuel_type_label: log?.fuel_types?.name ?? '',
     full_tank: log?.full_tank ?? true,
+    has_invoice: log?.has_invoice ?? false,
+    invoiced: log?.invoiced ?? false,
     notes: log?.notes ?? '',
   }
 }
@@ -127,9 +140,11 @@ export function FuelLogDetailPage() {
       liters: Number(draft.liters),
       total_cost: Number(draft.total_cost),
       odometer: draft.odometer.trim() === '' ? null : Number(draft.odometer),
-      station: draft.station || null,
-      fuel_type: draft.fuel_type || null,
+      fuel_station_id: draft.fuel_station_id || null,
+      fuel_type_id: draft.fuel_type_id || null,
       full_tank: draft.full_tank,
+      has_invoice: draft.has_invoice,
+      invoiced: draft.has_invoice && draft.invoiced,
       notes: draft.notes || null,
     }
 
@@ -227,12 +242,27 @@ export function FuelLogDetailPage() {
                       />
                     </DetailField>
                     <DetailField label="Gasolinera">
-                      <InlineField value={draft.station} onChange={(v) => update('station', v)} placeholder="Agregar…" />
+                      <RelationSelect
+                        value={draft.fuel_station_id || null}
+                        displayLabel={draft.fuel_station_label || null}
+                        placeholder="Selecciona o crea una…"
+                        onSearch={(query) =>
+                          searchFuelStations(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+                        }
+                        onSelect={(option) => {
+                          update('fuel_station_id', option?.id ?? '')
+                          update('fuel_station_label', option?.label ?? '')
+                        }}
+                        createLabel="Gasolinera"
+                        renderCreateForm={({ initialName, onCreated, onCancel }) => (
+                          <FuelStationQuickForm initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
+                        )}
+                      />
                     </DetailField>
                   </DetailGrid>
                 </DetailSection>
 
-                <DetailSection title="Carga" description="Litros, costo y kilometraje al momento de la carga.">
+                <DetailSection title="Carga" description="Litros, costo, tipo de combustible y kilometraje al momento de la carga.">
                   <DetailGrid>
                     <DetailField label="Litros" required error={errors.liters}>
                       <InlineField type="number" value={draft.liters} onChange={(v) => update('liters', v)} placeholder="0" />
@@ -245,7 +275,20 @@ export function FuelLogDetailPage() {
                       <InlineField type="number" value={draft.odometer} onChange={(v) => update('odometer', v)} placeholder="Agregar…" />
                     </DetailField>
                     <DetailField label="Combustible">
-                      <InlineField value={draft.fuel_type} onChange={(v) => update('fuel_type', v)} placeholder="Diésel, gasolina…" />
+                      <RelationSelect
+                        value={draft.fuel_type_id || null}
+                        displayLabel={draft.fuel_type_label || null}
+                        placeholder="Selecciona o crea uno…"
+                        onSearch={(query) => searchFuelTypes(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))}
+                        onSelect={(option) => {
+                          update('fuel_type_id', option?.id ?? '')
+                          update('fuel_type_label', option?.label ?? '')
+                        }}
+                        createLabel="Tipo de combustible"
+                        renderCreateForm={({ initialName, onCreated, onCancel }) => (
+                          <FuelTypeQuickForm initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
+                        )}
+                      />
                     </DetailField>
 
                     <DetailField label="Tanque lleno">
@@ -257,6 +300,40 @@ export function FuelLogDetailPage() {
                     </DetailField>
                   </DetailGrid>
                 </DetailSection>
+
+                <DetailSection title="Factura" description="Si la carga incluye factura fiscal (CFDI) y si ya se obtuvo.">
+                  <DetailGrid>
+                    <DetailField label="Lleva factura">
+                      <InlineField
+                        type="checkbox"
+                        value={draft.has_invoice ? 'true' : 'false'}
+                        onChange={(v) => {
+                          const hasInvoice = v === 'true'
+                          update('has_invoice', hasInvoice)
+                          if (!hasInvoice) update('invoiced', false)
+                        }}
+                      />
+                    </DetailField>
+                    {draft.has_invoice && (
+                      <DetailField label="Ya facturado">
+                        <InlineField
+                          type="checkbox"
+                          value={draft.invoiced ? 'true' : 'false'}
+                          onChange={(v) => update('invoiced', v === 'true')}
+                        />
+                      </DetailField>
+                    )}
+                  </DetailGrid>
+                </DetailSection>
+
+                {!isNew && id && (
+                  <DetailSection title="Evidencia fotográfica" description="Foto del ticket de la gasolinera y del odómetro al momento de la carga.">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <AttachmentUploader entityType="fuel_log_receipt" entityId={id} label="Foto del ticket" />
+                      <AttachmentUploader entityType="fuel_log_odometer" entityId={id} label="Foto del odómetro" />
+                    </div>
+                  </DetailSection>
+                )}
               </div>
             )}
           </div>

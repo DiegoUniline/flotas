@@ -11,14 +11,16 @@ import { computeDateRange } from '@/lib/dateRanges'
 import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
 const FILTER_FIELDS: FilterFieldDef[] = [
-  { key: 'fuel_type', label: 'Combustible', type: 'text' },
   { key: 'full_tank', label: 'Tanque lleno', type: 'boolean' },
-  { key: 'station', label: 'Gasolinera', type: 'text' },
+  { key: 'has_invoice', label: 'Lleva factura', type: 'boolean' },
+  { key: 'invoiced', label: 'Ya facturado', type: 'boolean' },
 ]
 
 const GROUP_FIELDS: GroupFieldDef[] = [
   { key: 'vehicle_id', label: 'Vehículo' },
   { key: 'full_tank', label: 'Tipo de carga' },
+  { key: 'fuel_station_id', label: 'Gasolinera' },
+  { key: 'fuel_type_id', label: 'Tipo de combustible' },
 ]
 
 export function FuelLogsPage() {
@@ -53,7 +55,7 @@ export function FuelLogsPage() {
             setSearch(v)
             setPage(0)
           }}
-          searchPlaceholder="Buscar por gasolinera..."
+          searchPlaceholder="Buscar en notas..."
           dateRange={dateRange}
           onDateRangeChange={(v) => {
             setDateRange(v)

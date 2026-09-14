@@ -10,6 +10,8 @@ export type FuelLogUpdate = TablesUpdate<'fuel_logs'>
 export interface FuelLogWithRelations extends FuelLog {
   vehicles: { economic_number: string; plate: string | null } | null
   drivers: { first_name: string; last_name: string } | null
+  fuel_stations: { name: string } | null
+  fuel_types: { name: string } | null
 }
 
 export type FuelLogSortColumn = 'logged_at' | 'total_cost' | 'liters' | 'created_at'
@@ -30,7 +32,7 @@ function escapeIlikeTerm(value: string) {
   return value.replace(/[%,()]/g, ' ').trim()
 }
 
-const FUEL_LOG_SELECT = '*, vehicles(economic_number, plate), drivers(first_name, last_name)'
+const FUEL_LOG_SELECT = '*, vehicles(economic_number, plate), drivers(first_name, last_name), fuel_stations(name), fuel_types(name)'
 const GROUPED_PAGE_SIZE = 300
 
 export async function fetchFuelLogs(
@@ -48,7 +50,7 @@ export async function fetchFuelLogs(
 
   const search = escapeIlikeTerm(filters.search)
   if (search) {
-    query = query.ilike('station', `%${search}%`)
+    query = query.ilike('notes', `%${search}%`)
   }
   if (filters.dateRange.from) query = query.gte('logged_at', filters.dateRange.from)
   if (filters.dateRange.to) query = query.lte('logged_at', `${filters.dateRange.to}T23:59:59`)
