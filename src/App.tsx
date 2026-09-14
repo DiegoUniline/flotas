@@ -40,6 +40,10 @@ import { MaintenanceTypesPage } from '@/features/maintenance/MaintenanceTypesPag
 import { MaintenanceTypeDetailPage } from '@/features/maintenance/MaintenanceTypeDetailPage'
 import { PartsPage } from '@/features/parts/PartsPage'
 import { PartDetailPage } from '@/features/parts/PartDetailPage'
+import { InspectionsPage } from '@/features/inspections/InspectionsPage'
+import { InspectionDetailPage } from '@/features/inspections/InspectionDetailPage'
+import { InspectionTemplatesPage } from '@/features/inspections/InspectionTemplatesPage'
+import { InspectionTemplateDetailPage } from '@/features/inspections/InspectionTemplateDetailPage'
 
 const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
@@ -92,6 +96,10 @@ export function App() {
             <Route path="mantenimientos/:id" element={<MaintenanceRecordDetailPage />} />
             <Route path="refacciones" element={<PartsPage />} />
             <Route path="refacciones/:id" element={<PartDetailPage />} />
+            <Route path="inspecciones/plantillas" element={<InspectionTemplatesPage />} />
+            <Route path="inspecciones/plantillas/:id" element={<InspectionTemplateDetailPage />} />
+            <Route path="inspecciones" element={<InspectionsPage />} />
+            <Route path="inspecciones/:id" element={<InspectionDetailPage />} />
             {comingSoonItems.map((item) => (
               <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
             ))}

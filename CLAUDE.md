@@ -1507,6 +1507,70 @@ o sea toda la gestión completa". Migración `maintenance_and_parts`:
   mismo criterio de "confirmar antes de construir" del resto del
   proyecto.
 
+### Inspecciones: checklist con plantillas propias (agregado en esta fase, cierra el módulo Mantenimiento)
+
+Pedido explícito del usuario: "termina todo el modulo completo" — tras la
+fase anterior de Mantenimiento (que dejó Inspecciones deliberadamente
+fuera por ser una feature distinta, ver arriba), el usuario pidió
+terminar los 3 ítems de la sección. Migración `inspections`:
+
+- **`inspection_templates`** + **`inspection_template_items`**: cada
+  organización define sus propias plantillas de checklist (sin default
+  del sistema — a diferencia de `maintenance_types`, no hay un checklist
+  universal razonable, cada empresa tiene sus propios puntos a revisar).
+  Gestión en `/inspecciones/plantillas` (mismo criterio de
+  `mantenimientos/tipos`: catálogo secundario, no ocupa ítem de sidebar,
+  se llega por un link "Plantillas" dentro de Inspecciones). Los ítems
+  del checklist se editan con `InspectionTemplateItemsEditor.tsx` —
+  filas simples (etiqueta + mover arriba/abajo con `sort_order` +
+  eliminar) + un campo para agregar uno nuevo; **solo disponible una vez
+  guardada la plantilla** (necesita su `id`), mismo patrón que
+  licencias/documentos que dependen de un registro padre ya existente.
+- **`inspections`**: el registro de una inspección real — `vehicle_id` +
+  `template_id` obligatorios, `driver_id` opcional (quién la realizó),
+  `performed_at timestamptz`, `odometer`, `overall_result` (`pass`/
+  `fail`), `notes`.
+- **`inspection_item_results`**: el resultado de cada punto del
+  checklist para esa inspección (`ok`/`issue`/`na` + notas opcionales,
+  solo se piden si el punto quedó en `issue`). **`overall_result` se
+  calcula solo, no se captura a mano**: si algún punto del checklist
+  queda en `issue`, la inspección completa se marca `fail`; si no, `pass`
+  — se calcula en el frontend al guardar (`InspectionDetailPage.tsx`,
+  `handleSave`) y se manda ya resuelto, mismo criterio de "no pedir un
+  dato que se puede derivar" usado en otras partes del proyecto.
+- **Flujo de captura** (`InspectionChecklist.tsx`): al elegir la
+  plantilla en la ficha, se cargan sus ítems (`fetchInspectionTemplateItems`)
+  y se arma un checklist local con estado `ok` por defecto en cada punto;
+  el usuario cambia a `Problema`/`N/A` por punto (botones tipo píldora,
+  igual criterio que el resto de la app para pocas opciones) y agrega
+  una nota solo si marcó `Problema`. Al guardar, se crea/actualiza la
+  inspección y luego se guardan todos los resultados del checklist de
+  una sola vez (`saveInspectionItemResults` en
+  `inspectionItemResultsApi.ts` — trae lo que ya existe, actualiza por
+  `template_item_id` e inserta lo que falta; no hay upsert nativo cómodo
+  desde supabase-js para esto, se resuelve explícito con dos pasos).
+  **Limitación real y deliberada:** si se edita una inspección ya
+  guardada y la plantilla ganó/perdió puntos después, el checklist que
+  se ve sigue siendo el que existía al momento de guardar esa inspección
+  (no se re-sincroniza contra la plantilla actual) — es intencional,
+  una inspección es un registro histórico de lo que se revisó ese día,
+  no debe moverse retroactivamente si la plantilla cambia después
+  (mismo criterio ya usado con el snapshot de paradas de ruta en Fase 4).
+- RLS de las 4 tablas: select por membresía de organización, write
+  gateado por el único permiso sembrado `inspections.perform` (cubre
+  crear/editar/eliminar tanto plantillas como inspecciones — mismo
+  criterio de permiso único que Dispositivos/Geocercas).
+- `navConfig.ts`: "Inspecciones" pasó a `implemented: true` — con esto
+  la sección "Mantenimiento" del sidebar queda completa (Mantenimientos,
+  Inspecciones, Refacciones, los 3 ítems reales).
+- **No construido a propósito:** motor de alertas/notificación cuando
+  una inspección sale `fail` (correo, aviso en Centro de control, etc.)
+  — depende del motor de alertas genérico (Fase 6 del roadmap, sigue sin
+  construirse); fotos por punto del checklist (a diferencia de
+  Combustible, donde sí se pidieron fotos de ticket/odómetro, aquí no se
+  pidió evidencia fotográfica — agregar con el mismo patrón de
+  `AttachmentUploader` si se pide después).
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

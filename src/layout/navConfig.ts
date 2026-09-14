@@ -69,7 +69,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Mantenimiento',
     items: [
       { label: 'Mantenimientos', to: '/mantenimientos', permission: 'maintenance.view', icon: Wrench, implemented: true },
-      { label: 'Inspecciones', to: '/inspecciones', permission: 'inspections.perform', icon: ClipboardCheck, implemented: false },
+      { label: 'Inspecciones', to: '/inspecciones', permission: 'inspections.perform', icon: ClipboardCheck, implemented: true },
       { label: 'Refacciones', to: '/refacciones', permission: 'maintenance.manage', icon: Package, implemented: true },
     ],
   },
