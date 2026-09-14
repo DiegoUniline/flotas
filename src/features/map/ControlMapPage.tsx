@@ -21,11 +21,13 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 import { LOCATION_TYPES } from '@/features/locations/api/locationsApi'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
 import { JOB_STATUSES } from '@/features/jobs/api/jobsApi'
+import { JobDetailContent } from '@/features/jobs/JobDetailContent'
 import { useRouteDriverOptions, useRoutePlan, useRoutePlansQuery, useRouteStops } from '@/features/routes/hooks/useRoutes'
 import { fetchRoutePlanIdForJob } from '@/features/routes/api/routeStopsApi'
 import { useControlKpis, useDayJobs, useLiveVehiclePositions, useLocationCounts, useMappedLocations } from './hooks/useControlMap'
@@ -201,6 +203,7 @@ export function ControlMapPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null)
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [resolvingJobRoute, setResolvingJobRoute] = useState(false)
+  const [viewJobId, setViewJobId] = useState<string | null>(null)
 
   const mappedQuery = useMappedLocations()
   const countsQuery = useLocationCounts()
@@ -364,6 +367,7 @@ export function ControlMapPage() {
   }
 
   return (
+    <>
     <PageScroll>
       <div className="flex flex-col gap-4 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -648,12 +652,13 @@ export function ControlMapPage() {
                 <p className="text-xs text-gray-400">Sin ruta asignada todavía.</p>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <Link
-                    to={`/pedidos/${selectedJob.id}`}
+                  <button
+                    type="button"
+                    onClick={() => setViewJobId(selectedJob.id)}
                     className="flex-1 rounded-md bg-accent-500 px-3 py-1.5 text-center text-sm font-medium text-white hover:bg-accent-600"
                   >
                     Ver pedido completo
-                  </Link>
+                  </button>
                   {selectedJob.drivers?.phone && (
                     <a
                       href={`tel:${selectedJob.drivers.phone}`}
@@ -684,10 +689,11 @@ export function ControlMapPage() {
           ) : dayJobs.length > 0 ? (
             <div className="flex flex-col divide-y divide-gray-100">
               {dayJobs.map((job) => (
-                <Link
+                <button
+                  type="button"
                   key={job.id}
-                  to={`/pedidos/${job.id}`}
-                  className="flex items-center justify-between gap-3 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => setViewJobId(job.id)}
+                  className="flex items-center justify-between gap-3 py-2 text-left text-sm hover:bg-gray-50"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-gray-900">
@@ -699,7 +705,7 @@ export function ControlMapPage() {
                     {JOB_STATUS_LABELS[job.status] ?? job.status}
                   </span>
                   <span className="w-20 shrink-0 text-right text-xs text-gray-500">{job.amount != null ? formatCurrency(job.amount) : '—'}</span>
-                </Link>
+                </button>
               ))}
             </div>
           ) : (
@@ -761,5 +767,14 @@ export function ControlMapPage() {
         )}
       </div>
     </PageScroll>
+
+    {viewJobId && (
+      <Modal open title="Pedido" onClose={() => setViewJobId(null)}>
+        <div className="-mx-6 -my-5 h-[75vh]">
+          <JobDetailContent id={viewJobId} onBack={() => setViewJobId(null)} backLabel="Cerrar" />
+        </div>
+      </Modal>
+    )}
+    </>
   )
 }

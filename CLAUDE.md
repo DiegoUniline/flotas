@@ -1009,6 +1009,36 @@ cuenta**, guardado **cada ~15s**, el Centro de control se actualiza por
   del propio historial de posiciones (distancia/tiempo entre lecturas)
   — no se construyó en esta fase.
 
+### "Ver pedido completo" ya no navega a otra vista — ficha completa en un Modal (agregado en esta fase)
+
+Pedido explícito del usuario: el botón "Ver pedido completo" del panel de
+pedido suelto en el Centro de control sacaba de la página (navegaba a
+`/pedidos/:id`) — "necesito que no me lleve a otra vista, todo ahí, una
+ventana emergente... nada que me haga más pasos".
+
+- **`JobDetailPage.tsx` se partió en dos**: la ficha completa de un
+  pedido **ya existente** (secciones, pestaña de Paquetes,
+  `HistoryPanel`, guardar/descartar, eliminar) se extrajo a
+  **`JobDetailContent.tsx`** — recibe `id` y `onBack()` por props en vez
+  de leer `useParams`/usar `useNavigate` directamente, así sirve tanto
+  para la ruta `/pedidos/:id` como embebida en cualquier otro lado.
+  `JobDetailPage.tsx` quedó solo con el wizard de creación (`id ===
+  'nuevo'`) y, para editar, renderiza `<JobDetailContent id={id}
+  onBack={() => navigate('/pedidos')} />` — mismo comportamiento de
+  siempre en la página completa, cero cambio visible ahí.
+- **Centro de control**: nuevo estado `viewJobId`; el botón "Ver pedido
+  completo" y cada fila de la tarjeta "Pedidos del día" ya no son
+  `<Link to="/pedidos/:id">` — ahora hacen `setViewJobId(job.id)`, que
+  abre un `Modal` (el mismo componente ancho del wizard de pedidos) con
+  `<JobDetailContent id={viewJobId} onBack={() => setViewJobId(null)}
+  backLabel="Cerrar" />` adentro. Se puede editar/guardar/eliminar el
+  pedido completo sin salir del Centro de control ni perder la selección
+  de ruta/fecha/repartidor que tenías puesta.
+- `JobDetailContent` ganó `backLabel`/`hideHeader` opcionales
+  precisamente para este tipo de reutilización embebida — cualquier otra
+  pantalla que necesite mostrar un pedido completo sin navegar (o con un
+  texto de regreso distinto a "Pedidos") puede reusarlo igual.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

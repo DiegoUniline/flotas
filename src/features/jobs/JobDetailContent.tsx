@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/ErrorState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DetailField, DetailGrid, DetailSection } from '@/components/ui/DetailGrid'
 import { InlineField } from '@/components/ui/InlineField'
+import { SaveDiscardBar } from '@/components/ui/SaveDiscardBar'
+import { Tabs } from '@/components/ui/Tabs'
 import { RelationSelect } from '@/components/ui/RelationSelect'
+import { HistoryPanel } from '@/components/audit/HistoryPanel'
 import { GpsCaptureField } from '@/components/ui/GpsCaptureField'
-import { Modal } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Can } from '@/components/Can'
 import { useOrg } from '@/context/OrgContext'
 import { searchCustomers } from '@/features/customers/api/customersApi'
 import { searchCustomerLocations } from '@/features/customers/api/customerLocationsApi'
@@ -15,10 +19,11 @@ import { CustomerLocationQuickCreate } from '@/features/customers/components/Cus
 import { searchLocations } from '@/features/locations/api/locationsApi'
 import { searchDrivers } from '@/features/drivers/api/driversApi'
 import { searchVehicles } from '@/features/vehicles/api/vehiclesApi'
-import { JOB_PRIORITIES, JOB_STATUSES, JOB_TYPES, ORIGIN_TYPES } from '@/features/jobs/api/jobsApi'
-import { useCreateJob } from '@/features/jobs/hooks/useJobs'
+import { JOB_PRIORITIES, JOB_STATUSES, JOB_TYPES, ORIGIN_TYPES, type JobWithRelations } from '@/features/jobs/api/jobsApi'
+import { useDeleteJob, useJob, useUpdateJob } from '@/features/jobs/hooks/useJobs'
 import { formatCurrency } from '@/lib/format'
-import { JobDetailContent } from './JobDetailContent'
+import { useJobPackages } from '@/features/jobs/hooks/useJobDetail'
+import { JobPackagesTab } from './components/JobPackagesTab'
 
 const TYPE_OPTIONS = JOB_TYPES.map((t) => ({ value: t.value, label: t.label }))
 const STATUS_OPTIONS = JOB_STATUSES.map((s) => ({ value: s.value, label: s.label }))
@@ -26,6 +31,7 @@ const PRIORITY_OPTIONS = JOB_PRIORITIES.map((p) => ({ value: p.value, label: p.l
 const ORIGIN_TYPE_OPTIONS = ORIGIN_TYPES.map((o) => ({ value: o.value, label: o.label }))
 
 interface Draft {
+  job_number: string
   job_type: string
   status: string
   priority: string
@@ -67,86 +73,48 @@ interface Draft {
   insurance_percentage: string
 }
 
-function emptyDraft(): Draft {
+function toDraft(job?: JobWithRelations): Draft {
   return {
-    job_type: 'delivery',
-    status: 'pending',
-    priority: 'normal',
-    customer_id: '',
-    customer_label: '',
-    scheduled_date: '',
-    time_window_start: '',
-    time_window_end: '',
-    sender_name: '',
-    sender_phone: '',
-    origin_type: 'pickup',
-    origin_customer_location_id: '',
-    origin_customer_location_label: '',
-    origin_branch_location_id: '',
-    origin_branch_location_label: '',
-    receiver_name: '',
-    receiver_phone: '',
-    customer_location_id: '',
-    customer_location_label: '',
-    assigned_driver_id: '',
-    assigned_driver_label: '',
-    assigned_vehicle_id: '',
-    assigned_vehicle_label: '',
-    estimated_service_minutes: '',
-    content_description: '',
-    declared_value: '',
-    cod_amount: '',
-    amount: '',
-    received_by_name: '',
-    received_at: null,
-    instructions: '',
-    pickup_latitude: null,
-    pickup_longitude: null,
-    pickup_captured_at: null,
-    delivery_latitude: null,
-    delivery_longitude: null,
-    delivery_captured_at: null,
-    has_insurance: false,
-    insurance_percentage: '',
-  }
-}
-
-const WIZARD_DRAFT_KEY = 'flotaa:job-wizard-draft'
-
-interface WizardDraft {
-  draft: Draft
-  step: number
-}
-
-/** Borrador del wizard de "Nuevo pedido" en sessionStorage — sobrevive a un
- * recargo de la pestaña (a diferencia del state de React) pero se limpia al
- * cerrar la pestaña o al terminar el flujo (crear o cancelar). No es
- * configuración ni preferencia del usuario, es contenido de un formulario
- * sin guardar — por eso no aplica la regla general de "nada de
- * localStorage" (esa es para permisos/config, ver CLAUDE.md). */
-function loadWizardDraft(): WizardDraft | null {
-  try {
-    const raw = sessionStorage.getItem(WIZARD_DRAFT_KEY)
-    return raw ? (JSON.parse(raw) as WizardDraft) : null
-  } catch {
-    return null
-  }
-}
-
-function saveWizardDraft(value: WizardDraft) {
-  try {
-    sessionStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(value))
-  } catch {
-    // Almacenamiento no disponible (modo privado, cuota llena, etc.) — el
-    // wizard sigue funcionando, solo sin recuperación tras recargar.
-  }
-}
-
-function clearWizardDraft() {
-  try {
-    sessionStorage.removeItem(WIZARD_DRAFT_KEY)
-  } catch {
-    // ignorar
+    job_number: job?.job_number ?? '',
+    job_type: job?.job_type ?? 'delivery',
+    status: job?.status ?? 'pending',
+    priority: job?.priority ?? 'normal',
+    customer_id: job?.customer_id ?? '',
+    customer_label: job?.customers?.name ?? '',
+    scheduled_date: job?.scheduled_date ?? '',
+    time_window_start: job?.time_window_start ?? '',
+    time_window_end: job?.time_window_end ?? '',
+    sender_name: job?.sender_name ?? '',
+    sender_phone: job?.sender_phone ?? '',
+    origin_type: job?.origin_type ?? 'pickup',
+    origin_customer_location_id: job?.origin_customer_location_id ?? '',
+    origin_customer_location_label: job?.origin_customer_locations?.name ?? '',
+    origin_branch_location_id: job?.origin_branch_location_id ?? '',
+    origin_branch_location_label: job?.origin_branch_locations?.name ?? '',
+    receiver_name: job?.receiver_name ?? '',
+    receiver_phone: job?.receiver_phone ?? '',
+    customer_location_id: job?.customer_location_id ?? '',
+    customer_location_label: job?.customer_locations?.name ?? '',
+    assigned_driver_id: job?.assigned_driver_id ?? '',
+    assigned_driver_label: job?.drivers ? `${job.drivers.first_name} ${job.drivers.last_name}` : '',
+    assigned_vehicle_id: job?.assigned_vehicle_id ?? '',
+    assigned_vehicle_label: job?.vehicles ? (job.vehicles.economic_number ?? job.vehicles.plate ?? '') : '',
+    estimated_service_minutes: job?.estimated_service_minutes != null ? String(job.estimated_service_minutes) : '',
+    content_description: job?.content_description ?? '',
+    declared_value: job?.declared_value != null ? String(job.declared_value) : '',
+    cod_amount: job?.cod_amount != null ? String(job.cod_amount) : '',
+    amount: job?.amount != null ? String(job.amount) : '',
+    received_by_name: job?.received_by_name ?? '',
+    received_at: job?.received_at ?? null,
+    instructions: job?.instructions ?? '',
+    pickup_latitude: job?.pickup_latitude ?? null,
+    pickup_longitude: job?.pickup_longitude ?? null,
+    pickup_captured_at: job?.pickup_captured_at ?? null,
+    delivery_latitude: job?.delivery_latitude ?? null,
+    delivery_longitude: job?.delivery_longitude ?? null,
+    delivery_captured_at: job?.delivery_captured_at ?? null,
+    has_insurance: job?.has_insurance ?? false,
+    insurance_percentage: job?.insurance_percentage != null ? String(job.insurance_percentage) : '',
   }
 }
 
@@ -162,29 +130,49 @@ function toNullableNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-/** Ruta `/pedidos/:id`. `id === 'nuevo'` abre el wizard de creación en un
- * `Modal` (ver CLAUDE.md, "Crear pedido: wizard en ventana emergente").
- * Editar un pedido existente delega todo a `JobDetailContent` — la misma
- * ficha completa se reutiliza embebida en un `Modal` desde el Centro de
- * control (pedido del usuario: "ver pedido completo" no debe navegar a
- * otra vista), así que esta página ya no duplica esa lógica. */
-export function JobDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const isNew = id === 'nuevo'
-  const navigate = useNavigate()
+interface JobDetailContentProps {
+  id: string
+  /** Se llama al pedir "volver"/cerrar — ya sea por el botón de regreso o
+   * tras confirmar salir con cambios sin guardar. Quien la usa decide qué
+   * significa "volver": navegar a `/pedidos` (página completa) o cerrar un
+   * `Modal` (uso embebido, p. ej. desde el Centro de control). */
+  onBack: () => void
+  /** Texto del botón de regreso — "Pedidos" en la página completa,
+   * "Cerrar" quando está embebido dentro de un Modal. */
+  backLabel?: string
+  /** Oculta el encabezado interno (botón de regreso/eliminar) cuando el
+   * contenedor que lo usa (p. ej. `Modal`) ya da su propio cierre. */
+  hideHeader?: boolean
+}
+
+/** Ficha completa de un pedido ya existente — cliente, recolección,
+ * entrega, paquete/cobro, paquetes y el historial de auditoría. Extraído
+ * de `JobDetailPage` para poder reutilizarse tanto como página completa
+ * (`/pedidos/:id`) como embebido dentro de un `Modal` sin navegar a otra
+ * vista (pedido explícito del usuario: "ver pedido completo" no debe
+ * sacarte del Centro de control). No incluye el wizard de creación —
+ * eso sigue siendo exclusivo de `JobDetailPage` para pedidos nuevos. */
+export function JobDetailContent({ id, onBack, backLabel = 'Pedidos', hideHeader = false }: JobDetailContentProps) {
   const { activeOrg } = useOrg()
+  const jobQuery = useJob(id)
+  const updateMutation = useUpdateJob()
+  const deleteMutation = useDeleteJob()
+  const packagesQuery = useJobPackages(id)
 
-  const createMutation = useCreateJob()
-
-  const [draft, setDraft] = useState<Draft>(() => loadWizardDraft()?.draft ?? emptyDraft())
-  const [original] = useState<Draft>(() => emptyDraft())
+  const [draft, setDraft] = useState<Draft>(() => toDraft())
+  const [original, setOriginal] = useState<Draft>(() => toDraft())
+  const [tab, setTab] = useState('paquetes')
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
-  const [step, setStep] = useState(() => loadWizardDraft()?.step ?? 0)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    saveWizardDraft({ draft, step })
-  }, [draft, step])
+    if (jobQuery.data) {
+      const next = toDraft(jobQuery.data)
+      setDraft(next)
+      setOriginal(next)
+    }
+  }, [jobQuery.data])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(original)
 
@@ -206,52 +194,32 @@ export function JobDetailPage() {
     })
   }
 
-  function validateStep(stepIndex: number): Record<string, string> {
-    const stepErrors: Record<string, string> = {}
-    if (stepIndex === 0 && !draft.customer_id) {
-      stepErrors.customer_id = 'Campo obligatorio'
-    }
-    if (stepIndex === 1) {
-      if (draft.origin_type === 'branch' && !draft.origin_branch_location_id) {
-        stepErrors.origin_branch_location_id = 'Campo obligatorio'
-      }
-      if (draft.origin_type === 'pickup' && !draft.origin_customer_location_id) {
-        stepErrors.origin_customer_location_id = 'Campo obligatorio'
-      }
-    }
-    if (stepIndex === 2) {
-      if (!draft.receiver_name.trim()) stepErrors.receiver_name = 'Campo obligatorio'
-      if (!draft.customer_location_id) stepErrors.customer_location_id = 'Campo obligatorio'
-    }
-    return stepErrors
-  }
-
-  function validateAll(): { valid: boolean; firstInvalidStep: number } {
-    for (let i = 0; i < 3; i++) {
-      const stepErrors = validateStep(i)
-      if (Object.keys(stepErrors).length > 0) {
-        setErrors((current) => ({ ...current, ...stepErrors }))
-        return { valid: false, firstInvalidStep: i }
-      }
-    }
-    return { valid: true, firstInvalidStep: 0 }
+  function validateAll(): boolean {
+    const nextErrors: Record<string, string> = {}
+    if (!draft.customer_id) nextErrors.customer_id = 'Campo obligatorio'
+    if (draft.origin_type === 'branch' && !draft.origin_branch_location_id) nextErrors.origin_branch_location_id = 'Campo obligatorio'
+    if (draft.origin_type === 'pickup' && !draft.origin_customer_location_id) nextErrors.origin_customer_location_id = 'Campo obligatorio'
+    if (!draft.receiver_name.trim()) nextErrors.receiver_name = 'Campo obligatorio'
+    if (!draft.customer_location_id) nextErrors.customer_location_id = 'Campo obligatorio'
+    setErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   function handleBack() {
     if (dirty) {
       setLeaveConfirmOpen(true)
     } else {
-      clearWizardDraft()
-      navigate('/pedidos')
+      onBack()
     }
   }
 
   function handleSave() {
-    const { valid, firstInvalidStep } = validateAll()
-    if (!valid) {
-      setStep(firstInvalidStep)
-      return
-    }
+    if (!validateAll()) return
+
+    const receivedAt =
+      draft.status === 'delivered' && original.status !== 'delivered' && !draft.received_at
+        ? new Date().toISOString()
+        : draft.received_at
 
     const input = {
       // job_number NO se manda: lo genera el trigger set_job_number() en el
@@ -279,7 +247,7 @@ export function JobDetailPage() {
       cod_amount: toNullableNumber(draft.cod_amount),
       amount: toNullableNumber(draft.amount),
       received_by_name: draft.received_by_name || null,
-      received_at: draft.received_at,
+      received_at: receivedAt,
       instructions: draft.instructions || null,
       pickup_latitude: draft.pickup_latitude,
       pickup_longitude: draft.pickup_longitude,
@@ -291,23 +259,22 @@ export function JobDetailPage() {
       insurance_percentage: draft.has_insurance ? toNullableNumber(draft.insurance_percentage) : null,
     }
 
-    createMutation.mutate(input, {
-      onSuccess: (created) => {
-        clearWizardDraft()
-        navigate(`/pedidos/${created.id}`, { replace: true })
-      },
-    })
+    updateMutation.mutate({ id, input }, { onSuccess: () => setOriginal({ ...draft, received_at: receivedAt }) })
   }
 
-  if (!isNew) {
-    return <JobDetailContent id={id!} onBack={() => navigate('/pedidos')} />
+  function handleDiscard() {
+    setDraft(original)
   }
 
-  const saving = createMutation.isPending
+  const saving = updateMutation.isPending
+  const job = jobQuery.data
 
   const sectionDatos = (
     <DetailSection title="Datos del pedido" description="Identificación, cliente y programación.">
       <DetailGrid>
+        <DetailField label="Número de pedido">
+          <p className="px-1.5 py-1 text-sm text-gray-500">{draft.job_number || '—'}</p>
+        </DetailField>
         <DetailField label="Tipo">
           <InlineField type="buttons" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
         </DetailField>
@@ -579,79 +546,59 @@ export function JobDetailPage() {
     </>
   )
 
-  const WIZARD_STEPS = [
-    { title: 'Datos del pedido', node: sectionDatos },
-    { title: 'Remitente y recolección', node: sectionOrigen },
-    { title: 'Destinatario y entrega', node: sectionDestino },
-    { title: 'Paquete y cobro', node: sectionPaquete },
-  ]
-  const isLastStep = step === WIZARD_STEPS.length - 1
-
   return (
     <>
-      <Modal
-        open
-        title="Nuevo pedido"
-        onClose={handleBack}
-        closeOnBackdrop={false}
-        footer={
-          <div className="flex items-center justify-between">
-            <Button variant="secondary" onClick={() => (step === 0 ? handleBack() : setStep((s) => s - 1))} disabled={saving}>
-              {step === 0 ? 'Cancelar' : 'Atrás'}
-            </Button>
-            <p className="text-xs text-gray-400">
-              Paso {step + 1} de {WIZARD_STEPS.length}
-            </p>
-            {isLastStep ? (
-              <Button onClick={handleSave} loading={saving}>
-                Crear pedido
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  const stepErrors = validateStep(step)
-                  if (Object.keys(stepErrors).length > 0) {
-                    setErrors((current) => ({ ...current, ...stepErrors }))
-                    return
-                  }
-                  setStep((s) => s + 1)
-                }}
-              >
-                Siguiente
-              </Button>
+      <div className="flex h-full flex-col">
+        {!hideHeader && (
+          <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+            <button type="button" onClick={handleBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
+              <ArrowLeft size={15} strokeWidth={2} />
+              {backLabel}
+            </button>
+            {job && (
+              <Can permission="jobs.manage">
+                <button type="button" onClick={() => setDeleteOpen(true)} className="text-sm font-medium text-red-600 hover:text-red-700">
+                  Eliminar
+                </button>
+              </Can>
             )}
           </div>
-        }
-      >
-        <div className="flex gap-6">
-          <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-gray-100 pr-5">
-            {WIZARD_STEPS.map((s, i) => (
-              <button
-                key={s.title}
-                type="button"
-                onClick={() => setStep(i)}
-                className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
-                  i === step ? 'bg-accent-50 font-medium text-accent-700' : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                    i < step
-                      ? 'bg-accent-500 text-white'
-                      : i === step
-                        ? 'border-2 border-accent-500 text-accent-600'
-                        : 'border border-gray-300 text-gray-400'
-                  }`}
-                >
-                  {i < step ? '✓' : i + 1}
-                </span>
-                {s.title}
-              </button>
-            ))}
-          </nav>
-          <div className="min-w-0 flex-1">{WIZARD_STEPS[step].node}</div>
+        )}
+
+        <div className="flex flex-1 overflow-hidden bg-white">
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {jobQuery.isLoading && <Skeleton className="h-64" />}
+            {jobQuery.isError && <ErrorState message="No se pudo cargar el pedido." onRetry={() => void jobQuery.refetch()} />}
+
+            {job && (
+              <div className="flex max-w-6xl flex-col gap-4">
+                <div>
+                  <h1 className="text-xl font-semibold text-ink">{draft.job_number || 'Pedido'}</h1>
+                  <p className="text-sm text-gray-500">{draft.customer_label || 'Sin cliente'}</p>
+                </div>
+
+                {sectionDatos}
+                {sectionOrigen}
+                {sectionDestino}
+                {sectionPaquete}
+
+                <div>
+                  <Tabs items={[{ key: 'paquetes', label: 'Paquetes', count: packagesQuery.data?.length }]} active={tab} onChange={setTab} />
+                  {tab === 'paquetes' && <JobPackagesTab jobId={id} />}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Can permission="audit.view">
+            <div className="w-80 shrink-0 border-l border-gray-200">
+              <HistoryPanel entityType="jobs" entityId={id} />
+            </div>
+          </Can>
         </div>
-      </Modal>
+
+        <SaveDiscardBar dirty={dirty} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
+      </div>
 
       <ConfirmDialog
         open={leaveConfirmOpen}
@@ -659,11 +606,19 @@ export function JobDetailPage() {
         description="Si sales ahora perderás los cambios que no has guardado. ¿Quieres continuar?"
         confirmLabel="Salir sin guardar"
         danger
-        onConfirm={() => {
-          clearWizardDraft()
-          navigate('/pedidos')
-        }}
+        onConfirm={onBack}
         onCancel={() => setLeaveConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Eliminar pedido"
+        description={`¿Seguro que quieres eliminar "${draft.job_number || 'este pedido'}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        danger
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate(id, { onSuccess: onBack })}
+        onCancel={() => setDeleteOpen(false)}
       />
     </>
   )
