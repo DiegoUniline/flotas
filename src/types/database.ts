@@ -567,15 +567,23 @@ export type Database = {
           customer_location_id: string | null
           declared_value: number | null
           deleted_at: string | null
+          delivery_captured_at: string | null
+          delivery_latitude: number | null
+          delivery_longitude: number | null
           estimated_service_minutes: number | null
+          has_insurance: boolean
           id: string
           instructions: string | null
+          insurance_percentage: number | null
           job_number: string | null
           job_type: string
           organization_id: string
           origin_branch_location_id: string | null
           origin_customer_location_id: string | null
           origin_type: string
+          pickup_captured_at: string | null
+          pickup_latitude: number | null
+          pickup_longitude: number | null
           priority: string
           received_at: string | null
           received_by_name: string | null
@@ -601,15 +609,23 @@ export type Database = {
           customer_location_id?: string | null
           declared_value?: number | null
           deleted_at?: string | null
+          delivery_captured_at?: string | null
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
           estimated_service_minutes?: number | null
+          has_insurance?: boolean
           id?: string
           instructions?: string | null
+          insurance_percentage?: number | null
           job_number?: string | null
           job_type?: string
           organization_id: string
           origin_branch_location_id?: string | null
           origin_customer_location_id?: string | null
           origin_type?: string
+          pickup_captured_at?: string | null
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
           priority?: string
           received_at?: string | null
           received_by_name?: string | null
@@ -635,15 +651,23 @@ export type Database = {
           customer_location_id?: string | null
           declared_value?: number | null
           deleted_at?: string | null
+          delivery_captured_at?: string | null
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
           estimated_service_minutes?: number | null
+          has_insurance?: boolean
           id?: string
           instructions?: string | null
+          insurance_percentage?: number | null
           job_number?: string | null
           job_type?: string
           organization_id?: string
           origin_branch_location_id?: string | null
           origin_customer_location_id?: string | null
           origin_type?: string
+          pickup_captured_at?: string | null
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
           priority?: string
           received_at?: string | null
           received_by_name?: string | null

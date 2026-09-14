@@ -484,6 +484,37 @@ cliente y domicilio". Se extendió `jobs` (migración
   un cálculo automático a partir de `job_packages` (ya trae el peso real
   y volumétrico listos para eso).
 
+### GPS de recolección/entrega y seguro (agregado en esta fase)
+
+Pedido explícito del usuario, terminando el módulo de paquetería.
+Migración `add_gps_capture_and_insurance_to_jobs`, extiende `jobs`:
+
+- **`pickup_latitude`/`pickup_longitude`/`pickup_captured_at`** y
+  **`delivery_latitude`/`delivery_longitude`/`delivery_captured_at`**:
+  **no es tracking en vivo ni requiere proveedor GPS** — es la
+  geolocalización del navegador (`navigator.geolocation`, el mismo
+  mecanismo que "Usar mi ubicación" en `CustomerLocationForm`) capturada
+  como una foto puntual en el momento real de recolectar/entregar, prueba
+  de dónde ocurrió cada evento (distinto de la dirección registrada del
+  domicilio, que es solo la referencia). Componente reutilizable
+  `components/ui/GpsCaptureField.tsx` (coords + hora capturada +
+  botón "Capturar ubicación actual"). El campo "GPS de recolección" en la
+  ficha de Pedido **solo se muestra cuando `origin_type = 'pickup'`**
+  (si el remitente lo entrega en sucursal no aplica recolección con GPS,
+  tal como pidió el usuario con "cuando aplica"); "GPS de entrega" siempre
+  se muestra. Esto sigue bloqueado/diferente de la integración de
+  rastreo vehicular en vivo (`vehicles.last_latitude/longitude`), que
+  sigue esperando que el usuario elija proveedor — no confundir ambas.
+- **`has_insurance` (boolean) + `insurance_percentage` (numeric)**:
+  seguro opcional del envío, expresado como % del `declared_value`. El
+  importe del seguro **no se guarda**, se calcula en la UI
+  (`declared_value * insurance_percentage / 100`, formateado con
+  `formatCurrency`) para que nunca quede desincronizado si se edita el
+  valor declarado después. Si en algún momento se necesita cobrar el
+  seguro por separado (línea de cobro propia, póliza con aseguradora
+  real, etc.), evaluar entonces si conviene persistir el monto — no se
+  inventó esa parte.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

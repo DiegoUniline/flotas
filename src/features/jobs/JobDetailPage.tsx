@@ -10,6 +10,7 @@ import { SaveDiscardBar } from '@/components/ui/SaveDiscardBar'
 import { Tabs } from '@/components/ui/Tabs'
 import { RelationSelect } from '@/components/ui/RelationSelect'
 import { HistoryPanel } from '@/components/audit/HistoryPanel'
+import { GpsCaptureField } from '@/components/ui/GpsCaptureField'
 import { Can } from '@/components/Can'
 import { useOrg } from '@/context/OrgContext'
 import { searchCustomers } from '@/features/customers/api/customersApi'
@@ -27,6 +28,7 @@ import {
   type JobWithRelations,
 } from '@/features/jobs/api/jobsApi'
 import { useCreateJob, useDeleteJob, useJob, useUpdateJob } from '@/features/jobs/hooks/useJobs'
+import { formatCurrency } from '@/lib/format'
 import { useJobPackages } from '@/features/jobs/hooks/useJobDetail'
 import { JobPackagesTab } from './components/JobPackagesTab'
 
@@ -68,6 +70,14 @@ interface Draft {
   received_by_name: string
   received_at: string | null
   instructions: string
+  pickup_latitude: number | null
+  pickup_longitude: number | null
+  pickup_captured_at: string | null
+  delivery_latitude: number | null
+  delivery_longitude: number | null
+  delivery_captured_at: string | null
+  has_insurance: boolean
+  insurance_percentage: string
 }
 
 function toDraft(job?: JobWithRelations): Draft {
@@ -104,6 +114,14 @@ function toDraft(job?: JobWithRelations): Draft {
     received_by_name: job?.received_by_name ?? '',
     received_at: job?.received_at ?? null,
     instructions: job?.instructions ?? '',
+    pickup_latitude: job?.pickup_latitude ?? null,
+    pickup_longitude: job?.pickup_longitude ?? null,
+    pickup_captured_at: job?.pickup_captured_at ?? null,
+    delivery_latitude: job?.delivery_latitude ?? null,
+    delivery_longitude: job?.delivery_longitude ?? null,
+    delivery_captured_at: job?.delivery_captured_at ?? null,
+    has_insurance: job?.has_insurance ?? false,
+    insurance_percentage: job?.insurance_percentage != null ? String(job.insurance_percentage) : '',
   }
 }
 
@@ -200,6 +218,14 @@ export function JobDetailPage() {
       received_by_name: draft.received_by_name || null,
       received_at: receivedAt,
       instructions: draft.instructions || null,
+      pickup_latitude: draft.pickup_latitude,
+      pickup_longitude: draft.pickup_longitude,
+      pickup_captured_at: draft.pickup_captured_at,
+      delivery_latitude: draft.delivery_latitude,
+      delivery_longitude: draft.delivery_longitude,
+      delivery_captured_at: draft.delivery_captured_at,
+      has_insurance: draft.has_insurance,
+      insurance_percentage: draft.has_insurance ? toNullableNumber(draft.insurance_percentage) : null,
     }
 
     if (isNew) {
@@ -362,6 +388,21 @@ export function JobDetailPage() {
                         />
                       )}
                     </DetailField>
+                    {draft.origin_type === 'pickup' && (
+                      <DetailField label="GPS de recolección" full>
+                        <GpsCaptureField
+                          latitude={draft.pickup_latitude}
+                          longitude={draft.pickup_longitude}
+                          capturedAt={draft.pickup_captured_at}
+                          onCapture={(lat, lng, capturedAt) => {
+                            update('pickup_latitude', lat)
+                            update('pickup_longitude', lng)
+                            update('pickup_captured_at', capturedAt)
+                          }}
+                          label="Capturar GPS de recolección"
+                        />
+                      </DetailField>
+                    )}
                   </DetailGrid>
                 </DetailSection>
 
@@ -440,10 +481,23 @@ export function JobDetailPage() {
                         onChange={(v) => update('estimated_service_minutes', v)}
                       />
                     </DetailField>
+                    <DetailField label="GPS de entrega" full>
+                      <GpsCaptureField
+                        latitude={draft.delivery_latitude}
+                        longitude={draft.delivery_longitude}
+                        capturedAt={draft.delivery_captured_at}
+                        onCapture={(lat, lng, capturedAt) => {
+                          update('delivery_latitude', lat)
+                          update('delivery_longitude', lng)
+                          update('delivery_captured_at', capturedAt)
+                        }}
+                        label="Capturar GPS de entrega"
+                      />
+                    </DetailField>
                   </DetailGrid>
                 </DetailSection>
 
-                <DetailSection title="Paquete y cobro" description="Contenido, valor declarado y montos a cobrar.">
+                <DetailSection title="Paquete y cobro" description="Contenido, valor declarado, seguro y montos a cobrar.">
                   <DetailGrid>
                     <DetailField label="Contenido del paquete" full>
                       <InlineField
@@ -459,6 +513,33 @@ export function JobDetailPage() {
                     </DetailField>
                     <DetailField label="Cobro contra entrega">
                       <InlineField type="number" value={draft.cod_amount} onChange={(v) => update('cod_amount', v)} />
+                    </DetailField>
+
+                    <DetailField label="Con seguro">
+                      <InlineField
+                        type="checkbox"
+                        value={draft.has_insurance ? 'true' : 'false'}
+                        onChange={(v) => update('has_insurance', v === 'true')}
+                      />
+                    </DetailField>
+                    <DetailField label="Seguro (%  del valor declarado)">
+                      {draft.has_insurance ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-24">
+                            <InlineField type="number" value={draft.insurance_percentage} onChange={(v) => update('insurance_percentage', v)} />
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {(() => {
+                              const declared = toNullableNumber(draft.declared_value)
+                              const pct = toNullableNumber(draft.insurance_percentage)
+                              if (declared == null || pct == null) return '— importe del seguro'
+                              return `= ${formatCurrency((declared * pct) / 100)}`
+                            })()}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="px-1.5 py-1 text-sm text-gray-400">Sin seguro</p>
+                      )}
                     </DetailField>
 
                     <DetailField label="Monto">
