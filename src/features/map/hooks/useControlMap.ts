@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useOrg } from '@/context/OrgContext'
 import { countLocations, fetchMappedLocations } from '@/features/map/api/mapApi'
+import { fetchControlKpis } from '@/features/map/api/controlApi'
 
 export function useMappedLocations() {
   const { activeOrg } = useOrg()
@@ -18,6 +19,16 @@ export function useLocationCounts() {
   return useQuery({
     queryKey: ['location-counts', activeOrg?.id],
     queryFn: () => countLocations(activeOrg!.id),
+    enabled: !!activeOrg,
+  })
+}
+
+export function useControlKpis(date: string) {
+  const { activeOrg } = useOrg()
+
+  return useQuery({
+    queryKey: ['control-kpis', activeOrg?.id, date],
+    queryFn: () => fetchControlKpis(activeOrg!.id, date),
     enabled: !!activeOrg,
   })
 }

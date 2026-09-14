@@ -21,11 +21,23 @@ export interface MapMarker {
   lng: number
   label: string
   description?: string
+  /** Color hex opcional; si se omite usa el pin default de Leaflet. */
+  color?: string
 }
 
 interface MapProps {
   markers: MapMarker[]
   className?: string
+}
+
+function coloredDivIcon(color: string): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    html: `<span style="display:block;width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -7],
+  })
 }
 
 export function Map({ markers, className = '' }: MapProps) {
@@ -72,7 +84,10 @@ export function Map({ markers, className = '' }: MapProps) {
         description.textContent = marker.description
         popup.appendChild(description)
       }
-      L.marker([marker.lat, marker.lng]).addTo(layer).bindPopup(popup)
+      const leafletMarker = marker.color
+        ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color) })
+        : L.marker([marker.lat, marker.lng])
+      leafletMarker.addTo(layer).bindPopup(popup)
     }
 
     const bounds = L.latLngBounds(markers.map((marker) => [marker.lat, marker.lng]))

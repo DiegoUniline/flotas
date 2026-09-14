@@ -223,6 +223,58 @@ Al construir cualquiera de estos módulos en serio, revisar primero si el
 permiso reutilizado sigue teniendo sentido o si conviene sembrar uno nuevo
 en `permissions` (documentarlo aquí igual que con `vehicle_types`/`settings.manage`).
 
+### Fase 4 — Operación: Clientes, Pedidos, Rutas y Centro de control real
+
+Pedido explícito del usuario: construir "crear pedidos" ya, y rediseñar el
+Centro de control con la estructura visual de una referencia (mapa
+protagonista, KPIs, panel lateral, timeline de ruta) pero **sin inventar
+tracking en vivo** — el movimiento del vehículo, velocidad, batería y
+"actualizado hace Xs" siguen bloqueados por la misma razón de siempre: no
+hay proveedor GPS elegido. Todo lo demás del rediseño usa datos reales.
+
+Tablas nuevas (mismo patrón RLS que el resto: select por membresía de org,
+write gateado por permiso, triggers `set_updated_at`/`audit_trigger`):
+
+- **`customers`** + **`customer_locations`** (domicilios múltiples por
+  cliente). No existe permiso `customers.*` sembrado — el write de ambas
+  reutiliza `jobs.manage` (un cliente solo tiene sentido para crear
+  pedidos). Ficha de cliente en `/clientes/:id` con domicilios como
+  sub-recurso, mismo patrón que licencias de operador, incluyendo el botón
+  "Usar mi ubicación".
+- **`jobs`** (pedidos): entrega/recolección/servicio, con cliente,
+  domicilio, operador y vehículo asignado, `amount numeric` — formatear
+  siempre con `formatCurrency()` de `src/lib/format.ts` (Intl.NumberFormat,
+  MXN hardcodeado por ahora — hay un TODO ahí para leer
+  `organizations.currency` cuando el producto soporte multi-moneda real).
+  RLS usa los permisos `jobs.view/manage/complete` que ya estaban
+  sembrados desde el inicio.
+- **`route_plans`** (ruta del día: operador + vehículo + sucursal base,
+  `status` draft→planned→in_progress→completed/cancelled) y
+  **`route_stops`** (paradas). Al agregar una parada desde un pedido
+  (`addStopFromJob`), se copia un **snapshot** de nombre/dirección/lat/lng
+  del `customer_location` del pedido hacia la parada — la parada no se
+  recalcula si luego editas el domicilio del cliente, es intencional (la
+  ruta del día no debe moverse retroactivamente). `route_plans` no tiene
+  `deleted_at`: no se borran, se cancelan (`status = 'cancelled'`) porque
+  tienen valor histórico. RLS: `routes.create` para crear rutas,
+  `routes.assign` para editarlas/reasignar/gestionar paradas (reutilizado
+  también para delete de `route_plans`, no hay permiso de borrado propio).
+
+**Centro de control rediseñado** (`features/map/ControlMapPage.tsx`):
+selector de fecha + selector de ruta (con buscador que filtra esa lista de
+rutas por nombre/operador/vehículo, cliente-side) + 4 KPIs reales
+(vehículos activos, rutas en curso hoy, pedidos entregados/programados,
+paradas pendientes hoy — todo vía `features/map/api/controlApi.ts`). Mapa
+con sucursales (pin default) + paradas de la ruta seleccionada (pin de
+color por estado: gris pendiente, índigo en camino, verde completada —
+`Map.tsx` ahora acepta `color` opcional por marcador vía `divIcon`). Panel
+lateral al seleccionar una ruta: info + progreso (paradas completadas/total)
++ siguiente parada + link a la ficha completa de la ruta. Timeline
+horizontal de paradas debajo del mapa. **No hay tarjeta de "alertas
+activas" ni "ETA promedio"** — no existe motor de alertas (Fase 6 del
+roadmap) ni tracking en vivo, así que no hay dato real que mostrar ahí;
+agregarlas cuando esas piezas existan, no antes.
+
 ## Sistema de diseño
 
 - Tipografía: Inter (cargada en `index.html` desde Google Fonts).
