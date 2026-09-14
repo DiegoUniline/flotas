@@ -4,11 +4,12 @@ import { ArrowLeft } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { DetailField, DetailGrid } from '@/components/ui/DetailGrid'
+import { DetailField, DetailGrid, DetailSection } from '@/components/ui/DetailGrid'
 import { InlineField } from '@/components/ui/InlineField'
 import { SaveDiscardBar } from '@/components/ui/SaveDiscardBar'
 import { Tabs } from '@/components/ui/Tabs'
 import { RelationSelect } from '@/components/ui/RelationSelect'
+import { HistoryPanel } from '@/components/audit/HistoryPanel'
 import { Can } from '@/components/Can'
 import { useOrg } from '@/context/OrgContext'
 import { searchLocations } from '@/features/locations/api/locationsApi'
@@ -194,156 +195,180 @@ export function VehicleDetailPage() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          {!isNew && vehicleQuery.isLoading && <Skeleton className="h-64" />}
-          {!isNew && vehicleQuery.isError && (
-            <ErrorState message="No se pudo cargar el vehículo." onRetry={() => void vehicleQuery.refetch()} />
-          )}
+        <div className="flex flex-1 overflow-hidden bg-white">
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {!isNew && vehicleQuery.isLoading && <Skeleton className="h-64" />}
+            {!isNew && vehicleQuery.isError && (
+              <ErrorState message="No se pudo cargar el vehículo." onRetry={() => void vehicleQuery.refetch()} />
+            )}
 
-          {(isNew || vehicle) && (
-            <div className="mx-auto flex max-w-3xl flex-col gap-6">
-              <div>
-                <h1 className="text-xl font-semibold text-ink">
-                  {draft.economic_number || (isNew ? 'Nuevo vehículo' : 'Vehículo')}
-                </h1>
-                <p className="text-sm text-gray-500">Placas: {draft.plate || 'sin registrar'}</p>
-              </div>
-
-              <DetailGrid>
-                <DetailField label="Número económico">
-                  <InlineField value={draft.economic_number} onChange={(v) => update('economic_number', v)} placeholder="Agregar…" />
-                </DetailField>
-                <DetailField label="Tipo">
-                  <RelationSelect
-                    value={draft.vehicle_type_id || null}
-                    displayLabel={draft.vehicle_type_label || null}
-                    placeholder="Selecciona un tipo"
-                    onSearch={(query) =>
-                      searchVehicleTypes(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                    }
-                    onSelect={(option) => {
-                      update('vehicle_type_id', option?.id ?? '')
-                      update('vehicle_type_label', option?.label ?? '')
-                    }}
-                    createLabel="Tipo de vehículo"
-                    renderCreateForm={({ initialName, onCreated, onCancel }) => (
-                      <VehicleTypeQuickForm initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
-                    )}
-                  />
-                </DetailField>
-
-                <DetailField label="Placas">
-                  <InlineField value={draft.plate} onChange={(v) => update('plate', v)} />
-                </DetailField>
-                <DetailField label="VIN">
-                  <InlineField value={draft.vin} onChange={(v) => update('vin', v)} />
-                </DetailField>
-
-                <DetailField label="Marca">
-                  <InlineField value={draft.brand} onChange={(v) => update('brand', v)} />
-                </DetailField>
-                <DetailField label="Modelo">
-                  <InlineField value={draft.model} onChange={(v) => update('model', v)} />
-                </DetailField>
-
-                <DetailField label="Año">
-                  <InlineField type="number" value={draft.year} onChange={(v) => update('year', v)} />
-                </DetailField>
-                <DetailField label="Grupo">
-                  <RelationSelect
-                    value={draft.vehicle_group_id || null}
-                    displayLabel={draft.vehicle_group_label || null}
-                    placeholder="Sin grupo"
-                    onSearch={(query) =>
-                      searchVehicleGroups(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                    }
-                    onSelect={(option) => {
-                      update('vehicle_group_id', option?.id ?? '')
-                      update('vehicle_group_label', option?.label ?? '')
-                    }}
-                    createLabel="Grupo de vehículos"
-                    renderCreateForm={({ initialName, onCreated, onCancel }) => (
-                      <VehicleGroupQuickForm initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
-                    )}
-                  />
-                </DetailField>
-
-                <DetailField label="Estado">
-                  <InlineField type="select" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => update('status', v)} />
-                </DetailField>
-                <DetailField label="Sucursal base">
-                  <RelationSelect
-                    value={draft.location_id || null}
-                    displayLabel={draft.location_label || null}
-                    placeholder="Sin asignar"
-                    onSearch={(query) =>
-                      searchLocations(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
-                    }
-                    onSelect={(option) => {
-                      update('location_id', option?.id ?? '')
-                      update('location_label', option?.label ?? '')
-                    }}
-                    createLabel="Sucursal"
-                    renderCreateForm={({ initialName, onCreated, onCancel }) => (
-                      <LocationQuickCreate initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
-                    )}
-                  />
-                </DetailField>
-
-                <DetailField label="Operador asignado">
-                  {isNew ? (
-                    <div className="px-1.5 py-1 text-sm text-gray-400">Disponible al guardar</div>
-                  ) : (
-                    <VehicleAssignmentField
-                      vehicleId={id!}
-                      driverId={vehicle?.assigned_driver_id ?? null}
-                      driverLabel={vehicle?.drivers ? `${vehicle.drivers.first_name} ${vehicle.drivers.last_name}` : null}
-                    />
-                  )}
-                </DetailField>
-                <DetailField label="Combustible">
-                  <InlineField value={draft.fuel_type} onChange={(v) => update('fuel_type', v)} placeholder="Diésel, gasolina..." />
-                </DetailField>
-
-                <DetailField label="Odómetro">
-                  <InlineField type="number" value={draft.current_odometer} onChange={(v) => update('current_odometer', v)} />
-                </DetailField>
-                <DetailField label="Unidad">
-                  <InlineField
-                    type="select"
-                    value={draft.odometer_unit}
-                    options={[
-                      { value: 'km', label: 'km' },
-                      { value: 'mi', label: 'mi' },
-                    ]}
-                    onChange={(v) => update('odometer_unit', v)}
-                  />
-                </DetailField>
-
-                <DetailField label="Activo">
-                  <InlineField type="checkbox" value={draft.active ? 'true' : 'false'} onChange={(v) => update('active', v === 'true')} />
-                </DetailField>
-
-                <DetailField label="Notas" full>
-                  <InlineField type="textarea" value={draft.notes} onChange={(v) => update('notes', v)} />
-                </DetailField>
-              </DetailGrid>
-
-              {!isNew && id && (
+            {(isNew || vehicle) && (
+              <div className="flex max-w-4xl flex-col gap-4">
                 <div>
-                  <Tabs
-                    items={[
-                      { key: 'documentos', label: 'Documentos', count: documentsQuery.data?.length },
-                      { key: 'historial', label: 'Historial de asignación' },
-                    ]}
-                    active={tab}
-                    onChange={setTab}
-                  />
-                  {tab === 'documentos' && <VehicleDocumentsTab vehicleId={id} />}
-                  {tab === 'historial' && <VehicleAssignmentHistoryTab vehicleId={id} />}
+                  <h1 className="text-xl font-semibold text-ink">
+                    {draft.economic_number || (isNew ? 'Nuevo vehículo' : 'Vehículo')}
+                  </h1>
+                  <p className="text-sm text-gray-500">Placas: {draft.plate || 'sin registrar'}</p>
                 </div>
-              )}
-            </div>
+
+                <DetailSection title="Identificación" description="Datos de registro del vehículo.">
+                  <DetailGrid>
+                    <DetailField label="Número económico">
+                      <InlineField value={draft.economic_number} onChange={(v) => update('economic_number', v)} placeholder="Agregar…" />
+                    </DetailField>
+                    <DetailField label="Tipo">
+                      <RelationSelect
+                        value={draft.vehicle_type_id || null}
+                        displayLabel={draft.vehicle_type_label || null}
+                        placeholder="Selecciona un tipo"
+                        onSearch={(query) =>
+                          searchVehicleTypes(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+                        }
+                        onSelect={(option) => {
+                          update('vehicle_type_id', option?.id ?? '')
+                          update('vehicle_type_label', option?.label ?? '')
+                        }}
+                        createLabel="Tipo de vehículo"
+                        renderCreateForm={({ initialName, onCreated, onCancel }) => (
+                          <VehicleTypeQuickForm initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
+                        )}
+                      />
+                    </DetailField>
+
+                    <DetailField label="Placas">
+                      <InlineField value={draft.plate} onChange={(v) => update('plate', v)} />
+                    </DetailField>
+                    <DetailField label="VIN">
+                      <InlineField value={draft.vin} onChange={(v) => update('vin', v)} />
+                    </DetailField>
+
+                    <DetailField label="Marca">
+                      <InlineField value={draft.brand} onChange={(v) => update('brand', v)} />
+                    </DetailField>
+                    <DetailField label="Modelo">
+                      <InlineField value={draft.model} onChange={(v) => update('model', v)} />
+                    </DetailField>
+
+                    <DetailField label="Año">
+                      <InlineField type="number" value={draft.year} onChange={(v) => update('year', v)} />
+                    </DetailField>
+                    <DetailField label="Grupo">
+                      <RelationSelect
+                        value={draft.vehicle_group_id || null}
+                        displayLabel={draft.vehicle_group_label || null}
+                        placeholder="Sin grupo"
+                        onSearch={(query) =>
+                          searchVehicleGroups(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+                        }
+                        onSelect={(option) => {
+                          update('vehicle_group_id', option?.id ?? '')
+                          update('vehicle_group_label', option?.label ?? '')
+                        }}
+                        createLabel="Grupo de vehículos"
+                        renderCreateForm={({ initialName, onCreated, onCancel }) => (
+                          <VehicleGroupQuickForm initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
+                        )}
+                      />
+                    </DetailField>
+                  </DetailGrid>
+                </DetailSection>
+
+                <DetailSection title="Estado y asignación" description="Dónde está el vehículo y quién lo trae.">
+                  <DetailGrid>
+                    <DetailField label="Estado">
+                      <InlineField type="select" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => update('status', v)} />
+                    </DetailField>
+                    <DetailField label="Sucursal base">
+                      <RelationSelect
+                        value={draft.location_id || null}
+                        displayLabel={draft.location_label || null}
+                        placeholder="Sin asignar"
+                        onSearch={(query) =>
+                          searchLocations(activeOrg!.id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+                        }
+                        onSelect={(option) => {
+                          update('location_id', option?.id ?? '')
+                          update('location_label', option?.label ?? '')
+                        }}
+                        createLabel="Sucursal"
+                        renderCreateForm={({ initialName, onCreated, onCancel }) => (
+                          <LocationQuickCreate initialName={initialName} onCreated={onCreated} onCancel={onCancel} />
+                        )}
+                      />
+                    </DetailField>
+
+                    <DetailField label="Operador asignado">
+                      {isNew ? (
+                        <div className="px-1.5 py-1 text-sm text-gray-400">Disponible al guardar</div>
+                      ) : (
+                        <VehicleAssignmentField
+                          vehicleId={id!}
+                          driverId={vehicle?.assigned_driver_id ?? null}
+                          driverLabel={vehicle?.drivers ? `${vehicle.drivers.first_name} ${vehicle.drivers.last_name}` : null}
+                        />
+                      )}
+                    </DetailField>
+                    <DetailField label="Activo">
+                      <InlineField type="checkbox" value={draft.active ? 'true' : 'false'} onChange={(v) => update('active', v === 'true')} />
+                    </DetailField>
+                  </DetailGrid>
+                </DetailSection>
+
+                <DetailSection title="Operación" description="Combustible y odómetro.">
+                  <DetailGrid>
+                    <DetailField label="Combustible">
+                      <InlineField value={draft.fuel_type} onChange={(v) => update('fuel_type', v)} placeholder="Diésel, gasolina..." />
+                    </DetailField>
+                    <DetailField label="Odómetro">
+                      <InlineField type="number" value={draft.current_odometer} onChange={(v) => update('current_odometer', v)} />
+                    </DetailField>
+
+                    <DetailField label="Unidad">
+                      <InlineField
+                        type="select"
+                        value={draft.odometer_unit}
+                        options={[
+                          { value: 'km', label: 'km' },
+                          { value: 'mi', label: 'mi' },
+                        ]}
+                        onChange={(v) => update('odometer_unit', v)}
+                      />
+                    </DetailField>
+                  </DetailGrid>
+                </DetailSection>
+
+                <DetailSection title="Notas">
+                  <DetailGrid>
+                    <DetailField label="Notas" full>
+                      <InlineField type="textarea" value={draft.notes} onChange={(v) => update('notes', v)} />
+                    </DetailField>
+                  </DetailGrid>
+                </DetailSection>
+
+                {!isNew && id && (
+                  <div>
+                    <Tabs
+                      items={[
+                        { key: 'documentos', label: 'Documentos', count: documentsQuery.data?.length },
+                        { key: 'historial', label: 'Historial de asignación' },
+                      ]}
+                      active={tab}
+                      onChange={setTab}
+                    />
+                    {tab === 'documentos' && <VehicleDocumentsTab vehicleId={id} />}
+                    {tab === 'historial' && <VehicleAssignmentHistoryTab vehicleId={id} />}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {!isNew && id && (
+            <Can permission="audit.view">
+              <div className="w-80 shrink-0 border-l border-gray-200">
+                <HistoryPanel entityType="vehicles" entityId={id} />
+              </div>
+            </Can>
           )}
         </div>
 

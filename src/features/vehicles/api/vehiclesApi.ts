@@ -206,3 +206,21 @@ export async function fetchVehicleOptions(organizationId: string): Promise<Vehic
   if (error) throw error
   return data ?? []
 }
+
+export async function searchVehicles(organizationId: string, query: string): Promise<VehicleOption[]> {
+  let q = supabase
+    .from('vehicles')
+    .select('id, economic_number, plate')
+    .eq('organization_id', organizationId)
+    .eq('active', true)
+    .is('deleted_at', null)
+
+  if (query.trim()) {
+    const term = escapeIlikeTerm(query)
+    q = q.or(`economic_number.ilike.%${term}%,plate.ilike.%${term}%`)
+  }
+
+  const { data, error } = await q.order('economic_number', { ascending: true }).limit(20)
+  if (error) throw error
+  return data ?? []
+}

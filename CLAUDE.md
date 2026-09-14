@@ -390,8 +390,99 @@ tienen) sin inventar uno nuevo.
 
 Migrar al patrón nuevo, en este orden sugerido (del más simple al más
 grande): Sucursales → Operadores (ya tiene sub-recursos, buena prueba de
-Tabs) → Clientes → Pedidos (buen caso de `RelationSelect` sin creación,
-solo búsqueda, para cliente/domicilio/operador/vehículo) → Rutas.
+Tabs) → Clientes → Rutas. **Pedidos ya se migró** (ver sección de
+paquetería abajo).
+
+### `DetailSection` + `HistoryPanel` (agregado en esta fase)
+
+Pedido explícito del usuario con referencia visual: las fichas de detalle
+no son un único bloque de campos — se agrupan en tarjetas con título y,
+a la derecha, un panel fijo con el historial real de cambios del registro.
+
+- **`DetailSection`** (`components/ui/DetailGrid.tsx`, junto a
+  `DetailGrid`/`DetailField`): tarjeta con borde, título y descripción
+  opcional, contiene un `DetailGrid` adentro. Agrupar campos relacionados
+  (p. ej. en Vehículos: "Identificación", "Estado y asignación",
+  "Operación", "Notas"; en Pedidos: "Datos del pedido", "Remitente y
+  recolección", "Destinatario y entrega", "Paquete y cobro",
+  "Instrucciones"). No inventa datos — sigue siendo el mismo
+  `DetailField` de siempre, solo con jerarquía visual.
+- **`HistoryPanel`** (`components/audit/HistoryPanel.tsx`): columna fija
+  de 320px a la derecha de la ficha (`w-80 shrink-0 border-l`), gateada
+  con `<Can permission="audit.view">` (el rol Consulta/Administrador/
+  Propietario lo tiene sembrado; si el usuario no tiene el permiso el
+  panel simplemente no se pinta — RLS de `audit_logs` ya lo bloquea de
+  cualquier forma). Lee de la tabla real `audit_logs` (ya poblada por los
+  triggers `audit_trigger()` que **todas** las tablas del proyecto ya
+  tienen desde el inicio) vía `features/audit/api/auditLogApi.ts` +
+  `features/audit/hooks/useAuditLog.ts`, filtrando por
+  `entity_type`/`entity_id` del registro actual. `lib/auditDiff.ts`
+  calcula qué campos cambiaron entre `old_values`/`new_values` (ignora
+  `id`/`organization_id`/timestamps/`created_by`) para mostrar
+  "campo: antes → después" por cada evento de `update`. Datos 100% reales,
+  nada simulado. Solo se agregó a Vehículos y Pedidos por ahora — agregar
+  el mismo bloque (`Can audit.view` + `HistoryPanel entityType=".." `) al
+  resto de fichas cuando se migren.
+- El contenedor de la ficha pasó de `mx-auto max-w-3xl` (centrado, fondo
+  gris alrededor) a `flex-1` con `bg-white` de borde a borde y
+  `max-w-4xl` sin centrar — el contenido queda pegado a la izquierda como
+  pidió el usuario, el `HistoryPanel` ocupa la derecha.
+
+### Pedidos como guía de paquetería (agregado en esta fase)
+
+Pedido explícito del usuario: el módulo de Pedidos debe servir para
+paquetería en general (tipo FedEx/DHL/Estafeta), no solo "entrega con
+cliente y domicilio". Se extendió `jobs` (migración
+`add_courier_fields_to_jobs`) y se agregó la tabla `job_packages`:
+
+- **Remitente/destinatario**: `sender_name`/`sender_phone` y
+  `receiver_name`/`receiver_phone` en `jobs` — texto libre, independiente
+  de si el remitente/destinatario son el mismo `customer_id` (la cuenta
+  que se factura no siempre es la persona de contacto de ese envío
+  puntual).
+- **Recolección con dos modos** (`origin_type`, check `pickup`|`branch`):
+  `pickup` = pasamos a recoger al domicilio del cliente
+  (`origin_customer_location_id`, FK a `customer_locations` — reutiliza
+  el mismo catálogo de domicilios del cliente, con `RelationSelect` +
+  creación en contexto vía `CustomerLocationQuickCreate`); `branch` = el
+  remitente lo entrega en una sucursal propia (`origin_branch_location_id`,
+  FK a `locations`, `RelationSelect` de solo búsqueda ya que las
+  sucursales no se crean desde aquí). La ficha muestra un solo campo de
+  ubicación que cambia de tipo según `origin_type`.
+- **Entrega**: sigue siendo el `customer_location_id` que ya existía
+  (domicilio del cliente, con lat/lng reales para el mapa — no se
+  duplicó esa dirección en `jobs`). `receiver_name`/`receiver_phone` son
+  la persona específica de ese envío, puede diferir del contacto guardado
+  en el domicilio.
+- **Contenido y cobro**: `content_description` (qué se envía),
+  `declared_value` (valor declarado), `cod_amount` (cobro contra
+  entrega/pago contra entrega), además del `amount` que ya existía
+  (monto a cobrar por el servicio). `received_by_name` (quién recibió) y
+  `received_at` — este último **no se captura a mano**: al guardar la
+  ficha, si `status` pasa a `delivered` y no tenía `received_at`, se
+  sella automáticamente con la hora del guardado (`JobDetailPage.tsx`,
+  función `handleSave`).
+- **`job_packages`** (tabla nueva, mismo patrón RLS que el resto —
+  `organization_id` propio, no join al padre — gateada por
+  `jobs.manage`): un pedido puede tener varios bultos, cada uno con
+  `quantity`, `weight_kg`, `length_cm`/`width_cm`/`height_cm`,
+  `description`, `declared_value`. Pestaña "Paquetes" en la ficha
+  (`JobPackagesTab.tsx`) con **filas editables directamente** (sin Drawer,
+  a diferencia de licencias/documentos — son líneas simples tipo hoja de
+  cálculo, cada celda hace commit en `onBlur`). Se calcula y muestra
+  **peso volumétrico** por fila (`L×A×H/5000`, fórmula estándar de
+  paquetería, `lib` vive en `jobPackagesApi.ts` como
+  `volumetricWeightKg()`) y totales de piezas/peso real/peso volumétrico
+  al pie — todo derivado de números reales que captura el usuario, nunca
+  inventado.
+- **Deliberadamente no construido:** motor de tarifas (cobrar
+  automáticamente por peso/tamaño con una tabla de precios). Cada
+  paquetería tiene su propio esquema de tarifas/zonas/contratos por
+  cliente — construirlo sin que el usuario defina las reglas sería
+  inventar lógica de negocio. Por ahora `amount` sigue siendo captura
+  manual; cuando el usuario decida el esquema de tarifas se puede sumar
+  un cálculo automático a partir de `job_packages` (ya trae el peso real
+  y volumétrico listos para eso).
 
 ## Sistema de diseño
 

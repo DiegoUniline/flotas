@@ -1,12 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrg } from '@/context/OrgContext'
 import { useToast } from '@/context/ToastContext'
-import { fetchCustomerOptions } from '@/features/customers/api/customersApi'
-import { fetchCustomerLocationOptions } from '@/features/customers/api/customerLocationsApi'
-import { fetchDriverOptions } from '@/features/drivers/api/driversApi'
-import { fetchVehicleOptions } from '@/features/vehicles/api/vehiclesApi'
 import {
   createJob,
+  fetchJobById,
   fetchJobs,
   softDeleteJob,
   updateJob,
@@ -31,38 +28,11 @@ export function useJobsQuery(filters: JobFilters, sort: JobSort, page: number) {
 
 export { PAGE_SIZE }
 
-export function useJobCustomerOptions() {
-  const { activeOrg } = useOrg()
+export function useJob(id: string | undefined) {
   return useQuery({
-    queryKey: ['customer-options', activeOrg?.id],
-    queryFn: () => fetchCustomerOptions(activeOrg!.id),
-    enabled: !!activeOrg,
-  })
-}
-
-export function useJobCustomerLocationOptions(customerId: string | undefined) {
-  return useQuery({
-    queryKey: ['customer-location-options', customerId],
-    queryFn: () => fetchCustomerLocationOptions(customerId!),
-    enabled: !!customerId,
-  })
-}
-
-export function useJobDriverOptions() {
-  const { activeOrg } = useOrg()
-  return useQuery({
-    queryKey: ['driver-options', activeOrg?.id],
-    queryFn: () => fetchDriverOptions(activeOrg!.id),
-    enabled: !!activeOrg,
-  })
-}
-
-export function useJobVehicleOptions() {
-  const { activeOrg } = useOrg()
-  return useQuery({
-    queryKey: ['vehicle-options', activeOrg?.id],
-    queryFn: () => fetchVehicleOptions(activeOrg!.id),
-    enabled: !!activeOrg,
+    queryKey: ['job', id],
+    queryFn: () => fetchJobById(id!),
+    enabled: !!id,
   })
 }
 
@@ -88,8 +58,9 @@ export function useUpdateJob() {
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: JobUpdate }) => updateJob(id, input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['jobs', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['job', variables.id] })
       showToast('Pedido actualizado', 'success')
     },
     onError: () => showToast('No se pudo actualizar el pedido', 'error'),

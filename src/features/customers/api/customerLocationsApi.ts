@@ -57,3 +57,11 @@ export async function fetchCustomerLocationOptions(customerId: string): Promise<
   if (error) throw error
   return data ?? []
 }
+
+export async function searchCustomerLocations(customerId: string, query: string): Promise<CustomerLocationOption[]> {
+  let q = supabase.from('customer_locations').select('id, name, address').eq('customer_id', customerId).eq('active', true)
+  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+  const { data, error } = await q.order('name', { ascending: true }).limit(20)
+  if (error) throw error
+  return data ?? []
+}

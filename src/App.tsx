@@ -20,6 +20,7 @@ import { DriverDetailPage } from '@/features/drivers/DriverDetailPage'
 import { CustomersPage } from '@/features/customers/CustomersPage'
 import { CustomerDetailPage } from '@/features/customers/CustomerDetailPage'
 import { JobsPage } from '@/features/jobs/JobsPage'
+import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { RoutesPage } from '@/features/routes/RoutesPage'
 import { RouteDetailPage } from '@/features/routes/RouteDetailPage'
 
@@ -55,6 +56,8 @@ export function App() {
             <Route path="clientes" element={<CustomersPage />} />
             <Route path="clientes/:id" element={<CustomerDetailPage />} />
             <Route path="pedidos" element={<JobsPage />} />
+            <Route path="pedidos/nuevo" element={<JobDetailPage />} />
+            <Route path="pedidos/:id" element={<JobDetailPage />} />
             <Route path="rutas" element={<RoutesPage />} />
             <Route path="rutas/:id" element={<RouteDetailPage />} />
             {comingSoonItems.map((item) => (

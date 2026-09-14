@@ -96,3 +96,18 @@ export async function fetchCustomerOptions(organizationId: string): Promise<Cust
   if (error) throw error
   return data ?? []
 }
+
+export async function searchCustomers(organizationId: string, query: string): Promise<CustomerOption[]> {
+  let q = supabase
+    .from('customers')
+    .select('id, name')
+    .eq('organization_id', organizationId)
+    .eq('status', 'active')
+    .is('deleted_at', null)
+
+  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+
+  const { data, error } = await q.order('name', { ascending: true }).limit(20)
+  if (error) throw error
+  return data ?? []
+}

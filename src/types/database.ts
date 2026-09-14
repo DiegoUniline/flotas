@@ -494,15 +494,78 @@ export type Database = {
           },
         ]
       }
+      job_packages: {
+        Row: {
+          created_at: string
+          declared_value: number | null
+          description: string | null
+          height_cm: number | null
+          id: string
+          job_id: string
+          length_cm: number | null
+          organization_id: string
+          quantity: number
+          updated_at: string
+          weight_kg: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          created_at?: string
+          declared_value?: number | null
+          description?: string | null
+          height_cm?: number | null
+          id?: string
+          job_id: string
+          length_cm?: number | null
+          organization_id: string
+          quantity?: number
+          updated_at?: string
+          weight_kg?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          created_at?: string
+          declared_value?: number | null
+          description?: string | null
+          height_cm?: number | null
+          id?: string
+          job_id?: string
+          length_cm?: number | null
+          organization_id?: string
+          quantity?: number
+          updated_at?: string
+          weight_kg?: number | null
+          width_cm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_packages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_packages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           amount: number | null
           assigned_driver_id: string | null
           assigned_vehicle_id: string | null
+          cod_amount: number | null
+          content_description: string | null
           created_at: string
           created_by: string | null
           customer_id: string | null
           customer_location_id: string | null
+          declared_value: number | null
           deleted_at: string | null
           estimated_service_minutes: number | null
           id: string
@@ -510,8 +573,17 @@ export type Database = {
           job_number: string | null
           job_type: string
           organization_id: string
+          origin_branch_location_id: string | null
+          origin_customer_location_id: string | null
+          origin_type: string
           priority: string
+          received_at: string | null
+          received_by_name: string | null
+          receiver_name: string | null
+          receiver_phone: string | null
           scheduled_date: string | null
+          sender_name: string | null
+          sender_phone: string | null
           status: string
           time_window_end: string | null
           time_window_start: string | null
@@ -521,10 +593,13 @@ export type Database = {
           amount?: number | null
           assigned_driver_id?: string | null
           assigned_vehicle_id?: string | null
+          cod_amount?: number | null
+          content_description?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
           customer_location_id?: string | null
+          declared_value?: number | null
           deleted_at?: string | null
           estimated_service_minutes?: number | null
           id?: string
@@ -532,8 +607,17 @@ export type Database = {
           job_number?: string | null
           job_type?: string
           organization_id: string
+          origin_branch_location_id?: string | null
+          origin_customer_location_id?: string | null
+          origin_type?: string
           priority?: string
+          received_at?: string | null
+          received_by_name?: string | null
+          receiver_name?: string | null
+          receiver_phone?: string | null
           scheduled_date?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
           status?: string
           time_window_end?: string | null
           time_window_start?: string | null
@@ -543,10 +627,13 @@ export type Database = {
           amount?: number | null
           assigned_driver_id?: string | null
           assigned_vehicle_id?: string | null
+          cod_amount?: number | null
+          content_description?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string | null
           customer_location_id?: string | null
+          declared_value?: number | null
           deleted_at?: string | null
           estimated_service_minutes?: number | null
           id?: string
@@ -554,8 +641,17 @@ export type Database = {
           job_number?: string | null
           job_type?: string
           organization_id?: string
+          origin_branch_location_id?: string | null
+          origin_customer_location_id?: string | null
+          origin_type?: string
           priority?: string
+          received_at?: string | null
+          received_by_name?: string | null
+          receiver_name?: string | null
+          receiver_phone?: string | null
           scheduled_date?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
           status?: string
           time_window_end?: string | null
           time_window_start?: string | null
@@ -595,6 +691,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_origin_branch_location_id_fkey"
+            columns: ["origin_branch_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_origin_customer_location_id_fkey"
+            columns: ["origin_customer_location_id"]
+            isOneToOne: false
+            referencedRelation: "customer_locations"
             referencedColumns: ["id"]
           },
         ]

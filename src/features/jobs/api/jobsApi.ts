@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
+import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
+import type { DateRangeValue } from '@/lib/dateRanges'
 
 export type Job = Tables<'jobs'>
 export type JobInsert = Omit<TablesInsert<'jobs'>, 'organization_id' | 'created_by'>
@@ -8,6 +10,8 @@ export type JobUpdate = TablesUpdate<'jobs'>
 export interface JobWithRelations extends Job {
   customers: { name: string } | null
   customer_locations: { name: string; address: string | null } | null
+  origin_customer_locations: { name: string; address: string | null } | null
+  origin_branch_locations: { name: string } | null
   drivers: { first_name: string; last_name: string } | null
   vehicles: { economic_number: string | null; plate: string | null } | null
 }
@@ -37,12 +41,18 @@ export const JOB_PRIORITIES = [
   { value: 'urgent', label: 'Urgente' },
 ] as const
 
+export const ORIGIN_TYPES = [
+  { value: 'pickup', label: 'Pasamos a recoger' },
+  { value: 'branch', label: 'Lo entregan en sucursal' },
+] as const
+
 export type JobSortColumn = 'scheduled_date' | 'job_number' | 'created_at'
 
 export interface JobFilters {
   search: string
-  status: string | null
-  scheduledDate: string | null
+  dateRange: DateRangeValue
+  advanced: AppliedFilter[]
+  groupBy: string | null
 }
 
 export interface JobSort {
@@ -55,7 +65,11 @@ function escapeIlikeTerm(value: string) {
 }
 
 const JOB_SELECT_WITH_RELATIONS =
-  '*, customers(name), customer_locations(name, address), drivers(first_name, last_name), vehicles(economic_number, plate)'
+  '*, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address), origin_customer_locations:customer_locations!jobs_origin_customer_location_id_fkey(name, address), origin_branch_locations:locations!jobs_origin_branch_location_id_fkey(name), drivers(first_name, last_name), vehicles(economic_number, plate)'
+
+/** Cuando hay agrupación se trae un lote más grande para que los grupos no
+ * queden cortados a la mitad entre páginas (mismo criterio que Vehículos). */
+const GROUPED_PAGE_SIZE = 300
 
 export async function fetchJobs(
   organizationId: string,
@@ -72,22 +86,33 @@ export async function fetchJobs(
 
   const search = escapeIlikeTerm(filters.search)
   if (search) {
-    query = query.ilike('job_number', `%${search}%`)
+    query = query.or(`job_number.ilike.%${search}%,sender_name.ilike.%${search}%,receiver_name.ilike.%${search}%`)
   }
-  if (filters.status) {
-    query = query.eq('status', filters.status)
-  }
-  if (filters.scheduledDate) {
-    query = query.eq('scheduled_date', filters.scheduledDate)
-  }
+  if (filters.dateRange.from) query = query.gte('scheduled_date', filters.dateRange.from)
+  if (filters.dateRange.to) query = query.lte('scheduled_date', filters.dateRange.to)
 
-  const from = page * pageSize
-  const to = from + pageSize - 1
-  query = query.order(sort.column, { ascending: sort.direction === 'asc' }).range(from, to)
+  query = applyFilters(query, filters.advanced)
+
+  const effectivePageSize = filters.groupBy ? GROUPED_PAGE_SIZE : pageSize
+  const effectivePage = filters.groupBy ? 0 : page
+  const from = effectivePage * effectivePageSize
+  const to = from + effectivePageSize - 1
+
+  const orderColumn = filters.groupBy ?? sort.column
+  query = query.order(orderColumn, { ascending: true }).range(from, to)
+  if (filters.groupBy) {
+    query = query.order(sort.column, { ascending: sort.direction === 'asc' })
+  }
 
   const { data, error, count } = await query
   if (error) throw error
   return { rows: (data ?? []) as unknown as JobWithRelations[], count: count ?? 0 }
+}
+
+export async function fetchJobById(id: string): Promise<JobWithRelations> {
+  const { data, error } = await supabase.from('jobs').select(JOB_SELECT_WITH_RELATIONS).eq('id', id).single()
+  if (error) throw error
+  return data as unknown as JobWithRelations
 }
 
 export async function createJob(organizationId: string, input: JobInsert): Promise<Job> {
@@ -149,7 +174,7 @@ export interface JobForStop {
 export async function fetchJobForStop(jobId: string): Promise<JobForStop> {
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, job_number, job_type, estimated_service_minutes, customer_locations(name, address, latitude, longitude)')
+    .select('id, job_number, job_type, estimated_service_minutes, customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude)')
     .eq('id', jobId)
     .single()
   if (error) throw error
