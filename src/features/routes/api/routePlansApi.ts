@@ -6,8 +6,8 @@ export type RoutePlanInsert = Omit<TablesInsert<'route_plans'>, 'organization_id
 export type RoutePlanUpdate = TablesUpdate<'route_plans'>
 
 export interface RoutePlanWithRelations extends RoutePlan {
-  drivers: { first_name: string; last_name: string } | null
-  vehicles: { economic_number: string | null; plate: string | null } | null
+  drivers: { first_name: string; last_name: string; phone: string | null; photo_url: string | null } | null
+  vehicles: { economic_number: string | null; plate: string | null; image_url: string | null } | null
 }
 
 export const ROUTE_STATUSES = [
@@ -23,7 +23,7 @@ export interface RoutePlanFilters {
   status: string | null
 }
 
-const ROUTE_PLAN_SELECT = '*, drivers(first_name, last_name), vehicles(economic_number, plate)'
+const ROUTE_PLAN_SELECT = '*, drivers(first_name, last_name, phone, photo_url), vehicles(economic_number, plate, image_url)'
 
 export async function fetchRoutePlans(
   organizationId: string,

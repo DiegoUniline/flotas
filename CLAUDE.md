@@ -722,6 +722,69 @@ ningún bug puntual — es la red de seguridad para que un error futuro sea
 diagnosticable (leer el mensaje en pantalla o la consola) en vez de
 silencioso.
 
+### Centro de control rediseñado otra vez, contra una referencia visual real (agregado en esta fase)
+
+Pedido explícito del usuario con una captura de pantalla de referencia
+("Routely"). Se llevó el diseño lo más cerca posible **con datos 100%
+reales** — lo que la referencia mostraba y no existe como dato real en
+FLOTAA (tracking en vivo por vehículo, velocidad, batería, ETA, badges de
+estado "En ruta"/"Detenido" por unidad, y el motor de alertas) **se omitió
+a propósito**, mismo criterio de siempre (bloqueado por no haber proveedor
+GPS ni motor de alertas — Fase 6 del roadmap, no construido).
+
+Lo que sí se construyó, todo con datos reales:
+
+- **Filtros en pastilla** (fecha/ruta/repartidor con ícono) en vez de
+  controles planos — mismo `<input type="date">`/`<select>` nativos por
+  dentro, solo el contenedor cambió. Se agregó **filtro por repartidor**
+  (nuevo, derivado de `route_plans.driver_id` de las rutas del día, sin
+  query adicional).
+- **KPIs con tendencia real** (`features/map/api/controlApi.ts`,
+  `fetchControlKpis` ahora también trae los mismos conteos del día
+  anterior): badge ↑/↓ con % de cambio en "Rutas en curso" y "Pedidos
+  entregados" (comparación día vs. día anterior, real). **Deliberadamente
+  sin badge de tendencia** en "Vehículos activos" (el tamaño de flota activa
+  no varía de forma comparable día a día, un % ahí sería ruido, no una
+  tendencia real) ni en "Paradas pendientes" (backlog del día, no una serie
+  comparable). No se agregaron las tarjetas "Alertas activas" ni "ETA
+  promedio" de la referencia — no existe ese dato.
+- **`components/map/Map.tsx`**: toggle **Mapa/Satélite** (Esri World
+  Imagery, gratuito sin API key, mismo criterio que los tiles de OSM),
+  **barra de escala** (`L.control.scale()`), botón de **"mi ubicación"**
+  (geolocalización del navegador, mismo mecanismo que en
+  `GpsCaptureField`) y **polyline** opcional que conecta en secuencia las
+  paradas reales de la ruta seleccionada (`route_stops.sequence` con sus
+  coordenadas reales — no es una ruta calculada/optimizada, es la
+  secuencia ya guardada). Leyenda de colores por estado de parada debajo
+  del mapa.
+- **Panel de la unidad** (al seleccionar una ruta): avatar real
+  (`drivers.photo_url`, con iniciales como fallback), nombre del operador,
+  vehículo, "Pedido actual" (del `job` de la parada en curso/siguiente vía
+  `route_stops.jobs`), "Siguiente parada" con dirección real, progreso de
+  entregas con barra. Botones **"Ver ruta"** y **"Llamar"** (`tel:` con
+  `drivers.phone` real, oculto si el operador no tiene teléfono
+  capturado). **Sin botón "Reasignar"** — no existe una mutación de
+  reasignación rápida construida para rutas (si se pide, construirla como
+  su propia acción, no simularla) y **sin badge de estado en vivo/ETA/
+  velocidad/batería** en este panel, mismo bloqueo de siempre. Se
+  extendió `ROUTE_PLAN_SELECT`/`RoutePlanWithRelations` en
+  `routePlansApi.ts` para traer `drivers.phone`/`drivers.photo_url` y
+  `vehicles.image_url` (no se usa `image_url` todavía, queda listo para
+  cuando se quiera mostrar la foto del vehículo).
+- **Timeline de paradas** rediseñado como stepper conectado real (antes
+  era una fila de chips con "→"): íconos de estado (check verde
+  completada, punto índigo en camino, punto gris pendiente) unidos por una
+  línea de progreso, con la hora real de cada evento
+  (`route_stops.completed_at`/`arrived_at`/`estimated_arrival_at`, el
+  primero que exista) en vez de solo la etiqueta de estado.
+
+**No se tocó** el buscador universal "⌘K" de la referencia (busca
+repartidor/vehículo/pedido desde el header) — es una función de nivel de
+app (barra superior global), no de esta página, y requeriría un endpoint
+de búsqueda cruzada entre 3 tablas que no se ha pedido todavía; el
+buscador de esta página sigue filtrando solo las rutas del día, ahora con
+estilo de pastilla para que combine visualmente.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

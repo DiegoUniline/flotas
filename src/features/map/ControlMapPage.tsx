@@ -1,11 +1,24 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, ClipboardList, MapPinOff, Truck } from 'lucide-react'
+import {
+  Building2,
+  Calendar,
+  CheckCircle2,
+  Circle,
+  ClipboardList,
+  MapPinOff,
+  Phone,
+  Route as RouteIcon,
+  Truck,
+  User,
+  Users,
+} from 'lucide-react'
 import { Map, type MapMarker } from '@/components/map/Map'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Input } from '@/components/ui/Input'
+import { formatDateTime } from '@/lib/format'
 import { LOCATION_TYPES } from '@/features/locations/api/locationsApi'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
@@ -24,25 +37,20 @@ const STOP_STATUS_COLOR: Record<string, string> = {
   skipped: '#dc2626',
 }
 
-const STOP_STATUS_TONE: Record<string, string> = {
-  pending: 'bg-gray-100 text-gray-500',
-  in_progress: 'bg-status-progress-bg text-status-progress',
-  completed: 'bg-status-active-bg text-status-active',
-  skipped: 'bg-status-delayed-bg text-status-delayed',
-}
-
 function StatCard({
   icon: Icon,
   label,
   value,
   sublabel,
   tone,
+  trendPct,
 }: {
   icon: typeof Building2
   label: string
   value: string
   sublabel?: string
   tone: 'accent' | 'green' | 'gray' | 'progress'
+  trendPct?: number | null
 }) {
   const toneClasses = {
     accent: 'bg-accent-50 text-accent-600',
@@ -56,12 +64,37 @@ function StatCard({
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${toneClasses}`}>
         <Icon size={18} strokeWidth={2} />
       </span>
-      <div className="min-w-0">
-        <p className="text-lg font-semibold leading-tight text-ink">{value}</p>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="text-lg font-semibold leading-tight text-ink">{value}</p>
+          {trendPct != null && (
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
+                trendPct >= 0 ? 'bg-status-active-bg text-status-active' : 'bg-status-delayed-bg text-status-delayed'
+              }`}
+            >
+              {trendPct >= 0 ? '↑' : '↓'}
+              {Math.abs(trendPct)}%
+            </span>
+          )}
+        </div>
         <p className="truncate text-xs text-gray-500">{sublabel ?? label}</p>
       </div>
     </div>
   )
+}
+
+function driverName(driver: { first_name: string; last_name: string } | null) {
+  return driver ? `${driver.first_name} ${driver.last_name}` : null
+}
+
+function initials(name: string) {
+  return name
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
 }
 
 function todayIso() {
@@ -71,6 +104,7 @@ function todayIso() {
 export function ControlMapPage() {
   const [date, setDate] = useState(todayIso())
   const [search, setSearch] = useState('')
+  const [driverFilter, setDriverFilter] = useState('')
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null)
 
   const mappedQuery = useMappedLocations()
@@ -83,21 +117,33 @@ export function ControlMapPage() {
   const withoutCoordinates =
     countsQuery.data && mappedQuery.data ? countsQuery.data.total - mappedQuery.data.length : 0
 
+  const driverOptions = useMemo(() => {
+    const byId: Record<string, string> = {}
+    for (const route of routesQuery.data ?? []) {
+      const name = driverName(route.drivers)
+      if (route.driver_id && name) byId[route.driver_id] = name
+    }
+    return Object.entries(byId)
+  }, [routesQuery.data])
+
   const filteredRoutes = useMemo(() => {
     const routes = routesQuery.data ?? []
     const term = search.trim().toLowerCase()
-    if (!term) return routes
     return routes.filter((route) => {
-      const driverName = route.drivers ? `${route.drivers.first_name} ${route.drivers.last_name}` : ''
+      if (driverFilter && route.driver_id !== driverFilter) return false
+      if (!term) return true
+      const driver = driverName(route.drivers) ?? ''
       const vehicleLabel = route.vehicles?.economic_number ?? route.vehicles?.plate ?? ''
       return (
         (route.name ?? '').toLowerCase().includes(term) ||
         (route.route_number ?? '').toLowerCase().includes(term) ||
-        driverName.toLowerCase().includes(term) ||
+        driver.toLowerCase().includes(term) ||
         vehicleLabel.toLowerCase().includes(term)
       )
     })
-  }, [routesQuery.data, search])
+  }, [routesQuery.data, search, driverFilter])
+
+  const stops = selectedStopsQuery.data ?? []
 
   const markers: MapMarker[] = useMemo(() => {
     const locationMarkers: MapMarker[] = (mappedQuery.data ?? []).map((location) => ({
@@ -110,7 +156,7 @@ export function ControlMapPage() {
         .join(' · '),
     }))
 
-    const stopMarkers: MapMarker[] = (selectedStopsQuery.data ?? [])
+    const stopMarkers: MapMarker[] = stops
       .filter((stop): stop is typeof stop & { latitude: number; longitude: number } => stop.latitude != null && stop.longitude != null)
       .map((stop) => ({
         id: `stop-${stop.id}`,
@@ -122,179 +168,282 @@ export function ControlMapPage() {
       }))
 
     return [...locationMarkers, ...stopMarkers]
-  }, [mappedQuery.data, selectedStopsQuery.data])
+  }, [mappedQuery.data, stops])
 
-  const completedStops = (selectedStopsQuery.data ?? []).filter((s) => s.status === 'completed').length
-  const totalStops = selectedStopsQuery.data?.length ?? 0
-  const nextStop = (selectedStopsQuery.data ?? []).find((s) => s.status === 'pending' || s.status === 'in_progress')
+  const routePolyline = useMemo(
+    () =>
+      stops
+        .filter((s): s is typeof s & { latitude: number; longitude: number } => s.latitude != null && s.longitude != null)
+        .map((s) => ({ lat: s.latitude, lng: s.longitude })),
+    [stops],
+  )
+
+  const completedStops = stops.filter((s) => s.status === 'completed').length
+  const totalStops = stops.length
+  const currentStop = stops.find((s) => s.status === 'in_progress') ?? stops.find((s) => s.status === 'pending')
+  const route = selectedRouteQuery.data
+  const routeDriverName = driverName(route?.drivers ?? null)
 
   return (
     <PageScroll>
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-ink">Centro de control</h1>
-          <p className="text-sm text-gray-500">Operación del día: sucursales, rutas y pedidos.</p>
+      <div className="flex flex-col gap-4 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold text-ink">Centro de control</h1>
+            <p className="text-sm text-gray-500">Operación del día: sucursales, rutas y pedidos.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+              <Calendar size={14} strokeWidth={2} className="text-gray-400" />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-auto border-0 p-0 text-sm text-gray-900 focus:outline-none focus:ring-0"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+              <RouteIcon size={14} strokeWidth={2} className="text-gray-400" />
+              <select
+                value={selectedRouteId ?? ''}
+                onChange={(e) => setSelectedRouteId(e.target.value || null)}
+                className="border-0 bg-transparent p-0 text-sm text-gray-900 focus:outline-none focus:ring-0"
+              >
+                <option value="">Todas las rutas</option>
+                {filteredRoutes.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name ?? r.route_number ?? r.id.slice(0, 8)}
+                    {r.drivers ? ` · ${driverName(r.drivers)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+              <Users size={14} strokeWidth={2} className="text-gray-400" />
+              <select
+                value={driverFilter}
+                onChange={(e) => setDriverFilter(e.target.value)}
+                className="border-0 bg-transparent p-0 text-sm text-gray-900 focus:outline-none focus:ring-0"
+              >
+                <option value="">Todos los repartidores</option>
+                {driverOptions.map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Input
+              placeholder="Buscar ruta, operador o vehículo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-56 rounded-full"
+            />
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
-          <select
-            value={selectedRouteId ?? ''}
-            onChange={(e) => setSelectedRouteId(e.target.value || null)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
-          >
-            <option value="">Todas las rutas</option>
-            {filteredRoutes.map((route) => (
-              <option key={route.id} value={route.id}>
-                {route.name ?? route.route_number ?? route.id.slice(0, 8)}
-                {route.drivers ? ` · ${route.drivers.first_name} ${route.drivers.last_name}` : ''}
-              </option>
-            ))}
-          </select>
-          <Input
-            placeholder="Buscar ruta, operador o vehículo..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-56"
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {kpisQuery.isLoading ? (
-          <>
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-            <Skeleton className="h-16" />
-          </>
-        ) : (
-          <>
-            <StatCard
-              icon={Truck}
-              label="Vehículos activos"
-              value={`${kpisQuery.data?.vehiclesActive ?? 0}`}
-              sublabel={`de ${kpisQuery.data?.vehiclesTotal ?? 0} registrados`}
-              tone="accent"
-            />
-            <StatCard
-              icon={ClipboardList}
-              label="Rutas en curso"
-              value={`${kpisQuery.data?.routesInProgress ?? 0}`}
-              sublabel={`de ${kpisQuery.data?.routesTotal ?? 0} hoy`}
-              tone="progress"
-            />
-            <StatCard
-              icon={Building2}
-              label="Pedidos entregados"
-              value={`${kpisQuery.data?.jobsDelivered ?? 0}`}
-              sublabel={`de ${kpisQuery.data?.jobsScheduled ?? 0} programados`}
-              tone="green"
-            />
-            <StatCard icon={MapPinOff} label="Paradas pendientes hoy" value={`${kpisQuery.data?.stopsPending ?? 0}`} tone="gray" />
-          </>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3 lg:flex-row">
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white lg:flex-1">
-          {mappedQuery.isError ? (
-            <ErrorState message="No se pudo cargar el mapa." onRetry={() => void mappedQuery.refetch()} />
-          ) : mappedQuery.isLoading ? (
-            <Skeleton className="h-[480px]" />
-          ) : markers.length > 0 ? (
-            <Map className="h-[480px] w-full" markers={markers} />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {kpisQuery.isLoading ? (
+            <>
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+              <Skeleton className="h-16" />
+            </>
           ) : (
-            <EmptyState
-              title="Sin ubicaciones que mostrar"
-              description="Agrega coordenadas a tus sucursales o selecciona una ruta con paradas."
-            />
+            <>
+              <StatCard
+                icon={Truck}
+                label="Vehículos activos"
+                value={`${kpisQuery.data?.vehiclesActive ?? 0}`}
+                sublabel={`de ${kpisQuery.data?.vehiclesTotal ?? 0} registrados`}
+                tone="accent"
+              />
+              <StatCard
+                icon={ClipboardList}
+                label="Rutas en curso"
+                value={`${kpisQuery.data?.routesInProgress ?? 0}`}
+                sublabel={`de ${kpisQuery.data?.routesTotal ?? 0} hoy`}
+                tone="progress"
+                trendPct={kpisQuery.data?.routesInProgressTrendPct}
+              />
+              <StatCard
+                icon={Building2}
+                label="Pedidos entregados"
+                value={`${kpisQuery.data?.jobsDelivered ?? 0}`}
+                sublabel={`de ${kpisQuery.data?.jobsScheduled ?? 0} programados`}
+                tone="green"
+                trendPct={kpisQuery.data?.jobsDeliveredTrendPct}
+              />
+              <StatCard icon={MapPinOff} label="Paradas pendientes hoy" value={`${kpisQuery.data?.stopsPending ?? 0}`} tone="gray" />
+            </>
           )}
         </div>
 
-        {selectedRouteId && (
-          <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-80">
-            {selectedRouteQuery.isLoading ? (
-              <Skeleton className="h-32" />
-            ) : selectedRouteQuery.data ? (
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
+            {mappedQuery.isError ? (
+              <ErrorState message="No se pudo cargar el mapa." onRetry={() => void mappedQuery.refetch()} />
+            ) : mappedQuery.isLoading ? (
+              <Skeleton className="h-[480px]" />
+            ) : markers.length > 0 ? (
               <>
-                <div>
-                  <p className="text-sm font-semibold text-ink">
-                    {selectedRouteQuery.data.name ?? selectedRouteQuery.data.route_number ?? 'Ruta'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {selectedRouteQuery.data.drivers
-                      ? `${selectedRouteQuery.data.drivers.first_name} ${selectedRouteQuery.data.drivers.last_name}`
-                      : 'Sin operador'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {selectedRouteQuery.data.vehicles?.economic_number ?? selectedRouteQuery.data.vehicles?.plate ?? 'Sin vehículo'}
-                  </p>
-                </div>
-                <span className="w-fit rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                  {ROUTE_STATUS_LABELS[selectedRouteQuery.data.status] ?? selectedRouteQuery.data.status}
-                </span>
-
-                <div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Progreso</span>
-                    <span>
-                      {completedStops} de {totalStops}
+                <Map className="h-[480px] w-full" markers={markers} polyline={routePolyline} />
+                <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
+                  <span className="font-medium text-gray-400">Estado de paradas:</span>
+                  {STOP_STATUSES.map((s) => (
+                    <span key={s.value} className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full" style={{ background: STOP_STATUS_COLOR[s.value] }} />
+                      {s.label}
                     </span>
-                  </div>
-                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full bg-status-active"
-                      style={{ width: totalStops > 0 ? `${(completedStops / totalStops) * 100}%` : '0%' }}
-                    />
-                  </div>
+                  ))}
                 </div>
-
-                {nextStop && (
-                  <div className="rounded-md bg-gray-50 p-2.5">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Siguiente parada</p>
-                    <p className="text-sm font-medium text-gray-900">{nextStop.name ?? nextStop.jobs?.customers?.name ?? 'Parada'}</p>
-                    <p className="text-xs text-gray-500">{nextStop.address ?? 'Sin dirección'}</p>
-                  </div>
-                )}
-
-                <Link to={`/rutas/${selectedRouteId}`} className="text-sm font-medium text-accent-600 hover:text-accent-700">
-                  Ver ruta completa →
-                </Link>
               </>
-            ) : null}
+            ) : (
+              <EmptyState
+                title="Sin ubicaciones que mostrar"
+                description="Agrega coordenadas a tus sucursales o selecciona una ruta con paradas."
+              />
+            )}
+          </div>
+
+          {selectedRouteId && (
+            <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-80">
+              {selectedRouteQuery.isLoading ? (
+                <Skeleton className="h-32" />
+              ) : route ? (
+                <>
+                  <div className="flex items-center gap-3">
+                    {route.drivers?.photo_url ? (
+                      <img src={route.drivers.photo_url} alt={routeDriverName ?? ''} className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-sm font-semibold text-accent-600">
+                        {routeDriverName ? initials(routeDriverName) : <User size={18} strokeWidth={2} />}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink">{routeDriverName ?? 'Sin operador'}</p>
+                      <p className="truncate text-xs text-gray-500">{route.name ?? route.route_number ?? 'Ruta'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                    <span className="rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-600">
+                      {ROUTE_STATUS_LABELS[route.status] ?? route.status}
+                    </span>
+                    {(route.vehicles?.economic_number || route.vehicles?.plate) && (
+                      <span>{route.vehicles?.economic_number ?? route.vehicles?.plate}</span>
+                    )}
+                  </div>
+
+                  {currentStop?.jobs && (
+                    <div className="rounded-md bg-gray-50 p-2.5">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Pedido actual</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {currentStop.jobs.job_number ?? '—'} {currentStop.jobs.customers?.name ? `· ${currentStop.jobs.customers.name}` : ''}
+                      </p>
+                    </div>
+                  )}
+
+                  {currentStop && (
+                    <div className="rounded-md bg-gray-50 p-2.5">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Siguiente parada</p>
+                      <p className="text-sm font-medium text-gray-900">{currentStop.name ?? currentStop.jobs?.customers?.name ?? 'Parada'}</p>
+                      <p className="text-xs text-gray-500">{currentStop.address ?? 'Sin dirección'}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Entregas completadas</span>
+                      <span>
+                        {completedStops} de {totalStops}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full bg-status-active"
+                        style={{ width: totalStops > 0 ? `${(completedStops / totalStops) * 100}%` : '0%' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <Link
+                      to={`/rutas/${selectedRouteId}`}
+                      className="flex-1 rounded-md bg-accent-500 px-3 py-1.5 text-center text-sm font-medium text-white hover:bg-accent-600"
+                    >
+                      Ver ruta
+                    </Link>
+                    {route.drivers?.phone && (
+                      <a
+                        href={`tel:${route.drivers.phone}`}
+                        title="Llamar"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+                      >
+                        <Phone size={14} strokeWidth={2} />
+                      </a>
+                    )}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        {selectedRouteId && stops.length > 0 && (
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">
+                Ruta de {routeDriverName ?? route?.name ?? route?.route_number ?? ''}
+              </p>
+              <span className="text-xs text-gray-500">
+                {completedStops} de {totalStops} entregas
+              </span>
+            </div>
+            <div className="flex gap-0 overflow-x-auto pb-1">
+              {stops.map((stop, index) => {
+                const done = stop.status === 'completed'
+                const current = stop.status === 'in_progress'
+                const timeLabel = stop.completed_at
+                  ? `Entregado · ${formatDateTime(stop.completed_at)}`
+                  : stop.arrived_at
+                    ? `Llegó · ${formatDateTime(stop.arrived_at)}`
+                    : stop.estimated_arrival_at
+                      ? `Programado · ${formatDateTime(stop.estimated_arrival_at)}`
+                      : STOP_STATUS_LABELS[stop.status] ?? stop.status
+
+                return (
+                  <div key={stop.id} className="flex shrink-0 items-start">
+                    <div className="flex w-40 flex-col items-center text-center">
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-full ${
+                          done
+                            ? 'bg-status-active-bg text-status-active'
+                            : current
+                              ? 'bg-status-progress-bg text-status-progress'
+                              : 'bg-gray-100 text-gray-400'
+                        }`}
+                      >
+                        {done ? <CheckCircle2 size={16} strokeWidth={2} /> : <Circle size={14} strokeWidth={2} />}
+                      </span>
+                      <p className="mt-1.5 truncate text-xs font-medium text-gray-900">{stop.name ?? stop.jobs?.customers?.name ?? `Parada ${index + 1}`}</p>
+                      <p className="mt-0.5 text-[11px] text-gray-400">{timeLabel}</p>
+                    </div>
+                    {index < stops.length - 1 && (
+                      <div className={`mt-3.5 h-0.5 w-8 shrink-0 ${done ? 'bg-status-active' : 'bg-gray-200'}`} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
+
+        {withoutCoordinates > 0 && (
+          <p className="text-xs text-gray-400">{withoutCoordinates} sucursal(es) sin coordenadas no aparecen en el mapa.</p>
+        )}
       </div>
-
-      {selectedRouteId && selectedStopsQuery.data && selectedStopsQuery.data.length > 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="mb-3 text-sm font-semibold text-ink">
-            Ruta de {selectedRouteQuery.data?.name ?? selectedRouteQuery.data?.route_number ?? ''}
-          </p>
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {selectedStopsQuery.data.map((stop, index) => (
-              <div key={stop.id} className="flex shrink-0 items-center gap-3">
-                <div className="w-36 shrink-0">
-                  <p className="text-xs font-medium text-gray-400">Parada {index + 1}</p>
-                  <p className="truncate text-sm font-medium text-gray-900">{stop.name ?? stop.jobs?.customers?.name ?? 'Parada'}</p>
-                  <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${STOP_STATUS_TONE[stop.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                    {STOP_STATUS_LABELS[stop.status] ?? stop.status}
-                  </span>
-                </div>
-                {index < (selectedStopsQuery.data?.length ?? 0) - 1 && <span className="text-gray-300">→</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {withoutCoordinates > 0 && (
-        <p className="text-xs text-gray-400">
-          {withoutCoordinates} sucursal(es) sin coordenadas no aparecen en el mapa.
-        </p>
-      )}
-    </div>
     </PageScroll>
   )
 }
