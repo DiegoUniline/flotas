@@ -35,8 +35,10 @@ async function searchAddress(query: string): Promise<AddressResult[]> {
     limit: '6',
     addressdetails: '0',
   })
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`)
-  if (!response.ok) throw new Error('No se pudo buscar la dirección')
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+    headers: { Accept: 'application/json', 'Accept-Language': 'es' },
+  })
+  if (!response.ok) throw new Error(`Nominatim respondió ${response.status} ${response.statusText}`)
   const data = (await response.json()) as { display_name: string; lat: string; lon: string }[]
   return data.map((r) => ({ label: r.display_name, lat: Number(r.lat), lng: Number(r.lon) }))
 }
@@ -128,19 +130,25 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
   useEffect(() => {
     if (!debouncedQuery.trim() || debouncedQuery.trim().length < 3) {
       setResults([])
+      setResultsOpen(false)
       return
     }
     let cancelled = false
     setSearching(true)
     setSearchError(null)
+    // Se abre desde ya (no solo al tener resultados) para que "Buscando…" y
+    // cualquier error de red/CORS sean visibles — antes se guardaban en
+    // estado pero el dropdown nunca se abría si la búsqueda fallaba, así
+    // que un error real se veía como "no hace nada".
+    setResultsOpen(true)
     searchAddress(debouncedQuery)
       .then((found) => {
         if (cancelled) return
         setResults(found)
-        setResultsOpen(true)
       })
-      .catch(() => {
-        if (!cancelled) setSearchError('No se pudo buscar. Intenta de nuevo.')
+      .catch((err) => {
+        console.error('Error buscando dirección:', err)
+        if (!cancelled) setSearchError('No se pudo buscar. Verifica tu conexión e intenta de nuevo.')
       })
       .finally(() => {
         if (!cancelled) setSearching(false)
