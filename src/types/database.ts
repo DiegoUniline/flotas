@@ -494,6 +494,29 @@ export type Database = {
           },
         ]
       }
+      job_number_counters: {
+        Row: {
+          last_number: number
+          organization_id: string
+        }
+        Insert: {
+          last_number?: number
+          organization_id: string
+        }
+        Update: {
+          last_number?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_number_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_packages: {
         Row: {
           created_at: string
@@ -1572,6 +1595,10 @@ export type Database = {
           p_slug: string
           p_timezone?: string
         }
+        Returns: string
+      }
+      generate_job_number: {
+        Args: { p_organization_id: string }
         Returns: string
       }
       has_permission: {

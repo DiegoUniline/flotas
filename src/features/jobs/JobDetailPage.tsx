@@ -239,7 +239,8 @@ export function JobDetailPage() {
         : draft.received_at
 
     const input = {
-      job_number: draft.job_number || null,
+      // job_number NO se manda: lo genera el trigger set_job_number() en el
+      // insert (consecutivo por organización) y nunca se debe reescribir.
       job_type: draft.job_type,
       status: draft.status,
       priority: draft.priority,
@@ -302,7 +303,9 @@ export function JobDetailPage() {
     <DetailSection title="Datos del pedido" description="Identificación, cliente y programación.">
       <DetailGrid>
         <DetailField label="Número de pedido">
-          <InlineField value={draft.job_number} onChange={(v) => update('job_number', v)} placeholder="Agregar…" />
+          <p className="px-1.5 py-1 text-sm text-gray-500">
+            {isNew ? 'Se genera automáticamente al guardar' : draft.job_number || '—'}
+          </p>
         </DetailField>
         <DetailField label="Tipo">
           <InlineField type="select" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />

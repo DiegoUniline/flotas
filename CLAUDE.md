@@ -545,6 +545,33 @@ ficha normal. Si algún otro módulo con muchos campos (Clientes, Rutas)
 tiene la misma queja de scroll al crear, replicar este mismo patrón en
 vez de inventar uno nuevo — pero solo para creación, no para edición.
 
+### Número de pedido automático y consecutivo (agregado en esta fase)
+
+Pedido explícito del usuario: `job_number` ya no se captura a mano — se
+genera solo, alfanumérico, consecutivo por organización y con la fecha al
+final para que sea fácil de leer: **`PED-00001-140926`** (`PED-` +
+consecutivo de 5 dígitos + `DDMMYY`).
+
+- Migración `auto_generate_job_number`: tabla
+  `job_number_counters (organization_id pk, last_number)` — sin policies
+  (no se consulta nunca desde el cliente, solo la usa la función de
+  abajo) — más `generate_job_number(p_organization_id)` (`SECURITY
+  DEFINER`, hace `UPDATE ... RETURNING` atómico sobre el contador, así
+  que es seguro con inserciones concurrentes) y un trigger
+  `trg_jobs_set_job_number` (`BEFORE INSERT on jobs`) que llama a esa
+  función **solo si `job_number` viene `null`** y arma el string. También
+  se agregó `UNIQUE (organization_id, job_number)` en `jobs` como
+  refuerzo. El consecutivo vive en el trigger de base de datos a
+  propósito, no en el frontend — así es consistente sin importar desde
+  dónde se inserte un pedido.
+- **El frontend ya no manda `job_number`** en ningún `insert`/`update`
+  (`JobDetailPage.tsx`, `handleSave`) — lo deja fuera del payload para
+  que el trigger lo genere, y nunca lo reescribe después. El campo en la
+  ficha (`sectionDatos`) pasó de `InlineField` editable a texto de solo
+  lectura: en modo creación muestra "Se genera automáticamente al
+  guardar" (todavía no existe, se ve hasta después de guardar), en modo
+  edición muestra el valor real, nunca editable.
+
 ### Wizard de "Nuevo pedido": más ancho, no se cierra por accidente, sobrevive a un recargo (agregado en esta fase)
 
 Pedido explícito del usuario tras ver el wizard funcionando:
