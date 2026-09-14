@@ -245,7 +245,7 @@ export function JobDetailPage() {
             {!isNew && jobQuery.isError && <ErrorState message="No se pudo cargar el pedido." onRetry={() => void jobQuery.refetch()} />}
 
             {(isNew || job) && (
-              <div className="flex max-w-4xl flex-col gap-4">
+              <div className="flex max-w-6xl flex-col gap-4">
                 <div>
                   <h1 className="text-xl font-semibold text-ink">{draft.job_number || (isNew ? 'Nuevo pedido' : 'Pedido')}</h1>
                   <p className="text-sm text-gray-500">{draft.customer_label || 'Sin cliente'}</p>
@@ -289,7 +289,7 @@ export function JobDetailPage() {
                     <DetailField label="Prioridad">
                       <InlineField type="select" value={draft.priority} options={PRIORITY_OPTIONS} onChange={(v) => update('priority', v)} />
                     </DetailField>
-                    <DetailField label="Fecha programada">
+                    <DetailField label="F. Programada">
                       <InlineField type="date" value={draft.scheduled_date} onChange={(v) => update('scheduled_date', v)} />
                     </DetailField>
 

@@ -203,7 +203,7 @@ export function VehicleDetailPage() {
             )}
 
             {(isNew || vehicle) && (
-              <div className="flex max-w-4xl flex-col gap-4">
+              <div className="flex max-w-6xl flex-col gap-4">
                 <div>
                   <h1 className="text-xl font-semibold text-ink">
                     {draft.economic_number || (isNew ? 'Nuevo vehículo' : 'Vehículo')}
