@@ -78,6 +78,23 @@ export async function updateLocation(id: string, input: LocationUpdate): Promise
   return data
 }
 
+export interface LocationOption {
+  id: string
+  name: string
+}
+
+export async function fetchLocationOptions(organizationId: string): Promise<LocationOption[]> {
+  const { data, error } = await supabase
+    .from('locations')
+    .select('id, name')
+    .eq('organization_id', organizationId)
+    .eq('active', true)
+    .is('deleted_at', null)
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
 export async function softDeleteLocation(id: string): Promise<void> {
   const { error } = await supabase
     .from('locations')

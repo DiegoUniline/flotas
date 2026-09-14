@@ -448,6 +448,81 @@ export type Database = {
           },
         ]
       }
+      vehicles: {
+        Row: {
+          active: boolean
+          brand: string | null
+          created_at: string
+          deleted_at: string | null
+          economic_number: string | null
+          id: string
+          last_latitude: number | null
+          last_longitude: number | null
+          last_position_at: string | null
+          location_id: string | null
+          model: string | null
+          organization_id: string
+          plate: string | null
+          updated_at: string
+          vehicle_type: string
+          vin: string | null
+          year: number | null
+        }
+        Insert: {
+          active?: boolean
+          brand?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          economic_number?: string | null
+          id?: string
+          last_latitude?: number | null
+          last_longitude?: number | null
+          last_position_at?: string | null
+          location_id?: string | null
+          model?: string | null
+          organization_id: string
+          plate?: string | null
+          updated_at?: string
+          vehicle_type?: string
+          vin?: string | null
+          year?: number | null
+        }
+        Update: {
+          active?: boolean
+          brand?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          economic_number?: string | null
+          id?: string
+          last_latitude?: number | null
+          last_longitude?: number | null
+          last_position_at?: string | null
+          location_id?: string | null
+          model?: string | null
+          organization_id?: string
+          plate?: string | null
+          updated_at?: string
+          vehicle_type?: string
+          vin?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

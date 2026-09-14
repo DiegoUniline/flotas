@@ -66,18 +66,30 @@ mcp__Supabase__generate_typescript_types (project_id: aqjscndhwedlwkpjgwol)
 
 Pegar el resultado en `src/types/database.ts`. No editar ese archivo a mano.
 
-### Pendiente: tracking de vehículos en vivo
+### `vehicles` (agregada en esta fase)
 
-Los permisos `vehicles.*`, `tracking.live`, `tracking.history`, `devices.manage`,
-`geofences.manage`, `routes.*`, `jobs.*`, `alerts.*` ya están sembrados en
-`permissions`, pero **no existen las tablas** (`vehicles`, posiciones GPS,
-`geofences`, `routes`, `jobs`, `alerts`). El Centro de control hoy solo
-grafica `locations` (sucursales) porque es el único dato geográfico real
-disponible. Antes de construir el mapa con vehículos en vivo hace falta
-decidir con el usuario: proveedor/protocolo de los GPS (webhook propio,
-Traccar, Wialon, etc.), estrategia de almacenamiento de posiciones
-(tabla de último punto vs. serie de tiempo) y mecanismo de actualización en
-vivo (Supabase Realtime vs. polling). No inventar este esquema sin confirmar.
+Registro de flota, mismo patrón que `locations` (soft delete vía
+`deleted_at`, triggers `set_updated_at` y `audit_trigger` reutilizados,
+RLS: `vehicles_select` por membresía de org, `vehicles_insert/update/delete`
+gateados por `has_permission(org, 'vehicles.create'|'vehicles.edit'|'vehicles.delete')`
+— más finos que `locations.manage` porque esos permisos ya existían separados).
+
+Incluye `last_latitude`, `last_longitude`, `last_position_at` (nullable) —
+columnas listas para una futura integración de GPS, pero **sin UI que las
+edite todavía**: el usuario aún no eligió proveedor/protocolo, así que no hay
+forma real de poblarlas y no se debe simular. Cuando se conecte un proveedor
+(webhook, Traccar, Wialon, etc.), esas tres columnas son el contrato mínimo
+para que el Centro de control empiece a graficar vehículos con posición real
+(ver `src/components/map/Map.tsx`, ya genérico). Decisiones pendientes antes
+de construir esa integración: protocolo/proveedor de los GPS, si conviene
+además una tabla de histórico de posiciones (serie de tiempo) y el mecanismo
+de actualización en vivo del mapa (Supabase Realtime vs. polling). No
+inventar esa parte sin confirmar con el usuario.
+
+Los permisos `tracking.live`, `tracking.history`, `devices.manage`,
+`geofences.manage`, `routes.*`, `jobs.*`, `alerts.*` siguen sembrados en
+`permissions` sin tablas correspondientes — mismo trato: no inventar esquema
+sin confirmar primero.
 
 ## Sistema de diseño
 

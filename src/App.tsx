@@ -11,6 +11,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { LocationsPage } from '@/features/locations/LocationsPage'
 import { ControlMapPage } from '@/features/map/ControlMapPage'
+import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 
 export function App() {
   return (
@@ -34,6 +35,7 @@ export function App() {
             <Route index element={<Navigate to="/centro-de-control" replace />} />
             <Route path="centro-de-control" element={<ControlMapPage />} />
             <Route path="sucursales" element={<LocationsPage />} />
+            <Route path="vehiculos" element={<VehiclesPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
