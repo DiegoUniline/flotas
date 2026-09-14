@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -108,7 +109,9 @@ export function DriversTable({
           <tr key={driver.id} className="border-b border-gray-100 hover:bg-gray-50">
             <td className="px-4 py-2 text-gray-700">{driver.employee_number ?? '—'}</td>
             <td className="px-4 py-2 font-medium text-gray-900">
-              {driver.first_name} {driver.last_name}
+              <Link to={`/operadores/${driver.id}`} className="hover:text-accent-600">
+                {driver.first_name} {driver.last_name}
+              </Link>
             </td>
             <td className="px-4 py-2 text-gray-700">{driver.phone ?? '—'}</td>
             <td className="px-4 py-2">

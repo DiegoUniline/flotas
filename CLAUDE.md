@@ -143,12 +143,40 @@ de texto libre), `current_odometer`, `odometer_unit`, `fuel_type`, `notes`,
 `image_url`.
 
 **No construido en esta fase (deliberado, evitar sobre-ingeniería):** UI
-para administrar `vehicle_types`/`vehicle_groups` personalizados, licencias,
-certificaciones, historial de asignación vehículo-operador, ni carga de
-archivos/documentos. `custom_field_definitions/values` y `saved_views`
-(Fase 2b del roadmap) tampoco se construyeron — son frameworks genéricos
-grandes, mejor esperar a que 2+ entidades reales los necesiten antes de
-construirlos, para no especular.
+para administrar `vehicle_types`/`vehicle_groups` personalizados.
+`custom_field_definitions/values` y `saved_views` (Fase 2b del roadmap)
+tampoco se construyeron — son frameworks genéricos grandes, mejor esperar a
+que 2+ entidades reales los necesiten antes de construirlos, para no
+especular.
+
+### Ficha de operador + asignación + attachments (completado en esta fase)
+
+Lo que arriba quedó pendiente sí se construyó:
+
+- **`assign_vehicle_to_driver(p_vehicle_id, p_driver_id, p_notes)`** y
+  **`unassign_vehicle(p_vehicle_id)`**: RPCs `SECURITY DEFINER` que hacen
+  atómico el flujo de reasignar (cierran la asignación activa anterior en
+  `vehicle_driver_assignments`, crean la nueva, y sincronizan
+  `vehicles.assigned_driver_id`). No usar `update` directo desde el
+  frontend sobre `vehicle_driver_assignments` para esto — se desincroniza
+  `vehicles.assigned_driver_id`.
+- **`features/attachments`**: capa reutilizable sobre el bucket privado
+  `attachments`. **Convención de path obligatoria:**
+  `<organization_id>/<entity_type>/<entity_id>/<timestamp>-<nombre>` — la
+  RLS de `storage.objects` exige que el primer segmento sea un
+  `organization_id` al que el usuario pertenezca (`uploadAttachment` ya lo
+  arma así, no construir el path a mano). Como el bucket es privado, ver un
+  archivo requiere `getAttachmentSignedUrl` (URL firmada, 1 hora), nunca una
+  URL pública directa. Componente `<AttachmentUploader entityType entityId>`
+  reutilizable para cualquier entidad — usado hoy en licencias y
+  certificaciones de operador.
+- `driver_licenses`/`driver_certifications`: CRUD completo dentro de la
+  ficha de operador (`/operadores/:id`), cada registro con su propio
+  `AttachmentUploader` (adjunto solo disponible al editar, porque necesita
+  el `id` del registro ya guardado).
+- Ficha de operador también muestra el vehículo asignado actual (vía
+  `vehicles.assigned_driver_id`, no re-derivado de `vehicle_driver_assignments`
+  para evitar una query extra) con historial de asignaciones debajo.
 
 ## Sistema de diseño
 

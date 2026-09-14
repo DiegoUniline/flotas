@@ -13,6 +13,7 @@ import { LocationsPage } from '@/features/locations/LocationsPage'
 import { ControlMapPage } from '@/features/map/ControlMapPage'
 import { VehiclesPage } from '@/features/vehicles/VehiclesPage'
 import { DriversPage } from '@/features/drivers/DriversPage'
+import { DriverDetailPage } from '@/features/drivers/DriverDetailPage'
 
 export function App() {
   return (
@@ -38,6 +39,7 @@ export function App() {
             <Route path="sucursales" element={<LocationsPage />} />
             <Route path="vehiculos" element={<VehiclesPage />} />
             <Route path="operadores" element={<DriversPage />} />
+            <Route path="operadores/:id" element={<DriverDetailPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

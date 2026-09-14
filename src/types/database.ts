@@ -1037,6 +1037,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_vehicle_to_driver: {
+        Args: { p_driver_id: string; p_notes?: string; p_vehicle_id: string }
+        Returns: string
+      }
       create_organization: {
         Args: {
           p_country?: string
@@ -1052,6 +1056,7 @@ export type Database = {
         Returns: boolean
       }
       is_org_member: { Args: { p_org: string }; Returns: boolean }
+      unassign_vehicle: { Args: { p_vehicle_id: string }; Returns: undefined }
       user_org_ids: { Args: never; Returns: string[] }
     }
     Enums: {

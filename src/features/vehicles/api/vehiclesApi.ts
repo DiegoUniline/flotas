@@ -132,3 +132,21 @@ export async function fetchVehicleGroupOptions(organizationId: string): Promise<
   if (error) throw error
   return data ?? []
 }
+
+export interface VehicleOption {
+  id: string
+  economic_number: string | null
+  plate: string | null
+}
+
+export async function fetchVehicleOptions(organizationId: string): Promise<VehicleOption[]> {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .select('id, economic_number, plate')
+    .eq('organization_id', organizationId)
+    .eq('active', true)
+    .is('deleted_at', null)
+    .order('economic_number', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
