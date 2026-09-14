@@ -785,6 +785,23 @@ de búsqueda cruzada entre 3 tablas que no se ha pedido todavía; el
 buscador de esta página sigue filtrando solo las rutas del día, ahora con
 estilo de pastilla para que combine visualmente.
 
+### Datos de prueba: 15 pedidos (agregado en esta fase)
+
+Pedido explícito del usuario: sembrar pedidos de prueba en la base real
+para poder probar el módulo y el Centro de control con volumen. Se
+insertaron directo por SQL (`execute_sql`, no es cambio de esquema por lo
+que no aplicó `apply_migration`): 6 `customers` + 8 `customer_locations`
+(negocios y domicilios de Autlán de Navarro, Jal., coordenadas reales de
+la zona) y 15 `jobs` (`PED-00002` a `PED-00016`, el consecutivo lo generó
+el trigger real, no se mandó a mano) con estatus/prioridad/fecha variados,
+algunos con operador+vehículo asignado, seguro, cobro contra entrega y
+`received_at` en los ya entregados. Son datos de prueba reales insertados
+en filas reales de la organización activa (no es una pantalla simulando
+datos) — si se necesita limpiarlos más adelante, son los `customers` con
+nombre `Ferretería El Tornillo`/`Farmacia San Rafael`/`Abarrotes La
+Central`/`Distribuidora Citrícola del Sur`/`Papelería Escolar Autlán`/
+`Refaccionaria El Motor` y sus `jobs`/`customer_locations` relacionados.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
