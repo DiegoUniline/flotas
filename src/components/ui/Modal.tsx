@@ -31,7 +31,7 @@ export function Modal({ open, title, description, onClose, children, footer, clo
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={closeOnBackdrop ? onClose : undefined} aria-hidden="true" />
       <div className="relative flex max-h-[88vh] w-full max-w-5xl flex-col rounded-lg bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">

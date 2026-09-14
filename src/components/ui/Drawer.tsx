@@ -22,7 +22,7 @@ export function Drawer({ open, title, onClose, children, footer }: DrawerProps) 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
+    <div className="fixed inset-0 z-[1100] flex justify-end">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} aria-hidden="true" />
       <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">

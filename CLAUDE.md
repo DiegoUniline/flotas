@@ -1039,6 +1039,30 @@ ventana emergente... nada que me haga más pasos".
   pantalla que necesite mostrar un pedido completo sin navegar (o con un
   texto de regreso distinto a "Pedidos") puede reusarlo igual.
 
+### Bug real: el mapa de Leaflet se veía encima del Modal (corregido en esta fase)
+
+Reportado por el usuario con captura: al abrir "Ver pedido completo"
+desde el Centro de control, el mapa grande de fondo (tiles, pines y los
+botones Mapa/Satélite/ubicación de `Map.tsx`) se pintaba **por encima**
+del `Modal`, tapando parte de la ficha del pedido. Causa real: el
+contenedor de Leaflet (`.leaflet-container`) es `position: relative`
+**sin** `z-index` propio, así que no aísla su propio contexto de
+apilamiento — todos los `z-index` internos de Leaflet (paneles/popups,
+hasta ~700) y los botones propios de `Map.tsx` (`z-[1000]`) compiten
+directo contra el resto de la página. `Modal`/`Drawer` usaban `z-40` y
+`ConfirmDialog`/`ToastViewport` `z-50` — muy por debajo de 700–1000, por
+eso el mapa "ganaba" y se veía encima.
+
+**Corrección:** se subió toda la escala de capas superpuestas de la app
+por encima de lo que usa Leaflet/`Map.tsx`, manteniendo el mismo orden
+relativo de antes (Toast > ConfirmDialog > Modal/Drawer):
+`Modal`/`Drawer` → `z-[1100]`, `ConfirmDialog` → `z-[1200]`,
+`ToastViewport` → `z-[1300]`. Los botones internos de `Map.tsx` se
+quedan en `z-[1000]` (siguen sin problema, ya quedan por debajo de
+cualquier modal/diálogo). Si se agrega otra capa fija/absoluta nueva a
+futuro que deba convivir con mapas Leaflet en pantalla, usar esta misma
+escala (por encima de 1000) en vez de valores bajos tipo `z-40`/`z-50`.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en
