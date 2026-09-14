@@ -76,9 +76,9 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Costos',
     items: [
-      { label: 'Combustible', to: '/combustible', permission: 'fuel.manage', icon: Fuel, implemented: false },
-      { label: 'Gastos', to: '/gastos', permission: 'expenses.view', icon: Receipt, implemented: false },
-      { label: 'Costos', to: '/costos', permission: 'reports.view', icon: Calculator, implemented: false },
+      { label: 'Combustible', to: '/combustible', permission: 'fuel.manage', icon: Fuel, implemented: true },
+      { label: 'Gastos', to: '/gastos', permission: 'expenses.view', icon: Receipt, implemented: true },
+      { label: 'Costos', to: '/costos', permission: 'reports.view', icon: Calculator, implemented: true },
     ],
   },
   {

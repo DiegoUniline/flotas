@@ -1217,6 +1217,93 @@ el usuario para ejecutar en Supabase sin preguntar.
   "notificar si el vehículo sale de zona") — ambas son features
   aparte que dependen de decisiones de producto no pedidas todavía.
 
+### Módulo Costos completo: Combustible, Gastos, Costos (agregado en esta fase)
+
+Pedido explícito del usuario: "ahora todo el modulo de costos" — los 3
+ítems de la sección "Costos" del sidebar (`navConfig.ts`) estaban
+`implemented: false`. Antes de construir se revisaron los permisos ya
+sembrados en `permissions`/`role_permissions` (regla del proyecto: no
+inventar sin confirmar qué ya existe) y resultó que el esquema de
+permisos **ya modela un flujo de aprobación real**: `expenses.create`
+(lo tiene hasta el rol Operador, no solo administración),
+`expenses.approve` (Administrador/Finanzas/Gerente de flota/Propietario)
+y `expenses.view` (más roles de solo consulta) son permisos distintos —
+no fue una decisión de producto inventada aquí, ya estaba en la base.
+
+- **`fuel_logs`** (migración `fuel_logs_and_expenses`): cargas de
+  combustible — `vehicle_id` obligatorio, `driver_id` opcional,
+  `logged_at timestamptz`, `liters`/`total_cost numeric` (se capturan
+  los dos directos, el costo por litro se **calcula en UI**
+  `total_cost/liters`, no se persiste, mismo criterio que el % de
+  seguro de Pedidos — nunca guardar un derivado que se puede
+  desincronizar), `odometer` opcional, `station`, `fuel_type` (texto
+  libre), `full_tank`. Write gateado por el único permiso sembrado
+  `fuel.manage` (cubre create/edit/delete, igual que Dispositivos/
+  Geocercas).
+- **`expenses`**: gastos operativos — `category` texto libre
+  (`EXPENSE_CATEGORIES`: mantenimiento/casetas/estacionamiento/multas/
+  seguros/permisos/otro), `amount`, `expense_date`, `vehicle_id`/
+  `driver_id` opcionales, `status` (`pending`/`approved`/`rejected`,
+  default `pending`), `approved_by`/`approved_at`. RLS respeta la
+  separación de permisos ya sembrada: insert requiere
+  `expenses.create`, delete requiere `expenses.approve` (solo quien
+  aprueba puede borrar), update permite `expenses.create` **o**
+  `expenses.approve` (para que quien capturó pueda seguir editando su
+  borrador). **Select se amplió a `expenses.view` OR `expenses.create`**
+  — sin esto, un Operador (que solo tiene `expenses.create`) rompería el
+  patrón `.insert(...).select().single()` que usa toda la capa `api/`
+  del proyecto, porque RLS bloquearía la lectura de vuelta del registro
+  recién creado. Es una decisión de RLS tomada aquí, documentada porque
+  amplía la lectura más allá de lo que el permiso `expenses.view`
+  sugiere por nombre.
+- **`set_expense_status(p_expense_id, p_status)`** (RPC `SECURITY
+  DEFINER`): aprobar/rechazar/regresar a pendiente. No es un `update`
+  directo desde el frontend — mismo criterio que
+  `assign_vehicle_to_driver`/`update_my_vehicle_position`: una acción
+  con efecto de negocio (sella `approved_by = auth.uid()` y
+  `approved_at = now()`) se resuelve con una RPC angosta que valida
+  `has_permission(org, 'expenses.approve')` server-side, nunca confiando
+  en que el frontend mande el `approved_by` correcto. Botones
+  "Aprobar"/"Rechazar" en la ficha de gasto, gateados con
+  `<Can permission="expenses.approve">`, visibles solo si el gasto está
+  `pending`.
+- **`features/fuel`** y **`features/expenses`**: mismo patrón Odoo
+  estándar completo (api con filtros/orden/paginado server-side +
+  `fetchXById`/CRUD + soft delete, hooks TanStack Query con toasts,
+  tabla 90/10, ficha con `DetailSection`/`RelationSelect`/
+  `SaveDiscardBar`/`HistoryPanel`). Validación de obligatorios:
+  Combustible exige **Vehículo**, **Litros** y **Costo total**; Gastos
+  exige **Monto** y **Fecha**.
+- **`features/costs/CostsPage.tsx`** (`/costos`, sin ficha — es un
+  reporte, no un CRUD): selector de rango de fechas (`DateRangeFilter`
+  solo, sin el `ListToolbar` completo porque no hay tabla paginada que
+  filtrar/ordenar, es un agregado) + 4 KPIs (costo total, combustible,
+  gastos aprobados, gastos pendientes) + tabla "Costos por vehículo"
+  (combustible + gastos aprobados sumados por `vehicle_id`) + tabla
+  "Gastos por categoría". **Solo cuentan los gastos con `status =
+  'approved'`** en los totales — un gasto `pending`/`rejected` no es un
+  costo confirmado todavía (los pendientes sí se muestran aparte, como
+  dato informativo de cuánto falta por revisar). `features/costs/api/costsApi.ts`
+  trae las filas de `fuel_logs`/`expenses` del periodo (con un tope
+  `ROW_LIMIT = 3000` de seguridad) y agrega en el cliente — mismo
+  criterio ya aceptado y documentado para "Agrupar por" en el patrón
+  Odoo (correcto para el volumen de una PyME en un rango acotado; si
+  crece, mover a una vista o RPC con `sum()`/`group by` real en Postgres).
+- **No construido a propósito:** eficiencia de combustible (km/l a
+  partir de diferencias de odómetro entre cargas del mismo vehículo) —
+  requiere manejar resets de odómetro, cambios de vehículo, y cargas
+  fuera de orden; no se pidió y se prestaría a un cálculo silenciosamente
+  incorrecto si se apresura. Motor de tarifas o presupuestos por
+  categoría/vehículo (comparar gasto real contra un límite) — depende de
+  que el usuario defina esos límites, no se inventó. Un flujo de
+  captura de gasto simplificado para operadores (que hoy tienen
+  `expenses.create` pero no aparecen en el sidebar porque el ítem
+  "Gastos" usa el permiso `expenses.view` para mostrarse) — pueden crear
+  gastos si llegan a `/gastos/nuevo` por URL directa, pero no tienen la
+  entrada de menú; construir esa pantalla dedicada si se pide.
+- `navConfig.ts`: "Combustible"/"Gastos"/"Costos" pasaron a
+  `implemented: true` — sección "Costos" del sidebar completa.
+
 ## Formato de fechas (agregado en esta fase)
 
 Pedido explícito del usuario: toda fecha visible en la UI se muestra en

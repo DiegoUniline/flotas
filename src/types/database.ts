@@ -557,6 +557,158 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          driver_id: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          driver_id?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          driver_id?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fuel_logs: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          driver_id: string | null
+          fuel_type: string | null
+          full_tank: boolean
+          id: string
+          liters: number
+          logged_at: string
+          notes: string | null
+          odometer: number | null
+          organization_id: string
+          station: string | null
+          total_cost: number
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          driver_id?: string | null
+          fuel_type?: string | null
+          full_tank?: boolean
+          id?: string
+          liters: number
+          logged_at?: string
+          notes?: string | null
+          odometer?: number | null
+          organization_id: string
+          station?: string | null
+          total_cost: number
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          driver_id?: string | null
+          fuel_type?: string | null
+          full_tank?: boolean
+          id?: string
+          liters?: number
+          logged_at?: string
+          notes?: string | null
+          odometer?: number | null
+          organization_id?: string
+          station?: string | null
+          total_cost?: number
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_logs_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_logs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geofences: {
         Row: {
           active: boolean
@@ -1732,6 +1884,32 @@ export type Database = {
         Returns: boolean
       }
       is_org_member: { Args: { p_org: string }; Returns: boolean }
+      set_expense_status: {
+        Args: { p_expense_id: string; p_status: string }
+        Returns: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          driver_id: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          organization_id: string
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       unassign_vehicle: { Args: { p_vehicle_id: string }; Returns: undefined }
       update_my_vehicle_position: {
         Args: { p_latitude: number; p_longitude: number }
