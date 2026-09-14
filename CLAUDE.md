@@ -545,6 +545,33 @@ ficha normal. Si algún otro módulo con muchos campos (Clientes, Rutas)
 tiene la misma queja de scroll al crear, replicar este mismo patrón en
 vez de inventar uno nuevo — pero solo para creación, no para edición.
 
+### Wizard de "Nuevo pedido": más ancho, no se cierra por accidente, sobrevive a un recargo (agregado en esta fase)
+
+Pedido explícito del usuario tras ver el wizard funcionando:
+
+- **`Modal`** ahora tiene `closeOnBackdrop` (default `true`); el wizard lo
+  pasa en `false` — ni el fondo oscuro ni Escape lo cierran, solo el botón
+  × o "Cancelar" del footer (ambos pasan por `handleBack`, que ya
+  pregunta con `ConfirmDialog` si hay cambios sin guardar). Evita perder
+  el progreso por un clic fuera del modal. `Modal` también creció de
+  `max-w-2xl`/`max-h-[85vh]` a `max-w-4xl`/`max-h-[90vh]`, con más
+  padding y el título en `text-lg` — más grande y fácil de leer.
+- **Persistencia del borrador en `sessionStorage`** (`JobDetailPage.tsx`,
+  helpers `loadWizardDraft`/`saveWizardDraft`/`clearWizardDraft`, llave
+  `flotaa:job-wizard-draft`): mientras se crea un pedido (`isNew`), cada
+  cambio de `draft`/`step` se guarda ahí; al montar el wizard se
+  restaura si existe. Así un recargo accidental de la pestaña (F5,
+  actualizar el navegador) no pierde lo que llevaba escrito — antes solo
+  había un `beforeunload` que pregunta "¿seguro que quieres salir?" pero
+  si el usuario aceptaba, todo se perdía igual. Se limpia explícitamente
+  al crear el pedido con éxito, o al confirmar "Salir sin guardar" — es
+  contenido de formulario sin guardar, no config/preferencia, así que
+  **no aplica** la regla general de "nada de `localStorage`" (esa es
+  para permisos/config de organización, ver el bullet correspondiente
+  arriba); se usa `sessionStorage` en vez de `localStorage` a propósito,
+  para que no sobreviva a cerrar la pestaña. Si se necesita el mismo
+  comportamiento en otro wizard futuro, replicar el mismo patrón.
+
 ### Bug real encontrado: ruta estática `/nuevo` pisaba el param `:id` (corregido en esta fase)
 
 **Causa raíz de la pantalla en blanco al crear pedidos** (y del mismo bug,

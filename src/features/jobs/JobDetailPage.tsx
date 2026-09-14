@@ -127,6 +127,45 @@ function toDraft(job?: JobWithRelations): Draft {
   }
 }
 
+const WIZARD_DRAFT_KEY = 'flotaa:job-wizard-draft'
+
+interface WizardDraft {
+  draft: Draft
+  step: number
+}
+
+/** Borrador del wizard de "Nuevo pedido" en sessionStorage — sobrevive a un
+ * recargo de la pestaña (a diferencia del state de React) pero se limpia al
+ * cerrar la pestaña o al terminar el flujo (crear o cancelar). No es
+ * configuración ni preferencia del usuario, es contenido de un formulario
+ * sin guardar — por eso no aplica la regla general de "nada de
+ * localStorage" (esa es para permisos/config, ver CLAUDE.md). */
+function loadWizardDraft(): WizardDraft | null {
+  try {
+    const raw = sessionStorage.getItem(WIZARD_DRAFT_KEY)
+    return raw ? (JSON.parse(raw) as WizardDraft) : null
+  } catch {
+    return null
+  }
+}
+
+function saveWizardDraft(value: WizardDraft) {
+  try {
+    sessionStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(value))
+  } catch {
+    // Almacenamiento no disponible (modo privado, cuota llena, etc.) — el
+    // wizard sigue funcionando, solo sin recuperación tras recargar.
+  }
+}
+
+function clearWizardDraft() {
+  try {
+    sessionStorage.removeItem(WIZARD_DRAFT_KEY)
+  } catch {
+    // ignorar
+  }
+}
+
 function toNullableInt(value: string): number | null {
   if (value.trim() === '') return null
   const parsed = Number(value)
@@ -151,12 +190,16 @@ export function JobDetailPage() {
   const deleteMutation = useDeleteJob()
   const packagesQuery = useJobPackages(isNew ? undefined : id)
 
-  const [draft, setDraft] = useState<Draft>(() => toDraft())
+  const [draft, setDraft] = useState<Draft>(() => (isNew ? (loadWizardDraft()?.draft ?? toDraft()) : toDraft()))
   const [original, setOriginal] = useState<Draft>(() => toDraft())
   const [tab, setTab] = useState('paquetes')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => (isNew ? (loadWizardDraft()?.step ?? 0) : 0))
+
+  useEffect(() => {
+    if (isNew) saveWizardDraft({ draft, step })
+  }, [isNew, draft, step])
 
   useEffect(() => {
     if (jobQuery.data) {
@@ -184,6 +227,7 @@ export function JobDetailPage() {
     if (dirty) {
       setLeaveConfirmOpen(true)
     } else {
+      if (isNew) clearWizardDraft()
       navigate('/pedidos')
     }
   }
@@ -233,7 +277,10 @@ export function JobDetailPage() {
 
     if (isNew) {
       createMutation.mutate(input, {
-        onSuccess: (created) => navigate(`/pedidos/${created.id}`, { replace: true }),
+        onSuccess: (created) => {
+          clearWizardDraft()
+          navigate(`/pedidos/${created.id}`, { replace: true })
+        },
       })
     } else if (id) {
       updateMutation.mutate({ id, input }, { onSuccess: () => setOriginal({ ...draft, received_at: receivedAt }) })
@@ -540,6 +587,7 @@ export function JobDetailPage() {
           title="Nuevo pedido"
           description={`Paso ${step + 1} de ${WIZARD_STEPS.length}: ${WIZARD_STEPS[step].title}`}
           onClose={handleBack}
+          closeOnBackdrop={false}
           footer={
             <div className="flex items-center justify-between">
               <Button variant="secondary" onClick={() => (step === 0 ? handleBack() : setStep((s) => s - 1))} disabled={saving}>
@@ -569,7 +617,10 @@ export function JobDetailPage() {
           description="Si sales ahora perderás los cambios que no has guardado. ¿Quieres continuar?"
           confirmLabel="Salir sin guardar"
           danger
-          onConfirm={() => navigate('/pedidos')}
+          onConfirm={() => {
+            clearWizardDraft()
+            navigate('/pedidos')
+          }}
           onCancel={() => setLeaveConfirmOpen(false)}
         />
       </>
