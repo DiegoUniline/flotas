@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { formatDate } from '@/lib/format'
 import {
   INCIDENT_SEVERITIES,
@@ -149,6 +150,21 @@ export function IncidentsTable({ rows, loading, error, hasFilters, sort, onSortC
     )
   }
 
+  function toRecord(incident: IncidentWithRelations): RecordListItem {
+    return {
+      id: incident.id,
+      onClick: () => navigate(`/incidentes/${incident.id}`),
+      title: TYPE_LABEL[incident.incident_type] ?? incident.incident_type,
+      subtitle: formatDate(incident.incident_date),
+      status: { label: STATUS_LABEL[incident.status] ?? incident.status, tone: STATUS_TONE[incident.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Severidad', value: SEVERITY_LABEL[incident.severity] ?? incident.severity },
+        { label: 'Vehículo', value: vehicleLabel(incident.vehicles) },
+        { label: 'Operador', value: driverLabel(incident.drivers) },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -172,9 +188,11 @@ export function IncidentsTable({ rows, loading, error, hasFilters, sort, onSortC
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -189,19 +207,30 @@ export function IncidentsTable({ rows, loading, error, hasFilters, sort, onSortC
               {!collapsed.has(group.key) && group.rows.map((incident) => <IncidentRow key={incident.id} incident={incident} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((incident) => (
           <IncidentRow key={incident.id} incident={incident} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +7,8 @@ import { Can } from '@/components/Can'
 import { RoutesTable } from './components/RoutesTable'
 import { useRoutePlansQuery } from './hooks/useRoutes'
 import { ROUTE_STATUSES, type RoutePlanFilters } from './api/routePlansApi'
+import { useListState } from '@/hooks/useListState'
+import { useScrollRestoration } from '@/hooks/useScrollRestoration'
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
@@ -15,9 +16,10 @@ function todayIso() {
 
 export function RoutesPage() {
   const navigate = useNavigate()
-  const [scheduledDate, setScheduledDate] = useState(todayIso())
-  const [status, setStatus] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [scheduledDate, setScheduledDate] = useListState('routes.scheduledDate', () => todayIso())
+  const [status, setStatus] = useListState<string | null>('routes.status', null)
+  const [search, setSearch] = useListState('routes.search', '')
+  const scrollRef = useScrollRestoration<HTMLDivElement>('routes-list')
 
   const filters: RoutePlanFilters = { scheduledDate, status, search }
   const routesQuery = useRoutePlansQuery(filters)
@@ -27,7 +29,7 @@ export function RoutesPage() {
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex shrink-0 items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Rutas</h1>
+          <h1 className="text-xl font-semibold text-ink">Rutas</h1>
           <p className="text-sm text-gray-500">Rutas del día con sus paradas.</p>
         </div>
         <Can permission="routes.create">
@@ -57,11 +59,16 @@ export function RoutesPage() {
             </option>
           ))}
         </select>
-        <Input placeholder="Buscar por nombre o número..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-56 rounded-full" />
+        <Input
+          placeholder="Buscar por nombre o número..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-full sm:w-56"
+        />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
-        <TableScrollArea>
+        <TableScrollArea ref={scrollRef}>
           <RoutesTable
             rows={routesQuery.data ?? []}
             loading={routesQuery.isLoading}

@@ -22,7 +22,7 @@ export function InspectionTemplatesPage() {
               <ArrowLeft size={15} strokeWidth={2} />
               Inspecciones
             </button>
-            <h1 className="text-lg font-semibold text-ink">Plantillas de inspección</h1>
+            <h1 className="text-xl font-semibold text-ink">Plantillas de inspección</h1>
             <p className="text-sm text-gray-500">Checklists que se aplican al inspeccionar un vehículo.</p>
           </div>
           <Can permission="inspections.perform">

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { Can } from '@/components/Can'
 import { useRolesQuery } from '@/features/roles/hooks/useRoles'
 
@@ -14,7 +15,7 @@ export function RolesPage() {
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Roles</h1>
+          <h1 className="text-xl font-semibold text-ink">Roles</h1>
           <p className="text-sm text-gray-500">
             Roles de sistema (compartidos, solo lectura) y roles personalizados de tu organización.
           </p>
@@ -32,30 +33,48 @@ export function RolesPage() {
         )}
         {rolesQuery.isError && <ErrorState message="No se pudieron cargar los roles." onRetry={() => void rolesQuery.refetch()} />}
         {roles.length > 0 && (
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                <th className="px-4 py-2">Nombre</th>
-                <th className="px-4 py-2">Descripción</th>
-                <th className="px-4 py-2">Origen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((role) => (
-                <tr key={role.id} onClick={() => navigate(`/roles/${role.id}`)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium text-gray-900">{role.name}</td>
-                  <td className="px-4 py-2 text-gray-500">{role.description ?? '—'}</td>
-                  <td className="px-4 py-2 text-gray-500">
-                    {role.organization_id ? (
-                      'Personalizado'
-                    ) : (
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">Sistema</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <>
+            <div className="hidden sm:block">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-2">Nombre</th>
+                    <th className="px-4 py-2">Descripción</th>
+                    <th className="px-4 py-2">Origen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roles.map((role) => (
+                    <tr key={role.id} onClick={() => navigate(`/roles/${role.id}`)} className="cursor-pointer border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium text-gray-900">{role.name}</td>
+                      <td className="px-4 py-2 text-gray-500">{role.description ?? '—'}</td>
+                      <td className="px-4 py-2 text-gray-500">
+                        {role.organization_id ? (
+                          'Personalizado'
+                        ) : (
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">Sistema</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <RecordList
+              className="sm:hidden"
+              items={roles.map(
+                (role): RecordListItem => ({
+                  id: role.id,
+                  onClick: () => navigate(`/roles/${role.id}`),
+                  title: role.name,
+                  subtitle: role.description ?? undefined,
+                  status: role.organization_id
+                    ? undefined
+                    : { label: 'Sistema', tone: 'bg-gray-100 text-gray-500' },
+                }),
+              )}
+            />
+          </>
         )}
       </div>
     </div>

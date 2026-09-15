@@ -83,7 +83,7 @@ export function AppRouteMapPage() {
     <PageScroll>
       <div className="mx-auto flex max-w-md flex-col gap-4 p-4 pb-10">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Mapa de entregas</h1>
+          <h1 className="text-xl font-semibold text-ink">Mapa de entregas</h1>
           <p className="text-sm text-gray-500">
             {stops.length === 0 ? 'Sin paradas pendientes con domicilio geolocalizado.' : `${stops.length} parada${stops.length === 1 ? '' : 's'} pendiente${stops.length === 1 ? '' : 's'}, en orden.`}
           </p>

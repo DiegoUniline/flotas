@@ -73,7 +73,7 @@ export function AlertsPage() {
     <PageScroll>
       <div className="flex flex-col gap-4 p-4">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Alertas</h1>
+          <h1 className="text-xl font-semibold text-ink">Alertas</h1>
           <p className="text-sm text-gray-500">
             Vista agregada de las situaciones reales que necesitan atención hoy: mantenimientos, documentos, inventario, incidentes y
             gastos pendientes. No hay notificaciones automáticas todavía — esta es una vista de consulta.

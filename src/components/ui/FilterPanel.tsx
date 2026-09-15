@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { ChevronDown, Plus, SlidersHorizontal, X } from 'lucide-react'
 import { useClickOutside } from '@/hooks/useClickOutside'
+import { BottomSheet } from './BottomSheet'
 import { OPERATORS_BY_TYPE, type AppliedFilter, type FilterFieldDef, type GroupFieldDef } from '@/lib/queryFilters'
 
 interface FilterPanelProps {
@@ -60,16 +61,10 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
         <ChevronDown size={14} strokeWidth={2} className="text-gray-400" />
       </button>
 
-      {open && (
-        <>
-          {/* En celular es una hoja fija al fondo de la pantalla, no un
-              popover anclado al botón — ese botón puede estar en
-              cualquier parte de la barra de herramientas, así que un
-              popover de 384px anclado ahí se saldría de la pantalla en
-              cualquier dirección. Desde `sm:` vuelve a ser el popover de
-              siempre. */}
-          <div className="fixed inset-0 z-30 bg-black/30 sm:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="fixed inset-x-0 bottom-0 z-30 max-h-[75vh] overflow-y-auto rounded-t-xl border-t border-gray-200 bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-1 sm:w-96 sm:rounded-md sm:border sm:p-3 sm:pb-3">
+      {/* Extraído a `BottomSheet` (hoja fija al fondo en celular, popover
+          anclado desde `sm:`) — mismo patrón, ahora compartido con cualquier
+          otro selector corto del proyecto. */}
+      <BottomSheet open={open} title="Filtros" onClose={() => setOpen(false)} anchorClassName="sm:right-0 sm:w-96">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Filtros por campos</p>
             <div className="flex flex-col gap-2">
@@ -168,9 +163,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
               </div>
             </div>
           )}
-          </div>
-        </>
-      )}
+      </BottomSheet>
     </div>
   )
 }

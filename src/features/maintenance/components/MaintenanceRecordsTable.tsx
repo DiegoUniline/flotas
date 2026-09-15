@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { formatCurrency, formatDate } from '@/lib/format'
 import {
   MAINTENANCE_RECORD_STATUSES,
@@ -130,6 +131,21 @@ export function MaintenanceRecordsTable({ rows, loading, error, hasFilters, sort
     )
   }
 
+  function toRecord(record: MaintenanceRecordWithRelations): RecordListItem {
+    return {
+      id: record.id,
+      onClick: () => navigate(`/mantenimientos/${record.id}`),
+      title: vehicleLabel(record.vehicles),
+      subtitle: record.maintenance_types?.name ?? undefined,
+      status: { label: STATUS_LABEL[record.status] ?? record.status, tone: STATUS_TONE[record.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Programado', value: formatDate(record.scheduled_date) },
+        { label: 'Completado', value: formatDate(record.completed_date) },
+        { label: 'Costo', value: formatCurrency(record.cost) },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -153,9 +169,11 @@ export function MaintenanceRecordsTable({ rows, loading, error, hasFilters, sort
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -170,19 +188,30 @@ export function MaintenanceRecordsTable({ rows, loading, error, hasFilters, sort
               {!collapsed.has(group.key) && group.rows.map((record) => <RecordRow key={record.id} record={record} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((record) => (
           <RecordRow key={record.id} record={record} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

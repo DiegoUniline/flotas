@@ -25,7 +25,7 @@ export function MaintenanceTypesPage() {
               <ArrowLeft size={15} strokeWidth={2} />
               Mantenimientos
             </button>
-            <h1 className="text-lg font-semibold text-ink">Tipos de servicio</h1>
+            <h1 className="text-xl font-semibold text-ink">Tipos de servicio</h1>
             <p className="text-sm text-gray-500">Catálogo de servicios con su intervalo por kilometraje y/o por tiempo.</p>
           </div>
           <Can permission="maintenance.manage">

@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { DRIVER_STATUSES, type Driver, type DriverSort, type DriverSortColumn } from '@/features/drivers/api/driversApi'
 
 const DRIVER_STATUS_LABELS = Object.fromEntries(DRIVER_STATUSES.map((s) => [s.value, s.label]))
@@ -118,6 +119,17 @@ export function DriversTable({ rows, loading, error, hasFilters, sort, onSortCha
     )
   }
 
+  function toRecord(driver: Driver): RecordListItem {
+    return {
+      id: driver.id,
+      onClick: () => navigate(`/operadores/${driver.id}`),
+      title: `${driver.first_name} ${driver.last_name}`,
+      subtitle: driver.employee_number ?? undefined,
+      status: { label: DRIVER_STATUS_LABELS[driver.status] ?? driver.status, tone: STATUS_TONE[driver.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [{ label: 'Teléfono', value: driver.phone ?? '—' }],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -140,9 +152,11 @@ export function DriversTable({ rows, loading, error, hasFilters, sort, onSortCha
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -157,19 +171,30 @@ export function DriversTable({ rows, loading, error, hasFilters, sort, onSortCha
               {!collapsed.has(group.key) && group.rows.map((driver) => <DriverRow key={driver.id} driver={driver} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((driver) => (
           <DriverRow key={driver.id} driver={driver} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

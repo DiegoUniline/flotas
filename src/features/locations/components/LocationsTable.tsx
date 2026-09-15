@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { LOCATION_TYPES, type Location, type LocationSort, type LocationSortColumn } from '@/features/locations/api/locationsApi'
 
 const LOCATION_TYPE_LABELS = Object.fromEntries(LOCATION_TYPES.map((t) => [t.value, t.label]))
@@ -117,6 +118,23 @@ export function LocationsTable({ rows, loading, error, hasFilters, sort, onSortC
     )
   }
 
+  function toRecord(location: Location): RecordListItem {
+    return {
+      id: location.id,
+      onClick: () => navigate(`/sucursales/${location.id}`),
+      title: location.name,
+      subtitle: location.code ?? undefined,
+      status: {
+        label: location.active ? 'Activa' : 'Inactiva',
+        tone: location.active ? 'bg-status-active-bg text-status-active' : 'bg-gray-100 text-gray-500',
+      },
+      fields: [
+        { label: 'Ciudad', value: location.city ?? '—' },
+        { label: 'Tipo', value: LOCATION_TYPE_LABELS[location.location_type] ?? location.location_type },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -139,9 +157,11 @@ export function LocationsTable({ rows, loading, error, hasFilters, sort, onSortC
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -156,19 +176,30 @@ export function LocationsTable({ rows, loading, error, hasFilters, sort, onSortC
               {!collapsed.has(group.key) && group.rows.map((location) => <LocationRow key={location.id} location={location} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((location) => (
           <LocationRow key={location.id} location={location} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

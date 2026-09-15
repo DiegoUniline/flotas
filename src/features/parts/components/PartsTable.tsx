@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { formatCurrency } from '@/lib/format'
 import type { Part, PartSort, PartSortColumn } from '@/features/parts/api/partsApi'
 
@@ -115,6 +116,22 @@ export function PartsTable({ rows, loading, error, hasFilters, sort, onSortChang
     )
   }
 
+  function toRecord(part: Part): RecordListItem {
+    const lowStock = part.min_stock != null && part.quantity_on_hand <= part.min_stock
+    return {
+      id: part.id,
+      onClick: () => navigate(`/refacciones/${part.id}`),
+      title: part.name,
+      subtitle: part.sku ?? undefined,
+      status: lowStock ? { label: 'Stock bajo', tone: 'bg-status-delayed-bg text-status-delayed' } : undefined,
+      fields: [
+        { label: 'Existencia', value: `${Number(part.quantity_on_hand).toLocaleString('es-MX')} ${part.unit}` },
+        { label: 'Costo', value: formatCurrency(part.unit_cost) },
+        { label: 'Categoría', value: part.category ?? '—' },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -137,9 +154,11 @@ export function PartsTable({ rows, loading, error, hasFilters, sort, onSortChang
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -154,19 +173,30 @@ export function PartsTable({ rows, loading, error, hasFilters, sort, onSortChang
               {!collapsed.has(group.key) && group.rows.map((part) => <PartRow key={part.id} part={part} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((part) => (
           <PartRow key={part.id} part={part} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

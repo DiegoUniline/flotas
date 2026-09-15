@@ -9,6 +9,7 @@ import { useAutoSyncOfflineData } from '@/features/offlineSync/hooks/useOfflineS
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { BottomNav } from './BottomNav'
 
 export function AppShell() {
   const { loading, error, needsOnboarding, refetch } = useOrg()
@@ -79,9 +80,16 @@ export function AppShell() {
             <Header onToggleSidebar={() => (isDesktop ? setCollapsed((c) => !c) : setMobileNavOpen((o) => !o))} />
             <div className="flex flex-1 overflow-hidden">
               <Sidebar iconOnly={collapsed && isDesktop} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} isDesktop={isDesktop} />
-              <main className="flex-1 overflow-hidden bg-gray-50">
-                <Outlet />
-              </main>
+              {/* Columna propia para main+BottomNav: la barra vive en el
+                  flujo normal (no `fixed`), así que `main` se reduce para
+                  darle espacio en vez de quedar tapado por ella — ver punto
+                  9 (nada fijo debe competir con el contenido). */}
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <main className="flex-1 overflow-hidden bg-gray-50">
+                  <Outlet />
+                </main>
+                <BottomNav onOpenMore={() => setMobileNavOpen(true)} className="lg:hidden" />
+              </div>
             </div>
           </div>
         )}

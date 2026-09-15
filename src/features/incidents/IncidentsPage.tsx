@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ListToolbar } from '@/components/ui/ListToolbar'
 import { TableScrollArea } from '@/components/ui/TableScrollArea'
+import { Pagination } from '@/components/ui/Pagination'
 import { Can } from '@/components/Can'
 import { IncidentsTable } from './components/IncidentsTable'
 import { useIncidentsQuery } from './hooks/useIncidents'
@@ -14,6 +14,8 @@ import {
   type IncidentSort,
 } from './api/incidentsApi'
 import { computeDateRange } from '@/lib/dateRanges'
+import { useListState } from '@/hooks/useListState'
+import { useScrollRestoration } from '@/hooks/useScrollRestoration'
 import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
 const FILTER_FIELDS: FilterFieldDef[] = [
@@ -30,12 +32,15 @@ const GROUP_FIELDS: GroupFieldDef[] = [
 
 export function IncidentsPage() {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [dateRange, setDateRange] = useState(computeDateRange('all'))
-  const [advanced, setAdvanced] = useState<AppliedFilter[]>([])
-  const [groupBy, setGroupBy] = useState<string | null>(null)
-  const [sort, setSort] = useState<IncidentSort>({ column: 'incident_date', direction: 'desc' })
-  const [page, setPage] = useState(0)
+  // `useListState` (en vez de `useState`) persiste cada slice en sessionStorage —
+  // al volver de un detalle la lista conserva búsqueda/filtros/orden/página.
+  const [search, setSearch] = useListState('incidents.search', '')
+  const [dateRange, setDateRange] = useListState('incidents.dateRange', () => computeDateRange('all'))
+  const [advanced, setAdvanced] = useListState<AppliedFilter[]>('incidents.advanced', [])
+  const [groupBy, setGroupBy] = useListState<string | null>('incidents.groupBy', null)
+  const [sort, setSort] = useListState<IncidentSort>('incidents.sort', { column: 'incident_date', direction: 'desc' })
+  const [page, setPage] = useListState('incidents.page', 0)
+  const scrollRef = useScrollRestoration<HTMLDivElement>('incidents-list')
 
   const filters: IncidentFilters = { search, dateRange, advanced, groupBy }
   const incidentsQuery = useIncidentsQuery(filters, sort, page)
@@ -45,7 +50,7 @@ export function IncidentsPage() {
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex shrink-0 items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Incidentes</h1>
+          <h1 className="text-xl font-semibold text-ink">Incidentes</h1>
           <p className="text-sm text-gray-500">Accidentes, descomposturas, infracciones y robos registrados en la flota.</p>
         </div>
         <Can permission="alerts.manage">
@@ -82,7 +87,7 @@ export function IncidentsPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
-        <TableScrollArea>
+        <TableScrollArea ref={scrollRef}>
           <IncidentsTable
             rows={incidentsQuery.data?.rows ?? []}
             loading={incidentsQuery.isLoading}
@@ -96,28 +101,8 @@ export function IncidentsPage() {
           />
         </TableScrollArea>
         {!groupBy && !incidentsQuery.isLoading && !incidentsQuery.isError && (incidentsQuery.data?.rows.length ?? 0) > 0 && (
-          <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
-            <span>
-              {page * 20 + 1}–{Math.min((page + 1) * 20, incidentsQuery.data?.count ?? 0)} de {incidentsQuery.data?.count ?? 0}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={(page + 1) * 20 >= (incidentsQuery.data?.count ?? 0)}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Siguiente
-              </button>
-            </div>
+          <div className="shrink-0">
+            <Pagination page={page} pageSize={20} total={incidentsQuery.data?.count ?? 0} onPageChange={setPage} />
           </div>
         )}
       </div>

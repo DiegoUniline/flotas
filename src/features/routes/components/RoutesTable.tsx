@@ -3,6 +3,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { ROUTE_STATUSES, type RoutePlanWithRelations } from '@/features/routes/api/routePlansApi'
 import { formatDate } from '@/lib/format'
 
@@ -57,36 +58,55 @@ export function RoutesTable({ rows, loading, error, hasFilters, onRetry, onCreat
     )
   }
 
+  function toRecord(route: RoutePlanWithRelations): RecordListItem {
+    return {
+      id: route.id,
+      onClick: () => navigate(`/rutas/${route.id}`),
+      title: route.name ?? route.route_number ?? route.id.slice(0, 8),
+      subtitle: formatDate(route.scheduled_date),
+      status: { label: STATUS_LABELS[route.status] ?? route.status, tone: STATUS_TONE[route.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Operador', value: route.drivers ? `${route.drivers.first_name} ${route.drivers.last_name}` : '—' },
+        { label: 'Vehículo', value: route.vehicles?.economic_number ?? route.vehicles?.plate ?? '—' },
+      ],
+    }
+  }
+
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">
-        <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-          <th className="px-4 py-2">Ruta</th>
-          <th className="px-4 py-2">Fecha</th>
-          <th className="px-4 py-2">Operador</th>
-          <th className="px-4 py-2">Vehículo</th>
-          <th className="px-4 py-2">Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((route) => (
-          <tr
-            key={route.id}
-            onClick={() => navigate(`/rutas/${route.id}`)}
-            className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
-          >
-            <td className="px-4 py-2 font-medium text-gray-900">{route.name ?? route.route_number ?? route.id.slice(0, 8)}</td>
-            <td className="px-4 py-2 text-gray-700">{formatDate(route.scheduled_date)}</td>
-            <td className="px-4 py-2 text-gray-700">{route.drivers ? `${route.drivers.first_name} ${route.drivers.last_name}` : '—'}</td>
-            <td className="px-4 py-2 text-gray-700">{route.vehicles?.economic_number ?? route.vehicles?.plate ?? '—'}</td>
-            <td className="px-4 py-2">
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[route.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                {STATUS_LABELS[route.status] ?? route.status}
-              </span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-2">Ruta</th>
+              <th className="px-4 py-2">Fecha</th>
+              <th className="px-4 py-2">Operador</th>
+              <th className="px-4 py-2">Vehículo</th>
+              <th className="px-4 py-2">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((route) => (
+              <tr
+                key={route.id}
+                onClick={() => navigate(`/rutas/${route.id}`)}
+                className="cursor-pointer border-b border-gray-100 hover:bg-gray-50"
+              >
+                <td className="px-4 py-2 font-medium text-gray-900">{route.name ?? route.route_number ?? route.id.slice(0, 8)}</td>
+                <td className="px-4 py-2 text-gray-700">{formatDate(route.scheduled_date)}</td>
+                <td className="px-4 py-2 text-gray-700">{route.drivers ? `${route.drivers.first_name} ${route.drivers.last_name}` : '—'}</td>
+                <td className="px-4 py-2 text-gray-700">{route.vehicles?.economic_number ?? route.vehicles?.plate ?? '—'}</td>
+                <td className="px-4 py-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[route.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                    {STATUS_LABELS[route.status] ?? route.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

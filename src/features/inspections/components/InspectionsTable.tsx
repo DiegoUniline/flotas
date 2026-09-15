@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { formatDateTime } from '@/lib/format'
 import { INSPECTION_RESULTS, type InspectionSort, type InspectionSortColumn, type InspectionWithRelations } from '@/features/inspections/api/inspectionsApi'
 
@@ -119,6 +120,23 @@ export function InspectionsTable({ rows, loading, error, hasFilters, sort, onSor
     )
   }
 
+  function toRecord(inspection: InspectionWithRelations): RecordListItem {
+    return {
+      id: inspection.id,
+      onClick: () => navigate(`/inspecciones/${inspection.id}`),
+      title: vehicleLabel(inspection.vehicles),
+      subtitle: formatDateTime(inspection.performed_at),
+      status: {
+        label: RESULT_LABEL[inspection.overall_result] ?? inspection.overall_result,
+        tone: RESULT_TONE[inspection.overall_result] ?? 'bg-gray-100 text-gray-500',
+      },
+      fields: [
+        { label: 'Operador', value: inspection.drivers ? `${inspection.drivers.first_name} ${inspection.drivers.last_name}` : '—' },
+        { label: 'Plantilla', value: inspection.inspection_templates?.name ?? '—' },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -143,9 +161,11 @@ export function InspectionsTable({ rows, loading, error, hasFilters, sort, onSor
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -160,19 +180,30 @@ export function InspectionsTable({ rows, loading, error, hasFilters, sort, onSor
               {!collapsed.has(group.key) && group.rows.map((inspection) => <InspectionRow key={inspection.id} inspection={inspection} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((inspection) => (
           <InspectionRow key={inspection.id} inspection={inspection} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

@@ -6,7 +6,7 @@ export function ComingSoonPage({ title }: { title: string }) {
     <PageScroll>
     <div className="flex flex-col gap-4 p-6">
       <div>
-        <h1 className="text-lg font-semibold text-ink">{title}</h1>
+        <h1 className="text-xl font-semibold text-ink">{title}</h1>
       </div>
       <div className="rounded-lg border border-gray-200 bg-surface">
         <EmptyState

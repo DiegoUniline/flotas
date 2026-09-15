@@ -75,7 +75,7 @@ export function IndicatorsPage() {
       <div className="flex flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-ink">Indicadores</h1>
+            <h1 className="text-xl font-semibold text-ink">Indicadores</h1>
             <p className="text-sm text-gray-500">KPIs operativos del día, comparados contra el día anterior cuando aplica.</p>
           </div>
           <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-surface px-3 py-1.5 text-sm text-gray-700">

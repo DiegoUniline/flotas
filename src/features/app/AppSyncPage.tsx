@@ -11,7 +11,7 @@ export function AppSyncPage() {
     <PageScroll>
       <div className="mx-auto flex max-w-md flex-col gap-4 p-6">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Sincronizar</h1>
+          <h1 className="text-xl font-semibold text-ink">Sincronizar</h1>
           <p className="text-sm text-gray-500">
             Trae clientes, domicilios, sucursales, operadores y vehículos completos para poder crear pedidos sin conexión.
           </p>

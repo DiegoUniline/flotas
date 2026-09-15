@@ -55,7 +55,7 @@ export function CostsPage() {
       <div className="flex flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-ink">Costos</h1>
+            <h1 className="text-xl font-semibold text-ink">Costos</h1>
             <p className="text-sm text-gray-500">Combustible y gastos aprobados, agregados por vehículo y categoría.</p>
           </div>
           <DateRangeFilter value={dateRange} onChange={setDateRange} />
@@ -112,26 +112,28 @@ export function CostsPage() {
                 {summary.byVehicle.length === 0 ? (
                   <EmptyState title="Sin datos" description="No hay combustible ni gastos aprobados en este periodo." />
                 ) : (
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        <th className="px-4 py-2">Vehículo</th>
-                        <th className="px-4 py-2">Combustible</th>
-                        <th className="px-4 py-2">Gastos</th>
-                        <th className="px-4 py-2">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {summary.byVehicle.map((row) => (
-                        <tr key={row.vehicleId} className="border-b border-gray-100">
-                          <td className="px-4 py-2 font-medium text-gray-900">{row.label}</td>
-                          <td className="px-4 py-2 text-gray-700">{formatCurrency(row.fuelCost)}</td>
-                          <td className="px-4 py-2 text-gray-700">{formatCurrency(row.expensesCost)}</td>
-                          <td className="px-4 py-2 font-medium text-gray-900">{formatCurrency(row.total)}</td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[420px] border-collapse text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                          <th className="px-4 py-2">Vehículo</th>
+                          <th className="px-4 py-2">Combustible</th>
+                          <th className="px-4 py-2">Gastos</th>
+                          <th className="px-4 py-2">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {summary.byVehicle.map((row) => (
+                          <tr key={row.vehicleId} className="border-b border-gray-100">
+                            <td className="px-4 py-2 font-medium text-gray-900">{row.label}</td>
+                            <td className="px-4 py-2 text-gray-700">{formatCurrency(row.fuelCost)}</td>
+                            <td className="px-4 py-2 text-gray-700">{formatCurrency(row.expensesCost)}</td>
+                            <td className="px-4 py-2 font-medium text-gray-900">{formatCurrency(row.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
 

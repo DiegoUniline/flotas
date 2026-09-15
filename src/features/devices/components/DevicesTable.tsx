@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { DEVICE_STATUSES, DEVICE_TYPES, type DeviceSort, type DeviceSortColumn, type DeviceWithRelations } from '@/features/devices/api/devicesApi'
 
 interface Column {
@@ -119,6 +120,22 @@ export function DevicesTable({ rows, loading, error, hasFilters, sort, onSortCha
     )
   }
 
+  function toRecord(device: DeviceWithRelations): RecordListItem {
+    return {
+      id: device.id,
+      onClick: () => navigate(`/dispositivos/${device.id}`),
+      title: device.name,
+      subtitle: TYPE_LABEL[device.device_type] ?? device.device_type,
+      status: {
+        label: STATUS_LABEL[device.status] ?? device.status,
+        tone: device.status === 'active' ? 'bg-status-active-bg text-status-active' : 'bg-gray-100 text-gray-500',
+      },
+      fields: [
+        { label: 'Vehículo', value: device.vehicles ? `${device.vehicles.economic_number}${device.vehicles.plate ? ` · ${device.vehicles.plate}` : ''}` : '—' },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -140,9 +157,11 @@ export function DevicesTable({ rows, loading, error, hasFilters, sort, onSortCha
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -157,19 +176,30 @@ export function DevicesTable({ rows, loading, error, hasFilters, sort, onSortCha
               {!collapsed.has(group.key) && group.rows.map((device) => <DeviceRow key={device.id} device={device} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((device) => (
           <DeviceRow key={device.id} device={device} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

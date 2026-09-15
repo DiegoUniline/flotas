@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 import type { FuelLogSort, FuelLogSortColumn, FuelLogWithRelations } from '@/features/fuel/api/fuelLogsApi'
 
@@ -129,6 +130,26 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
     )
   }
 
+  function toRecord(log: FuelLogWithRelations): RecordListItem {
+    return {
+      id: log.id,
+      onClick: () => navigate(`/combustible/${log.id}`),
+      title: vehicleLabel(log.vehicles),
+      subtitle: formatDateTime(log.logged_at),
+      status: log.has_invoice
+        ? {
+            label: log.invoiced ? 'Facturado' : 'Por facturar',
+            tone: log.invoiced ? 'bg-status-active-bg text-status-active' : 'bg-status-delayed-bg text-status-delayed',
+          }
+        : { label: 'Sin factura', tone: 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Litros', value: `${Number(log.liters).toLocaleString('es-MX')} L` },
+        { label: 'Costo', value: formatCurrency(log.total_cost) },
+        { label: 'Gasolinera', value: log.fuel_stations?.name ?? '—' },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -153,9 +174,11 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -170,19 +193,30 @@ export function FuelLogsTable({ rows, loading, error, hasFilters, sort, onSortCh
               {!collapsed.has(group.key) && group.rows.map((log) => <FuelLogRow key={log.id} log={log} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((log) => (
           <FuelLogRow key={log.id} log={log} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

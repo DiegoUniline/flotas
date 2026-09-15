@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { EXPENSE_CATEGORIES, EXPENSE_STATUSES, type ExpenseSort, type ExpenseSortColumn, type ExpenseWithRelations } from '@/features/expenses/api/expensesApi'
 
@@ -124,6 +125,20 @@ export function ExpensesTable({ rows, loading, error, hasFilters, sort, onSortCh
     )
   }
 
+  function toRecord(expense: ExpenseWithRelations): RecordListItem {
+    return {
+      id: expense.id,
+      onClick: () => navigate(`/gastos/${expense.id}`),
+      title: formatCurrency(expense.amount),
+      subtitle: formatDate(expense.expense_date),
+      status: { label: STATUS_LABEL[expense.status] ?? expense.status, tone: STATUS_TONE[expense.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Categoría', value: CATEGORY_LABEL[expense.category] ?? expense.category },
+        { label: 'Vehículo', value: vehicleLabel(expense.vehicles) },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -147,9 +162,11 @@ export function ExpensesTable({ rows, loading, error, hasFilters, sort, onSortCh
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -164,19 +181,30 @@ export function ExpensesTable({ rows, loading, error, hasFilters, sort, onSortCh
               {!collapsed.has(group.key) && group.rows.map((expense) => <ExpenseRow key={expense.id} expense={expense} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((expense) => (
           <ExpenseRow key={expense.id} expense={expense} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

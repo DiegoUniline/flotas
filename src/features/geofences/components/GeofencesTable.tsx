@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import type { GeofenceSort, GeofenceSortColumn, GeofenceWithRelations } from '@/features/geofences/api/geofencesApi'
 
 interface Column {
@@ -114,6 +115,20 @@ export function GeofencesTable({ rows, loading, error, hasFilters, sort, onSortC
     )
   }
 
+  function toRecord(geofence: GeofenceWithRelations): RecordListItem {
+    return {
+      id: geofence.id,
+      onClick: () => navigate(`/geocercas/${geofence.id}`),
+      title: geofence.name,
+      subtitle: geofence.locations?.name ?? undefined,
+      status: {
+        label: geofence.active ? 'Activa' : 'Inactiva',
+        tone: geofence.active ? 'bg-status-active-bg text-status-active' : 'bg-gray-100 text-gray-500',
+      },
+      fields: [{ label: 'Radio', value: `${geofence.radius_meters.toLocaleString('es-MX')} m` }],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -136,9 +151,11 @@ export function GeofencesTable({ rows, loading, error, hasFilters, sort, onSortC
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -153,19 +170,30 @@ export function GeofencesTable({ rows, loading, error, hasFilters, sort, onSortC
               {!collapsed.has(group.key) && group.rows.map((geofence) => <GeofenceRow key={geofence.id} geofence={geofence} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((geofence) => (
           <GeofenceRow key={geofence.id} geofence={geofence} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

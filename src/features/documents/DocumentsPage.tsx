@@ -4,6 +4,7 @@ import { PageScroll } from '@/components/ui/PageScroll'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { useOrg } from '@/context/OrgContext'
 import { useQuery } from '@tanstack/react-query'
 import { formatDate } from '@/lib/format'
@@ -53,7 +54,7 @@ export function DocumentsPage() {
     <PageScroll>
       <div className="flex flex-col gap-4 p-4">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Documentos</h1>
+          <h1 className="text-xl font-semibold text-ink">Documentos</h1>
           <p className="text-sm text-gray-500">
             Licencias, certificaciones y documentos de vehículo con vencimiento — índice de solo lectura, edita cada documento desde la
             ficha del operador o vehículo dueño.
@@ -114,38 +115,60 @@ export function DocumentsPage() {
             <EmptyState title="Sin documentos" description="No hay documentos que coincidan con los filtros." />
           )}
           {documentsQuery.data && filtered.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    <th className="px-4 py-2">Documento</th>
-                    <th className="px-4 py-2">Tipo</th>
-                    <th className="px-4 py-2">Dueño</th>
-                    <th className="px-4 py-2">Vence</th>
-                    <th className="px-4 py-2">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((row) => (
-                    <tr key={`${row.source}-${row.id}`} className="border-b border-gray-100">
-                      <td className="px-4 py-2 font-medium text-gray-900">{row.documentType}</td>
-                      <td className="px-4 py-2 text-gray-700">{DOCUMENT_SOURCE_LABEL[row.source]}</td>
-                      <td className="px-4 py-2 text-gray-700">
-                        <Link to={row.linkTo} className="text-accent-600 hover:underline">
-                          {row.ownerLabel}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2 text-gray-700">{row.expiresAt ? formatDate(row.expiresAt) : '—'}</td>
-                      <td className="px-4 py-2">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[row.status]}`}>
-                          {DOCUMENT_STATUS_LABEL[row.status]}
-                        </span>
-                      </td>
+            <>
+              <div className="hidden sm:block">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      <th className="px-4 py-2">Documento</th>
+                      <th className="px-4 py-2">Tipo</th>
+                      <th className="px-4 py-2">Dueño</th>
+                      <th className="px-4 py-2">Vence</th>
+                      <th className="px-4 py-2">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filtered.map((row) => (
+                      <tr key={`${row.source}-${row.id}`} className="border-b border-gray-100">
+                        <td className="px-4 py-2 font-medium text-gray-900">{row.documentType}</td>
+                        <td className="px-4 py-2 text-gray-700">{DOCUMENT_SOURCE_LABEL[row.source]}</td>
+                        <td className="px-4 py-2 text-gray-700">
+                          <Link to={row.linkTo} className="text-accent-600 hover:underline">
+                            {row.ownerLabel}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 text-gray-700">{row.expiresAt ? formatDate(row.expiresAt) : '—'}</td>
+                        <td className="px-4 py-2">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[row.status]}`}>
+                            {DOCUMENT_STATUS_LABEL[row.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <RecordList
+                className="sm:hidden"
+                items={filtered.map(
+                  (row): RecordListItem => ({
+                    id: `${row.source}-${row.id}`,
+                    onClick: undefined,
+                    title: row.documentType,
+                    subtitle: (
+                      <Link to={row.linkTo} className="text-accent-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                        {row.ownerLabel}
+                      </Link>
+                    ),
+                    status: { label: DOCUMENT_STATUS_LABEL[row.status], tone: STATUS_TONE[row.status] },
+                    fields: [
+                      { label: 'Tipo', value: DOCUMENT_SOURCE_LABEL[row.source] },
+                      { label: 'Vence', value: row.expiresAt ? formatDate(row.expiresAt) : '—' },
+                    ],
+                  }),
+                )}
+              />
+            </>
           )}
         </div>
       </div>

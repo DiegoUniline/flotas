@@ -1,14 +1,16 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ListToolbar } from '@/components/ui/ListToolbar'
 import { TableScrollArea } from '@/components/ui/TableScrollArea'
+import { Pagination } from '@/components/ui/Pagination'
 import { Can } from '@/components/Can'
 import { InspectionsTable } from './components/InspectionsTable'
 import { useInspectionsQuery } from './hooks/useInspections'
 import { INSPECTION_RESULTS, type InspectionFilters, type InspectionSort } from './api/inspectionsApi'
 import { computeDateRange } from '@/lib/dateRanges'
+import { useListState } from '@/hooks/useListState'
+import { useScrollRestoration } from '@/hooks/useScrollRestoration'
 import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
 const FILTER_FIELDS: FilterFieldDef[] = [
@@ -23,12 +25,15 @@ const GROUP_FIELDS: GroupFieldDef[] = [
 
 export function InspectionsPage() {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [dateRange, setDateRange] = useState(computeDateRange('this_month'))
-  const [advanced, setAdvanced] = useState<AppliedFilter[]>([])
-  const [groupBy, setGroupBy] = useState<string | null>(null)
-  const [sort, setSort] = useState<InspectionSort>({ column: 'performed_at', direction: 'desc' })
-  const [page, setPage] = useState(0)
+  // `useListState` (en vez de `useState`) persiste cada slice en sessionStorage —
+  // al volver de un detalle la lista conserva búsqueda/filtros/orden/página.
+  const [search, setSearch] = useListState('inspections.search', '')
+  const [dateRange, setDateRange] = useListState('inspections.dateRange', () => computeDateRange('this_month'))
+  const [advanced, setAdvanced] = useListState<AppliedFilter[]>('inspections.advanced', [])
+  const [groupBy, setGroupBy] = useListState<string | null>('inspections.groupBy', null)
+  const [sort, setSort] = useListState<InspectionSort>('inspections.sort', { column: 'performed_at', direction: 'desc' })
+  const [page, setPage] = useListState('inspections.page', 0)
+  const scrollRef = useScrollRestoration<HTMLDivElement>('inspections-list')
 
   const filters: InspectionFilters = { search, dateRange, advanced, groupBy }
   const inspectionsQuery = useInspectionsQuery(filters, sort, page)
@@ -38,7 +43,7 @@ export function InspectionsPage() {
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex shrink-0 items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Inspecciones</h1>
+          <h1 className="text-xl font-semibold text-ink">Inspecciones</h1>
           <p className="text-sm text-gray-500">Checklists de inspección aplicados a los vehículos.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -87,7 +92,7 @@ export function InspectionsPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
-        <TableScrollArea>
+        <TableScrollArea ref={scrollRef}>
           <InspectionsTable
             rows={inspectionsQuery.data?.rows ?? []}
             loading={inspectionsQuery.isLoading}
@@ -101,28 +106,8 @@ export function InspectionsPage() {
           />
         </TableScrollArea>
         {!groupBy && !inspectionsQuery.isLoading && !inspectionsQuery.isError && (inspectionsQuery.data?.rows.length ?? 0) > 0 && (
-          <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
-            <span>
-              {page * 20 + 1}–{Math.min((page + 1) * 20, inspectionsQuery.data?.count ?? 0)} de {inspectionsQuery.data?.count ?? 0}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={(page + 1) * 20 >= (inspectionsQuery.data?.count ?? 0)}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Siguiente
-              </button>
-            </div>
+          <div className="shrink-0">
+            <Pagination page={page} pageSize={20} total={inspectionsQuery.data?.count ?? 0} onPageChange={setPage} />
           </div>
         )}
       </div>

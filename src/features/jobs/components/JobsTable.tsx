@@ -7,6 +7,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { groupRows } from '@/lib/groupRows'
+import { RecordList, type RecordListItem } from '@/components/ui/RecordList'
 import { JOB_PRIORITIES, JOB_STATUSES, type JobSort, type JobSortColumn, type JobWithRelations } from '@/features/jobs/api/jobsApi'
 
 const STATUS_LABELS = Object.fromEntries(JOB_STATUSES.map((s) => [s.value, s.label]))
@@ -127,6 +128,21 @@ export function JobsTable({ rows, loading, error, hasFilters, sort, onSortChange
     )
   }
 
+  function toRecord(job: JobWithRelations): RecordListItem {
+    return {
+      id: job.id,
+      onClick: () => navigate(`/pedidos/${job.id}`),
+      title: job.job_number ?? job.id.slice(0, 8),
+      subtitle: job.customers?.name ?? undefined,
+      status: { label: STATUS_LABELS[job.status] ?? job.status, tone: STATUS_TONE[job.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Fecha', value: formatDate(job.scheduled_date) },
+        { label: 'Destinatario', value: job.receiver_name ?? '—' },
+        { label: 'Monto', value: formatCurrency(job.amount) },
+      ],
+    }
+  }
+
   const headerRow = (
     <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
       {COLUMNS.map((column) => (
@@ -152,9 +168,11 @@ export function JobsTable({ rows, loading, error, hasFilters, sort, onSortChange
       (r) => groupLabel(r, groupBy),
     )
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
           {groups.map((group) => (
             <Fragment key={group.key}>
               <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -169,19 +187,30 @@ export function JobsTable({ rows, loading, error, hasFilters, sort, onSortChange
               {!collapsed.has(group.key) && group.rows.map((job) => <JobRow key={job.id} job={job} />)}
             </Fragment>
           ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+        <RecordList
+          groups={groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))}
+          className="sm:hidden"
+        />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
         {rows.map((job) => (
           <JobRow key={job.id} job={job} />
         ))}
-      </tbody>
-    </table>
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

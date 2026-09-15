@@ -1,13 +1,15 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ListToolbar } from '@/components/ui/ListToolbar'
 import { TableScrollArea } from '@/components/ui/TableScrollArea'
+import { Pagination } from '@/components/ui/Pagination'
 import { Can } from '@/components/Can'
 import { PartsTable } from './components/PartsTable'
 import { usePartsQuery } from './hooks/useParts'
 import type { PartFilters, PartSort } from './api/partsApi'
 import { computeDateRange } from '@/lib/dateRanges'
+import { useListState } from '@/hooks/useListState'
+import { useScrollRestoration } from '@/hooks/useScrollRestoration'
 import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
 const FILTER_FIELDS: FilterFieldDef[] = [
@@ -23,12 +25,15 @@ const GROUP_FIELDS: GroupFieldDef[] = [
 
 export function PartsPage() {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [dateRange, setDateRange] = useState(computeDateRange('all'))
-  const [advanced, setAdvanced] = useState<AppliedFilter[]>([])
-  const [groupBy, setGroupBy] = useState<string | null>(null)
-  const [sort, setSort] = useState<PartSort>({ column: 'name', direction: 'asc' })
-  const [page, setPage] = useState(0)
+  // `useListState` (en vez de `useState`) persiste cada slice en sessionStorage —
+  // al volver de un detalle la lista conserva búsqueda/filtros/orden/página.
+  const [search, setSearch] = useListState('parts.search', '')
+  const [dateRange, setDateRange] = useListState('parts.dateRange', () => computeDateRange('all'))
+  const [advanced, setAdvanced] = useListState<AppliedFilter[]>('parts.advanced', [])
+  const [groupBy, setGroupBy] = useListState<string | null>('parts.groupBy', null)
+  const [sort, setSort] = useListState<PartSort>('parts.sort', { column: 'name', direction: 'asc' })
+  const [page, setPage] = useListState('parts.page', 0)
+  const scrollRef = useScrollRestoration<HTMLDivElement>('parts-list')
 
   const filters: PartFilters = { search, dateRange, advanced, groupBy }
   const partsQuery = usePartsQuery(filters, sort, page)
@@ -38,7 +43,7 @@ export function PartsPage() {
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex shrink-0 items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Refacciones</h1>
+          <h1 className="text-xl font-semibold text-ink">Refacciones</h1>
           <p className="text-sm text-gray-500">Inventario de refacciones y su uso en los servicios de mantenimiento.</p>
         </div>
         <Can permission="maintenance.manage">
@@ -75,7 +80,7 @@ export function PartsPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
-        <TableScrollArea>
+        <TableScrollArea ref={scrollRef}>
           <PartsTable
             rows={partsQuery.data?.rows ?? []}
             loading={partsQuery.isLoading}
@@ -89,28 +94,8 @@ export function PartsPage() {
           />
         </TableScrollArea>
         {!groupBy && !partsQuery.isLoading && !partsQuery.isError && (partsQuery.data?.rows.length ?? 0) > 0 && (
-          <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
-            <span>
-              {page * 20 + 1}–{Math.min((page + 1) * 20, partsQuery.data?.count ?? 0)} de {partsQuery.data?.count ?? 0}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={(page + 1) * 20 >= (partsQuery.data?.count ?? 0)}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Siguiente
-              </button>
-            </div>
+          <div className="shrink-0">
+            <Pagination page={page} pageSize={20} total={partsQuery.data?.count ?? 0} onPageChange={setPage} />
           </div>
         )}
       </div>

@@ -380,7 +380,7 @@ export function ControlMapPage() {
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold text-ink">Centro de control</h1>
+            <h1 className="text-xl font-semibold text-ink">Centro de control</h1>
             <p className="text-sm text-gray-500">Operación del día: sucursales, rutas y pedidos.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

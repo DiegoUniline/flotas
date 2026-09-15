@@ -96,7 +96,7 @@ export function CompanyPage() {
     <PageScroll>
       <div className="flex flex-col gap-4 p-4 pb-20">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Empresa</h1>
+          <h1 className="text-xl font-semibold text-ink">Empresa</h1>
           <p className="text-sm text-gray-500">Datos generales de tu organización.</p>
         </div>
 

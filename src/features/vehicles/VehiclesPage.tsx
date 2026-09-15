@@ -1,13 +1,15 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ListToolbar } from '@/components/ui/ListToolbar'
+import { Pagination } from '@/components/ui/Pagination'
 import { TableScrollArea } from '@/components/ui/TableScrollArea'
 import { Can } from '@/components/Can'
 import { VehiclesTable } from './components/VehiclesTable'
 import { useVehiclesQuery } from './hooks/useVehicles'
 import { VEHICLE_STATUSES, type VehicleFilters, type VehicleSort } from './api/vehiclesApi'
 import { computeDateRange } from '@/lib/dateRanges'
+import { useListState } from '@/hooks/useListState'
+import { useScrollRestoration } from '@/hooks/useScrollRestoration'
 import type { AppliedFilter, FilterFieldDef, GroupFieldDef } from '@/lib/queryFilters'
 
 const FILTER_FIELDS: FilterFieldDef[] = [
@@ -26,12 +28,16 @@ const GROUP_FIELDS: GroupFieldDef[] = [
 
 export function VehiclesPage() {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [dateRange, setDateRange] = useState(computeDateRange('all'))
-  const [advanced, setAdvanced] = useState<AppliedFilter[]>([])
-  const [groupBy, setGroupBy] = useState<string | null>(null)
-  const [sort, setSort] = useState<VehicleSort>({ column: 'economic_number', direction: 'asc' })
-  const [page, setPage] = useState(0)
+  // `useListState` (en vez de `useState`) persiste cada slice en
+  // sessionStorage — al volver de la ficha de un vehículo, la lista
+  // conserva búsqueda/filtros/orden/página en vez de reiniciarse.
+  const [search, setSearch] = useListState('vehicles.search', '')
+  const [dateRange, setDateRange] = useListState('vehicles.dateRange', () => computeDateRange('all'))
+  const [advanced, setAdvanced] = useListState<AppliedFilter[]>('vehicles.advanced', [])
+  const [groupBy, setGroupBy] = useListState<string | null>('vehicles.groupBy', null)
+  const [sort, setSort] = useListState<VehicleSort>('vehicles.sort', { column: 'economic_number', direction: 'asc' })
+  const [page, setPage] = useListState('vehicles.page', 0)
+  const scrollRef = useScrollRestoration<HTMLDivElement>('vehicles-list')
 
   const filters: VehicleFilters = { search, dateRange, advanced, groupBy }
   const vehiclesQuery = useVehiclesQuery(filters, sort, page)
@@ -41,7 +47,7 @@ export function VehiclesPage() {
     <div className="flex h-full flex-col gap-3 p-4">
       <div className="flex shrink-0 items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-ink">Vehículos</h1>
+          <h1 className="text-xl font-semibold text-ink">Vehículos</h1>
           <p className="text-sm text-gray-500">Flota registrada de tu organización.</p>
         </div>
         <Can permission="vehicles.create">
@@ -78,7 +84,7 @@ export function VehiclesPage() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
-        <TableScrollArea>
+        <TableScrollArea ref={scrollRef}>
           <VehiclesTable
             rows={vehiclesQuery.data?.rows ?? []}
             loading={vehiclesQuery.isLoading}
@@ -92,28 +98,8 @@ export function VehiclesPage() {
           />
         </TableScrollArea>
         {!groupBy && !vehiclesQuery.isLoading && !vehiclesQuery.isError && (vehiclesQuery.data?.rows.length ?? 0) > 0 && (
-          <div className="flex shrink-0 items-center justify-between border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
-            <span>
-              {page * 20 + 1}–{Math.min((page + 1) * 20, vehiclesQuery.data?.count ?? 0)} de {vehiclesQuery.data?.count ?? 0}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={(page + 1) * 20 >= (vehiclesQuery.data?.count ?? 0)}
-                className="rounded border border-gray-300 px-2.5 py-1 disabled:opacity-40"
-              >
-                Siguiente
-              </button>
-            </div>
+          <div className="shrink-0">
+            <Pagination page={page} pageSize={20} total={vehiclesQuery.data?.count ?? 0} onPageChange={setPage} />
           </div>
         )}
       </div>

@@ -5,6 +5,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Can } from '@/components/Can'
+import { RecordList, type RecordListItem, type RecordListGroup } from '@/components/ui/RecordList'
 import { groupRows } from '@/lib/groupRows'
 import {
   VEHICLE_STATUSES,
@@ -104,6 +105,21 @@ export function VehiclesTable({ rows, loading, error, hasFilters, sort, onSortCh
     }
   }
 
+  function toRecord(vehicle: VehicleWithRelations): RecordListItem {
+    return {
+      id: vehicle.id,
+      onClick: () => navigate(`/vehiculos/${vehicle.id}`),
+      title: vehicle.economic_number ?? vehicle.plate ?? 'Sin número',
+      subtitle: [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || undefined,
+      status: { label: VEHICLE_STATUS_LABELS[vehicle.status] ?? vehicle.status, tone: STATUS_TONE[vehicle.status] ?? 'bg-gray-100 text-gray-500' },
+      fields: [
+        { label: 'Placas', value: vehicle.plate ?? '—' },
+        { label: 'Tipo', value: vehicle.vehicle_types?.name ?? '—' },
+        { label: 'Operador', value: vehicle.drivers ? `${vehicle.drivers.first_name} ${vehicle.drivers.last_name}` : '—' },
+      ],
+    }
+  }
+
   function toggleGroup(key: string) {
     setCollapsed((current) => {
       const next = new Set(current)
@@ -151,39 +167,53 @@ export function VehiclesTable({ rows, loading, error, hasFilters, sort, onSortCh
     </tr>
   )
 
+  // Desktop: tabla densa 90/10 de siempre (`hidden sm:block`). Celular:
+  // `RecordList` — punto 4 de la pasada de UX móvil, NUNCA la misma tabla
+  // con scroll horizontal para un registro repetitivo como un vehículo.
   if (groupBy) {
     const groups = groupRows(rows, (r) => groupLabel(r, groupBy), (r) => groupLabel(r, groupBy))
+    const recordGroups: RecordListGroup[] = groups.map((g) => ({ key: g.key, label: g.label, items: g.rows.map(toRecord) }))
     return (
-      <table className="w-full border-collapse text-sm">
-        <thead className="sticky top-0 z-10">{headerRow}</thead>
-        <tbody>
-          {groups.map((group) => (
-            <Fragment key={group.key}>
-              <tr className="border-b border-gray-100 bg-gray-50/70">
-                <td colSpan={6} className="px-4 py-1.5">
-                  <button type="button" onClick={() => toggleGroup(group.key)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
-                    {collapsed.has(group.key) ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
-                    {group.label}
-                    <span className="font-normal text-gray-400">({group.rows.length})</span>
-                  </button>
-                </td>
-              </tr>
-              {!collapsed.has(group.key) && group.rows.map((vehicle) => <VehicleRow key={vehicle.id} vehicle={vehicle} />)}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+      <>
+        <div className="hidden sm:block">
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 z-10">{headerRow}</thead>
+            <tbody>
+              {groups.map((group) => (
+                <Fragment key={group.key}>
+                  <tr className="border-b border-gray-100 bg-gray-50/70">
+                    <td colSpan={6} className="px-4 py-1.5">
+                      <button type="button" onClick={() => toggleGroup(group.key)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+                        {collapsed.has(group.key) ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
+                        {group.label}
+                        <span className="font-normal text-gray-400">({group.rows.length})</span>
+                      </button>
+                    </td>
+                  </tr>
+                  {!collapsed.has(group.key) && group.rows.map((vehicle) => <VehicleRow key={vehicle.id} vehicle={vehicle} />)}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <RecordList groups={recordGroups} className="sm:hidden" />
+      </>
     )
   }
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <thead className="sticky top-0 z-10">{headerRow}</thead>
-      <tbody>
-        {rows.map((vehicle) => (
-          <VehicleRow key={vehicle.id} vehicle={vehicle} />
-        ))}
-      </tbody>
-    </table>
+    <>
+      <div className="hidden sm:block">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">{headerRow}</thead>
+          <tbody>
+            {rows.map((vehicle) => (
+              <VehicleRow key={vehicle.id} vehicle={vehicle} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <RecordList items={rows.map(toRecord)} className="sm:hidden" />
+    </>
   )
 }

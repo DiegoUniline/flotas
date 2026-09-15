@@ -3093,3 +3093,178 @@ sobre tablas que el proyecto ya tenía.
   patrón preexistente que ya tienen decenas de fichas del proyecto
   (`DeviceDetailPage.tsx`, `ExpenseDetailPage.tsx`, etc.), no una
   regresión nueva.
+
+## App móvil de verdad: navegación, listas y estado de sesión (2026-09-15)
+
+Pedido explícito del usuario: "no basta con hacerla responsiva... necesito
+adaptar la experiencia completa". Las fases anteriores ("pasada de
+responsividad móvil", "pasada de tamaños táctiles") ya habían resuelto la
+base (`TableScrollArea` con scroll horizontal, `HistoryPanel` apilado,
+`FilterPanel` como hoja inferior, sidebar overlay, `Modal` pantalla
+completa, tap targets de 44px) — esta fase construye ENCIMA de esa base,
+sin rehacerla, siguiendo el mismo criterio de siempre del proyecto:
+arreglar los primitivos compartidos una sola vez y propagarlos
+mecánicamente al resto de los módulos (mismo patrón ya usado para modo
+oscuro y la pasada táctil anterior).
+
+### Componentes y hooks nuevos (base compartida)
+
+- **`components/ui/RecordList.tsx`** (`RecordListItem`/`RecordListGroup`):
+  reemplaza el "scroll horizontal de la misma tabla de escritorio" que el
+  usuario pidió explícitamente dejar de usar para registros repetitivos.
+  Fila compacta (NO tarjeta grande): título, badge de estado con el mismo
+  `STATUS_TONE` que ya tenía cada tabla, 2-4 campos secundarios en una
+  línea que envuelve, toda la fila es el área táctil que navega al detalle
+  (igual que el `<tr onClick>` de escritorio). Soporta `groups` para
+  reproducir "Agrupar por" con un encabezado gris por grupo (sin colapsar,
+  a diferencia del genérico de escritorio). Verificado con Playwright
+  (reproducción estática con el CSS compilado real) a 360/390/430px: cero
+  scroll horizontal, filas de 62-102px de alto (muy por encima del mínimo
+  táctil de 44px) incluso con títulos/subtítulos largos forzando
+  truncado.
+- **`hooks/useListState.ts`**: reemplazo directo de `useState` para
+  cualquier slice de una pantalla de lista (búsqueda, filtros, orden,
+  página, rango de fecha, agrupar por) que además lo persiste en
+  `sessionStorage` (mismo criterio ya documentado para el borrador del
+  wizard de Pedidos y la intención de compartir ubicación — estado de
+  sesión, nunca `localStorage`). Resuelve el punto 2 pedido explícito:
+  "conserva filtros/búsqueda al volver de un detalle" — antes cada lista
+  reiniciaba su estado al desmontarse al navegar a `/modulo/:id`.
+- **`hooks/useScrollRestoration.ts`**: guarda/restaura el `scrollTop` de
+  un contenedor (mismo `sessionStorage`) — `TableScrollArea` ahora
+  reenvía su `ref` (`forwardRef`) precisamente para que las listas puedan
+  pasarle este hook y conservar la posición de scroll al volver de un
+  detalle.
+- **`components/ui/BottomSheet.tsx`**: se extrajo el patrón que
+  `FilterPanel` ya improvisaba (hoja fija al fondo en celular, popover
+  anclado desde `sm:`) a un componente genérico reutilizable — `FilterPanel`
+  ahora lo usa internamente en vez de duplicar el markup. Cualquier
+  selector corto nuevo (no un formulario largo, para eso sigue `Modal`)
+  debe usar este componente en vez de un dropdown absoluto propio.
+- **`layout/BottomNav.tsx`**: navegación inferior del admin en celular —
+  decisión de diseño que el punto 2 delegó explícitamente ("no llenar la
+  barra con todos los módulos... tú decides"). Se eligió agregar una barra
+  de 4 destinos (Inicio/Mapa/Pedidos/Vehículos, los de más tráfico) + "Más"
+  (abre el mismo overlay de sidebar de siempre) en vez de dejar el overlay
+  de hamburguesa como único mecanismo — reduce de 2 toques a 1 toque
+  cualquier destino de uso diario. Vive en el flujo normal del layout
+  (`AppShell.tsx`: `main` + `BottomNav` dentro de una columna propia,
+  `<main>` se reduce para darle espacio), **nunca `fixed`** — así nunca
+  compite ni tapa el último elemento de una lista, a diferencia de una
+  barra flotante superpuesta. Verificado: 56px de alto por ítem (bien
+  arriba del mínimo de 44px), sin desbordar a 360px con 5 destinos.
+- **`SaveDiscardBar`** ganó `pb-[max(...,env(safe-area-inset-bottom))]`
+  — antes no tenía en cuenta el home indicator/gesture bar de iOS al
+  quedar pegada al fondo de la ficha.
+
+### Verificación de lo que ya estaba bien (punto 10/11, "verificar antes de reconstruir")
+
+- **Guardia contra doble envío**: se revisaron los ~42 archivos con
+  `.mutate(`/`.mutateAsync(` — todos los botones de submit (fichas con
+  `SaveDiscardBar`, Drawers de creación rápida, `InviteMemberDrawer`,
+  `MemberEditDrawer`, etc.) ya atan `loading`/`disabled` al
+  `mutation.isPending` correspondiente (`Button` ya deshabilita solo con
+  `loading`). No se encontró ningún botón sin esta guardia — nada que
+  corregir.
+- **Teclado abierto / alturas**: se revisó cada uso de `100vh`/`h-screen`
+  del proyecto — todos son shells de página completa (`ErrorBoundary`,
+  `AuthLayout`, `AppShell` raíz, `OnboardingWizard`) o el modo pantalla
+  completa real de `ControlMapPage` (Fullscreen API, donde el viewport sí
+  está fijo) — ninguno es un formulario que se rompería con el teclado en
+  pantalla. `SaveDiscardBar` ya es `sticky bottom-0` dentro del scroll de
+  cada ficha, así que el campo activo y las acciones de guardar siguen
+  alcanzables con el teclado abierto sin cambios adicionales.
+- **`AppTabLayout`** (app del repartidor) ya cumplía los puntos 2/8/9
+  desde la fase anterior (header compacto + menú inferior real, safe-area
+  en ambos, sin overlap) — no se reconstruyó, solo se confirmó.
+  `MyJobsPage`/`AppRouteMapPage`/`MiUbicacionPage`/`AppSyncPage` solo
+  recibieron el ajuste de tamaño de título (ver abajo) — ya tenían
+  tratamiento de tarjeta dedicado de una fase anterior.
+
+### Módulos con el patrón completo (lista↔fila + estado persistente + paginación consistente)
+
+Los 13 módulos CRUD reales del roadmap, migrados de forma mecánica (mismo
+script de transformación aplicado a los 12 con forma idéntica de
+`<Módulo>Page.tsx`/`<Módulo>Table.tsx`, más Vehículos hecho a mano como
+referencia y Rutas/Usuarios/Roles con su propio ajuste por tener forma
+distinta): **Vehículos, Pedidos, Operadores, Clientes, Rutas, Sucursales,
+Dispositivos, Geocercas, Combustible, Gastos, Mantenimientos
+(pestaña Historial), Refacciones, Inspecciones, Incidentes, Usuarios,
+Roles**. Cada uno tiene: tabla de escritorio intacta (`hidden sm:block`),
+`RecordList` en celular (`sm:hidden`) con los mismos datos/tonos de
+estado, `useListState` en cada slice de filtro/orden/página, scroll
+restaurado con `useScrollRestoration`, paginado con el componente
+`Pagination` compartido (antes casi todos improvisaban su propio footer
+"Anterior/Siguiente" con botones por debajo del mínimo táctil — ahora es
+un solo componente, 44px reales), y título de pantalla a `text-xl` (20px,
+antes `text-lg`/18px) en **todas** las pantallas del proyecto (bump
+aplicado también a los módulos de solo lectura de abajo y a la app del
+repartidor, para que el tamaño de título sea consistente en todo el
+proyecto).
+
+Páginas de agregación/reporte (no CRUD, sin tabla paginada — ya cumplían
+bien el punto 5 de KPIs 2/fila desde que se construyeron, solo se
+tocaron puntualmente): **Inicio**, **Indicadores** y **Alertas** (esta
+última ya era una lista de filas tipo `RecordList` hecha a mano, no
+necesitó cambio) solo recibieron el ajuste de título. **Costos** y
+**Reportes** además envolvieron sus tablas resumen (2-4 columnas
+angostas, no un registro repetitivo denso) en `overflow-x-auto`
+defensivo. **Documentos** (`DocumentsPage.tsx`) sí es una lista densa de
+registros repetitivos (licencias/certificaciones/documentos de vehículo
+mezclados) — se le agregó el mismo split tabla/`RecordList` que a los
+CRUD reales, aunque no tiene ficha propia (la fila no navega, solo el
+nombre del dueño es un link, igual que en escritorio).
+
+### Deliberadamente sin terminar en esta fase (honesto, no un descuido)
+
+- **`MaintenanceDueTable`** (pestaña "Próximos vencimientos" de
+  Mantenimientos): sigue con scroll horizontal de la tabla de escritorio
+  en celular — es una vista derivada (no tiene fila-a-detalle, su acción
+  es un botón "Programar" por fila) que no encaja en el patrón
+  navegar-a-detalle de `RecordList` sin diseñar una variante nueva; no se
+  alcanzó a hacer en esta pasada.
+- **`MaintenanceTypesPage`/`InspectionTemplatesPage`** (catálogos
+  secundarios, sin ítem propio en el sidebar): solo recibieron el bump de
+  título, siguen con tabla de escritorio + scroll horizontal en celular —
+  son catálogos de bajo tráfico (se editan una vez, no se consultan a
+  diario como Vehículos/Pedidos), quedaron fuera de la priorización.
+- **Listas de sub-recursos dentro de una pestaña de ficha** (licencias y
+  certificaciones de operador, documentos de vehículo, domicilios de
+  cliente, paquetes de pedido, refacciones de un servicio, ítems de
+  plantilla de inspección): no se tocaron — son filas cortas
+  editables-en-línea (`onBlur` commit) dentro de una tarjeta, un patrón
+  distinto al de "fila que navega a otra pantalla" que resuelve
+  `RecordList`; ya eran razonablemente compactas antes de esta fase.
+- **Centro de control**: no se reconstruyó (el pedido explícito era
+  "verificar/ajustar, no rehacer" dado que CLAUDE.md ya documenta varias
+  fases de trabajo móvil específico ahí — mapa `h-[380px] lg:h-[620px]`,
+  KPIs `grid-cols-2 sm:grid-cols-4`, filtros en pastilla con `flex-wrap`,
+  pantalla completa de toda la página). Solo recibió el bump de título.
+- **Fichas de detalle individuales** (`DetailGrid`/`InlineField` por
+  módulo): no se tocó ninguna a mano — ya heredan el apilamiento a 1
+  columna, `HistoryPanel` apilado, inputs de 16px/44px y `Modal`
+  pantalla completa de las dos fases móviles anteriores; no se encontró
+  ninguna regresión ni caso roto al revisar el código de las compartidas
+  (`DetailGrid.tsx`, `InlineField.tsx`, `RelationSelect.tsx`).
+
+### Validación
+
+`npx tsc -b` y `npm run build` limpios en cada checkpoint;
+`npm run lint` sin errores nuevos (mismos warnings preexistentes ya
+documentados arriba). Playwright headless
+(`/opt/pw-browsers/chromium`) contra `npm run preview`:
+`/login` a 360×800/390×844/430×932/1280×900 — cero scroll horizontal,
+botón primario 44px de alto en los 4 anchos, sin errores de consola
+nuevos (el único error de red, `ERR_CERT_AUTHORITY_INVALID`, es el mismo
+bloqueo de Supabase en este entorno sandboxeado ya documentado en fases
+previas, no una regresión). Reproducción estática con el CSS compilado
+real (mismo método ya usado en fases anteriores) de `RecordList` y
+`BottomNav` a 360/390/430px: cero desbordamiento horizontal incluso con
+contenido largo forzando truncado, filas de 62-102px y BottomNav de
+56px — ambos muy por encima del mínimo táctil de 44px. **No se pudo
+iniciar sesión real** (sin credenciales de prueba, limitación ya
+documentada en cada fase móvil anterior) — por eso la verificación de
+`RecordList`/`BottomNav`/`useListState` en vivo dentro de cada módulo
+real se hizo por código (mismo patrón ya aplicado y ya verificado por
+`tsc`/build en los 13+ módulos) más la reproducción estática del
+componente compartido, no por navegación autenticada end-to-end.

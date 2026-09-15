@@ -224,7 +224,7 @@ export function MyJobsPage() {
       <div className="mx-auto flex max-w-md flex-col gap-4 p-4 pb-10">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-lg font-semibold text-ink">Mis pedidos</h1>
+            <h1 className="text-xl font-semibold text-ink">Mis pedidos</h1>
             <p className="text-sm text-gray-500">Hola {driverProfile.driverName}, estos son tus pedidos asignados.</p>
           </div>
           <Link
