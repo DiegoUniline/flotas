@@ -9,7 +9,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           <p className="mt-1 text-sm text-gray-500">{title}</p>
           {subtitle && <p className="mt-1 text-xs text-gray-400">{subtitle}</p>}
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">{children}</div>
+        <div className="rounded-lg border border-gray-200 bg-surface p-6 shadow-sm">{children}</div>
       </div>
     </div>
   )

@@ -207,7 +207,7 @@ export function MaintenanceRecordDetailPage() {
   return (
     <>
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 sm:px-6">
           <button type="button" onClick={handleBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
             <ArrowLeft size={15} strokeWidth={2} />
             Mantenimientos
@@ -221,7 +221,7 @@ export function MaintenanceRecordDetailPage() {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col overflow-y-auto bg-white lg:flex-row lg:overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-y-auto bg-surface lg:flex-row lg:overflow-hidden">
           <div className="flex-1 px-4 py-4 sm:px-6 sm:py-5 lg:overflow-y-auto">
             {!isNew && recordQuery.isLoading && <Skeleton className="h-64" />}
             {!isNew && recordQuery.isError && (

@@ -8,7 +8,7 @@ export function ComingSoonPage({ title }: { title: string }) {
       <div>
         <h1 className="text-lg font-semibold text-ink">{title}</h1>
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="rounded-lg border border-gray-200 bg-surface">
         <EmptyState
           title="Próximamente"
           description={`${title} está en el roadmap de FLOTAA y todavía no está disponible.`}

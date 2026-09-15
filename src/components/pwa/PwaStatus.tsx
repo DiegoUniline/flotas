@@ -38,13 +38,16 @@ export function PwaStatus() {
     return (
       <div className="fixed left-1/2 top-3 z-[1300] flex -translate-x-1/2 flex-col items-center gap-2 px-4">
         {!online && (
-          <div className="flex items-center gap-2 rounded-full bg-gray-900 px-4 py-2 text-sm text-white shadow-lg">
+          <div className="flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
             <WifiOff size={15} strokeWidth={2} />
             Sin conexión — tus cambios se guardan y se sincronizan solos al reconectar.
           </div>
         )}
         {needRefresh && (
-          <div className="flex items-center gap-3 rounded-full bg-ink px-4 py-2 text-sm text-white shadow-lg">
+          // `slate-900`, no `gray-900`/`bg-ink`: mismo criterio que
+          // ToastViewport — este pill debe seguir oscuro con texto blanco
+          // sin importar el tema, y `ink`/`gray-*` se invierten en dark mode.
+          <div className="flex items-center gap-3 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
             <RefreshCw size={15} strokeWidth={2} />
             Hay una versión nueva de FLOTAA.
             <button

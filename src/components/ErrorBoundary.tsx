@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   render() {
     if (this.state.error) {
       return (
-        <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-white p-6 text-center">
+        <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-surface p-6 text-center">
           <p className="text-base font-semibold text-ink">Algo salió mal.</p>
           <p className="max-w-md text-sm text-gray-500">
             Ocurrió un error inesperado. Intenta recargar la página; si el problema sigue, avísale al equipo con el

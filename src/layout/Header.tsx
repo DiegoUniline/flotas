@@ -29,7 +29,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   useClickOutside(menuRef, () => setMenuOpen(false), menuOpen)
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 pt-[env(safe-area-inset-top)] sm:px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-surface px-3 pt-[env(safe-area-inset-top)] sm:px-4">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
@@ -97,7 +97,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 bg-white py-1.5 shadow-lg">
+            <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 bg-surface py-1.5 shadow-lg">
               {driverProfile && (
                 <>
                   <Link

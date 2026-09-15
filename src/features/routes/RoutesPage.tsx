@@ -36,7 +36,7 @@ export function RoutesPage() {
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+        <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-surface px-3 py-1.5 text-sm text-gray-700">
           <Calendar size={14} strokeWidth={2} className="text-gray-400" />
           <input
             type="date"
@@ -48,7 +48,7 @@ export function RoutesPage() {
         <select
           value={status ?? ''}
           onChange={(e) => setStatus(e.target.value || null)}
-          className="rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+          className="rounded-full border border-gray-300 bg-surface px-3 py-1.5 text-sm text-gray-700 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
         >
           <option value="">Todos los estados</option>
           {ROUTE_STATUSES.map((s) => (
@@ -60,7 +60,7 @@ export function RoutesPage() {
         <Input placeholder="Buscar por nombre o número..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-56 rounded-full" />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
         <TableScrollArea>
           <RoutesTable
             rows={routesQuery.data ?? []}

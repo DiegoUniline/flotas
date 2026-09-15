@@ -33,7 +33,7 @@ function StatCard({
   }[tone]
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-4 py-3">
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${toneClasses}`}>
         <Icon size={18} strokeWidth={2} />
       </span>
@@ -105,7 +105,7 @@ export function CostsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-lg border border-gray-200 bg-white">
+              <div className="rounded-lg border border-gray-200 bg-surface">
                 <div className="border-b border-gray-200 px-4 py-3">
                   <h2 className="text-sm font-semibold text-ink">Costos por vehículo</h2>
                 </div>
@@ -135,7 +135,7 @@ export function CostsPage() {
                 )}
               </div>
 
-              <div className="rounded-lg border border-gray-200 bg-white">
+              <div className="rounded-lg border border-gray-200 bg-surface">
                 <div className="border-b border-gray-200 px-4 py-3">
                   <h2 className="text-sm font-semibold text-ink">Gastos por categoría</h2>
                 </div>

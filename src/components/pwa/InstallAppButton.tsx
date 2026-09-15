@@ -30,7 +30,7 @@ export function InstallAppButton() {
       </button>
 
       {showIosHelp && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-600 shadow-lg">
+        <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 bg-surface p-3 text-sm text-gray-600 shadow-lg">
           <p className="mb-2 font-medium text-ink">Instalar en tu iPhone/iPad</p>
           <ol className="list-decimal space-y-1 pl-4">
             <li className="flex items-center gap-1">

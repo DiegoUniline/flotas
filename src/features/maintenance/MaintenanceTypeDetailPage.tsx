@@ -127,7 +127,7 @@ export function MaintenanceTypeDetailPage() {
   return (
     <>
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-surface px-4 py-3 sm:px-6">
           <button type="button" onClick={handleBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
             <ArrowLeft size={15} strokeWidth={2} />
             Tipos de servicio
@@ -141,7 +141,7 @@ export function MaintenanceTypeDetailPage() {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white px-6 py-5">
+        <div className="flex-1 overflow-y-auto bg-surface px-6 py-5">
           {!isNew && typeQuery.isLoading && <Skeleton className="h-64" />}
           {!isNew && typeQuery.isError && (
             <ErrorState message="No se pudo cargar el tipo de servicio." onRetry={() => void typeQuery.refetch()} />

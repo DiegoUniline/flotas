@@ -37,16 +37,16 @@ export function MiUbicacionPage() {
         </div>
 
         {!driverProfile ? (
-          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
+          <div className="rounded-lg border border-gray-200 bg-surface p-4 text-sm text-gray-500">
             Tu cuenta no está vinculada a un operador — solo los operadores pueden compartir ubicación.
           </div>
         ) : !driverProfile.vehicle ? (
-          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
+          <div className="rounded-lg border border-gray-200 bg-surface p-4 text-sm text-gray-500">
             Hola {driverProfile.driverName}. Todavía no tienes un vehículo asignado, así que no hay a quién guardarle la posición.
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface p-4">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-600">
                 <Truck size={18} strokeWidth={2} />
               </span>
@@ -56,7 +56,7 @@ export function MiUbicacionPage() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 bg-white p-6 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-200 bg-surface p-6 text-center">
               <span
                 className={`flex h-14 w-14 items-center justify-center rounded-full ${sharing ? 'bg-status-active-bg text-status-active' : 'bg-gray-100 text-gray-400'}`}
               >
@@ -78,7 +78,7 @@ export function MiUbicacionPage() {
             </div>
 
             {lastCoords && (
-              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-surface">
                 <Map
                   className="h-64 w-full"
                   markers={[{ id: 'me', lat: lastCoords.lat, lng: lastCoords.lng, label: driverProfile.driverName, color: '#16a34a' }]}

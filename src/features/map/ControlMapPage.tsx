@@ -157,7 +157,7 @@ function StatCard({
   }[tone]
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-surface px-4 py-3">
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${toneClasses}`}>
         <Icon size={18} strokeWidth={2} />
       </span>
@@ -384,7 +384,7 @@ export function ControlMapPage() {
             <p className="text-sm text-gray-500">Operación del día: sucursales, rutas y pedidos.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-surface px-3 py-1.5 text-sm text-gray-700">
               <Calendar size={14} strokeWidth={2} className="text-gray-400" />
               <input
                 type="date"
@@ -393,7 +393,7 @@ export function ControlMapPage() {
                 className="w-auto border-0 p-0 text-sm text-gray-900 focus:outline-none focus:ring-0"
               />
             </label>
-            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-surface px-3 py-1.5 text-sm text-gray-700">
               <RouteIcon size={14} strokeWidth={2} className="text-gray-400" />
               <select
                 value={selectedRouteId ?? ''}
@@ -409,7 +409,7 @@ export function ControlMapPage() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700">
+            <label className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-surface px-3 py-1.5 text-sm text-gray-700">
               <Users size={14} strokeWidth={2} className="text-gray-400" />
               <select
                 value={driverFilter}
@@ -472,7 +472,7 @@ export function ControlMapPage() {
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="relative flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="relative flex-1 overflow-hidden rounded-lg border border-gray-200 bg-surface">
             {/* Botón de pantalla completa de toda la página (filtros, KPIs,
                 panel, pedidos, timeline) — se mueve como overlay sobre la
                 esquina del mapa en vez de vivir en la barra de filtros:
@@ -538,7 +538,7 @@ export function ControlMapPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:w-96">
+          <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-surface p-4 lg:w-96">
             {resolvingJobRoute ? (
               <Skeleton className="h-32" />
             ) : selectedRouteId ? (
@@ -706,7 +706,7 @@ export function ControlMapPage() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="rounded-lg border border-gray-200 bg-surface p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-ink">Pedidos del día</p>
             <span className="text-xs text-gray-500">{dayJobs.length} pedido(s)</span>
@@ -741,7 +741,7 @@ export function ControlMapPage() {
         </div>
 
         {selectedRouteId && stops.length > 0 && (
-          <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="rounded-lg border border-gray-200 bg-surface p-4">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-ink">
                 Ruta de {routeDriverName ?? route?.name ?? route?.route_number ?? ''}

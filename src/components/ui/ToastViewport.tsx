@@ -1,9 +1,12 @@
 import { useToast } from '@/context/ToastContext'
 
+// `slate-800`, no `gray-800`: la escala `gray-*` se invierte en modo oscuro
+// (ver src/index.css), y este chip debe seguir oscuro con texto blanco sin
+// importar el tema — `slate` es una escala aparte que no se toca.
 const VARIANT_STYLES: Record<string, string> = {
   success: 'bg-emerald-600',
   error: 'bg-red-600',
-  info: 'bg-gray-800',
+  info: 'bg-slate-800',
 }
 
 export function ToastViewport() {

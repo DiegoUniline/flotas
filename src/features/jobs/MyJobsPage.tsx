@@ -109,7 +109,7 @@ function JobCard({ job, onOpen }: { job: MyJob; onOpen: () => void }) {
   const actions = NEXT_ACTIONS[job.status] ?? []
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
           <p className="truncate text-sm font-semibold text-ink">{job.job_number ?? 'Sin número'}</p>
@@ -195,7 +195,7 @@ export function MyJobsPage() {
     return (
       <PageScroll>
         <div className="mx-auto max-w-md p-6">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
+          <div className="rounded-lg border border-gray-200 bg-surface p-4 text-sm text-gray-500">
             Tu cuenta no está vinculada a un operador — solo los operadores tienen pedidos asignados aquí.
           </div>
         </div>

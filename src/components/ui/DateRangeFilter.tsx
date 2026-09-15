@@ -18,7 +18,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
       >
         <Calendar size={14} strokeWidth={2} className="text-gray-400" />
         {formatDateRangeLabel(value)}
@@ -26,7 +26,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-md border border-gray-200 bg-white p-1.5 shadow-lg">
+        <div className="absolute left-0 top-full z-30 mt-1 w-64 rounded-md border border-gray-200 bg-surface p-1.5 shadow-lg">
           {DATE_RANGE_PRESETS.filter((p) => p.value !== 'custom').map((preset) => (
             <button
               key={preset.value}

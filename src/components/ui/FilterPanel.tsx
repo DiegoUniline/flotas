@@ -50,7 +50,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
       >
         <SlidersHorizontal size={14} strokeWidth={2} className="text-gray-400" />
         Filtros
@@ -69,7 +69,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
               cualquier dirección. Desde `sm:` vuelve a ser el popover de
               siempre. */}
           <div className="fixed inset-0 z-30 bg-black/30 sm:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="fixed inset-x-0 bottom-0 z-30 max-h-[75vh] overflow-y-auto rounded-t-xl border-t border-gray-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-1 sm:w-96 sm:rounded-md sm:border sm:p-3 sm:pb-3">
+          <div className="fixed inset-x-0 bottom-0 z-30 max-h-[75vh] overflow-y-auto rounded-t-xl border-t border-gray-200 bg-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-1 sm:w-96 sm:rounded-md sm:border sm:p-3 sm:pb-3">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Filtros por campos</p>
             <div className="flex flex-col gap-2">

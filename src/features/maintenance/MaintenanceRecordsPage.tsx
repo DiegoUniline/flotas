@@ -106,7 +106,7 @@ export function MaintenanceRecordsPage() {
             />
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
             <TableScrollArea>
               <MaintenanceRecordsTable
                 rows={recordsQuery.data?.rows ?? []}
@@ -150,7 +150,7 @@ export function MaintenanceRecordsPage() {
       )}
 
       {tab === 'vencimientos' && (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
           <TableScrollArea>
             <MaintenanceDueTable
               rows={dueQuery.data ?? []}

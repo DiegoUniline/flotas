@@ -39,7 +39,7 @@ export function DriverAssignmentSection({ driverId }: { driverId: string }) {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-gray-200 bg-surface p-4">
       <h2 className="mb-3 text-sm font-semibold text-ink">Vehículo asignado</h2>
 
       {assignedVehicleQuery.isLoading ? (

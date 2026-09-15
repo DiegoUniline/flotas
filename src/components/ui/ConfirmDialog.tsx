@@ -32,7 +32,7 @@ export function ConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="relative w-full max-w-sm rounded-lg bg-white p-5 shadow-xl"
+        className="relative w-full max-w-sm rounded-lg bg-surface p-5 shadow-xl"
       >
         <h2 id="confirm-dialog-title" className="text-base font-semibold text-gray-900">
           {title}

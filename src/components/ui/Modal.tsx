@@ -39,7 +39,7 @@ export function Modal({ open, title, description, onClose, children, footer, clo
           arriba. `pt-[env(safe-area-inset-top)]`/`pb-[...]` en el header y
           footer para no quedar debajo de la isla dinámica/home indicator
           cuando corre instalada. */}
-      <div className="relative flex h-full w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[88vh] sm:w-full sm:max-w-5xl sm:rounded-lg">
+      <div className="relative flex h-full w-full flex-col bg-surface shadow-xl sm:h-auto sm:max-h-[88vh] sm:w-full sm:max-w-5xl sm:rounded-lg">
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:py-5 sm:pt-5">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-gray-900 sm:text-lg">{title}</h2>

@@ -83,7 +83,7 @@ export function RelationSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-72 rounded-md border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 top-full z-30 mt-1 w-72 rounded-md border border-gray-200 bg-surface shadow-lg">
           <input
             autoFocus
             value={query}

@@ -15,7 +15,7 @@ export function FullscreenButton({ isFullscreen, onToggle, className = '' }: Ful
       type="button"
       onClick={onToggle}
       title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-      className={`flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 shadow-sm hover:bg-gray-50 ${className}`}
+      className={`flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-surface text-gray-600 shadow-sm hover:bg-gray-50 ${className}`}
     >
       {isFullscreen ? <Minimize size={15} strokeWidth={2} /> : <Maximize size={15} strokeWidth={2} />}
     </button>

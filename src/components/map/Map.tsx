@@ -310,7 +310,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
   }
 
   return (
-    <div ref={wrapperRef} className={`relative bg-white ${className}`}>
+    <div ref={wrapperRef} className={`relative bg-surface ${className}`}>
       <div ref={containerRef} className="h-full w-full" />
 
       {status === 'error' && (
@@ -326,7 +326,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
 
       {status === 'ready' && (
         <>
-          <div className="absolute left-2.5 top-2.5 z-[1000] flex overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
+          <div className="absolute left-2.5 top-2.5 z-[1000] flex overflow-hidden rounded-md border border-gray-200 bg-surface shadow-sm">
             <button
               type="button"
               onClick={() => setSatellite(false)}
@@ -350,7 +350,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
               onClick={handleLocate}
               disabled={locating}
               title="Mi ubicación"
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-600 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-surface text-gray-600 shadow-sm hover:bg-gray-50 disabled:opacity-50"
             >
               <LocateFixed size={15} strokeWidth={2} className={locating ? 'animate-pulse' : ''} />
             </button>

@@ -74,7 +74,7 @@ export function PartsPage() {
         />
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-surface">
         <TableScrollArea>
           <PartsTable
             rows={partsQuery.data?.rows ?? []}

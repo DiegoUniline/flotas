@@ -78,7 +78,7 @@ export function UsersPage() {
         </Can>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-surface">
         <div className="border-b border-gray-200 px-4 py-2.5">
           <h2 className="text-sm font-semibold text-ink">Miembros</h2>
         </div>
@@ -124,7 +124,7 @@ export function UsersPage() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-surface">
         <div className="border-b border-gray-200 px-4 py-2.5">
           <h2 className="text-sm font-semibold text-ink">Invitaciones pendientes</h2>
         </div>

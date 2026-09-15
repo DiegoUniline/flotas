@@ -112,7 +112,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
           <section.icon size={18} strokeWidth={2} className="shrink-0" />
         </div>
 
-        <div className="invisible absolute left-full top-0 z-[1100] ml-1.5 w-56 rounded-lg border border-gray-200 bg-white p-2 opacity-0 shadow-lg transition-opacity duration-100 group-hover/section:visible group-hover/section:opacity-100">
+        <div className="invisible absolute left-full top-0 z-[1100] ml-1.5 w-56 rounded-lg border border-gray-200 bg-surface p-2 opacity-0 shadow-lg transition-opacity duration-100 group-hover/section:visible group-hover/section:opacity-100">
           <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
           <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item))}</ul>
         </div>
@@ -156,7 +156,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
           se omite en JS (`isDesktop`) en vez de intentar cancelarla con
           `lg:`. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-72 flex-col border-r border-gray-200 bg-white lg:static lg:z-auto lg:w-auto lg:transition-[width] ${
+        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-72 flex-col border-r border-gray-200 bg-surface lg:static lg:z-auto lg:w-auto lg:transition-[width] ${
           isDesktop ? '' : `transition-transform duration-200 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
         } ${iconOnly ? 'lg:w-16' : 'lg:w-60'}`}
       >
@@ -179,7 +179,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
                 <Search size={18} strokeWidth={2} />
               </button>
               {searchOpen && (
-                <div className="absolute left-full top-0 z-[1100] ml-1.5 w-64 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+                <div className="absolute left-full top-0 z-[1100] ml-1.5 w-64 rounded-lg border border-gray-200 bg-surface p-2 shadow-lg">
                   <div className="relative">
                     <Search size={14} strokeWidth={2} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input

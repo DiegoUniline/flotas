@@ -2630,3 +2630,83 @@ que el código fuente solo tenga ASCII.
 `VITE_GOOGLE_MAPS_API_KEY` en `.env` (gitignored) — esta última la debe
 generar el usuario en Google Cloud Console (Maps JavaScript API +
 facturación) y configurarla también en Vercel para producción.
+
+## Modo oscuro (agregado en esta fase)
+
+Pedido explícito del usuario: "pon modo dark en el sistema pero un dark
+bonito no negro negro". Sigue `prefers-color-scheme` del sistema
+operativo/navegador — **sin toggle manual ni `localStorage`**, consistente
+con la regla del proyecto de no persistir preferencias de UI ahí (no hay
+columna de perfil para esto tampoco; si en algún momento se pide un
+selector manual, evaluar entonces un campo en `profiles`, mismo criterio
+que `active_organization_id`).
+
+- **Un solo lugar, no `dark:` por componente:** con cientos de pantallas
+  ya construidas sobre la escala `gray-*`/`white`/`ink`/`accent-*`/
+  `status-*` de Tailwind, agregar `dark:bg-...` a cada una habría sido un
+  refactor gigante. En vez de eso, `src/index.css` **reasigna los mismos
+  tokens de color** (`@theme` de Tailwind v4 genera cada utilidad como
+  `background-color:var(--color-gray-200)`, no como valor literal —
+  verificado en el CSS compilado) dentro de un bloque
+  `@media (prefers-color-scheme: dark) { :root { ... } }`. Redefinir
+  `--color-gray-50` a `--color-gray-900` (con la escala **invertida**:
+  gray-50 pasa de ser el fondo más claro a el más oscuro, gray-900 de
+  texto casi negro a texto casi blanco) repinta automáticamente cada
+  `bg-gray-50`/`text-gray-900`/`border-gray-200` que ya existe en toda la
+  app, sin tocar un solo componente. Mismo tratamiento para `--color-ink`
+  (color de texto por defecto de `body`), `--color-accent-50`/`-100`
+  (fondos claros usados para el estado activo del sidebar/badges),
+  `--color-status-*`/`-bg` (chips de estado operativo) y `--color-red-50`
+  (fondo del badge "Rechazado" de Gastos) — todos con equivalentes
+  oscuros, nunca solo invertidos mecánicamente (los colores de acento se
+  eligieron a mano para que sigan siendo legibles). `body` también gana
+  su propio `background` oscuro (era un valor fijo fuera de cualquier
+  token, `#f7f7f8`, no una clase de Tailwind).
+- **Paleta con tinte azulado suave, nunca negro puro** (pedido explícito):
+  canvas `#14161c`, tarjetas `#1f232c`, sin ningún `#000000` en la
+  escala. Esto es lo que hace que se vea "bonito" y no "negro negro".
+- **Token nuevo `--color-surface`, separado de `white`:** `white` no se
+  invirtió porque también se usa como `text-white`/`border-white` sobre
+  botones y chips de color fijo (accent, rojo, verde) que deben seguir
+  blancos sin importar el tema — invertir `--color-white` habría vuelto
+  oscuro el texto de cualquier botón primario. Se agregó `--color-surface`
+  (blanco en claro, `#1f232c` en oscuro) como el único token que significa
+  "fondo de tarjeta/panel/modal", y se hizo un reemplazo mecánico de
+  `bg-white` → `bg-surface` en los ~62 archivos que lo usaban así (tablas,
+  `Modal`/`Drawer`/`ConfirmDialog`, el mapa, formularios, etc.). **Dos
+  excepciones deliberadas, no tocadas:** `bg-white/15`/`hover:bg-white/25`
+  en `PwaStatus.tsx` (overlay translúcido decorativo sobre un pill que ya
+  es oscuro fijo) y `border-white` en `ProfilePhotoUploader.tsx` (borde
+  decorativo sobre un botón de acento) — ninguno de los dos representa una
+  superficie de tarjeta, deben seguir blancos literales.
+- **Chips que deben quedarse oscuros siempre, no invertirse con el
+  tema:** `ToastViewport.tsx` (variante "info") y los dos pills flotantes
+  de `PwaStatus.tsx` ("sin conexión"/"hay una versión nueva") usaban
+  `bg-gray-800`/`bg-gray-900`/`bg-ink` — como esos tokens SÍ se invierten
+  para modo oscuro, se habrían vuelto pills claros con texto blanco
+  ilegible. Se cambiaron a `bg-slate-800`/`bg-slate-900` (la escala
+  `slate` de Tailwind es independiente de `gray` y no se toca aquí) —
+  quedan oscuros fijos en cualquier tema, que es justo lo que se quiere
+  para un aviso tipo notificación flotante.
+- **Regla para cualquier color nuevo que se agregue a futuro:** si es un
+  color **estructural** (fondo de superficie, texto, borde — algo que
+  debe verse distinto en claro/oscuro), usar los tokens ya existentes
+  (`gray-*`, `surface`, `ink`, `accent-50/100` para fondos claros de
+  estado activo) para heredar la inversión gratis. Si es un color **de
+  marca/fijo** (un chip que siempre debe verse igual, como los pills de
+  PwaStatus/Toast, o iconografía de estado con su propio significado como
+  `status-*`), usar una escala aparte (`slate`, `emerald`, `red` tal cual)
+  o, si necesita adaptarse mejor al tema, agregar su propio par
+  claro/oscuro en el bloque `@media (prefers-color-scheme: dark)` de
+  `src/index.css` en vez de reutilizar `gray-*` a secas.
+- **Verificación:** `npx tsc -b` y `npm run build` limpios; capturas con
+  Playwright headless (`colorScheme: 'dark'` y `'light'`) contra `/login`
+  sirviendo el build de producción (`vite preview`) — confirmó el fondo
+  oscuro real (`rgb(20, 22, 28)`), texto/inputs legibles, botón de acento
+  naranja con buen contraste, y el modo claro sin ningún cambio visual.
+- **No construido a propósito:** selector manual de tema (claro/oscuro/
+  automático) — no se pidió, y agregarlo requeriría decidir dónde vive esa
+  preferencia sin usar `localStorage` (ver arriba). Si se pide después, la
+  clase `dark:` de Tailwind ya funciona en modo `media` tal cual está
+  configurado; pasar a modo manual con `<html class="dark">` no
+  necesitaría rehacer la paleta, solo el mecanismo de activación.

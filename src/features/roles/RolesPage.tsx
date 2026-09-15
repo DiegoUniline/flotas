@@ -24,7 +24,7 @@ export function RolesPage() {
         </Can>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-gray-200 bg-surface">
         {rolesQuery.isLoading && (
           <div className="p-4">
             <Skeleton className="h-32" />
