@@ -40,21 +40,24 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Modo oscuro — sigue `prefers-color-scheme`, sin toggle manual ni
-   `localStorage` (regla del proyecto: nada de preferencias en
-   localStorage; esto no depende de storage, solo del SO/navegador).
-   Reasigna los mismos tokens de color que ya usa toda la app (la escala
-   `gray-*` de Tailwind + `surface`/`ink`/`accent-50`/`accent-100`/
-   `status-*`/`red-50`) en vez de agregar clases `dark:` por componente —
-   con cientos de pantallas ya construidas sobre estos tokens, invertir el
-   valor una sola vez aquí repinta toda la app. La escala se invierte
-   (gray-50 pasa de ser el fondo más claro a el más oscuro, gray-900 de
-   texto casi negro a texto casi blanco) para que `bg-gray-50`/
-   `text-gray-900`/`border-gray-200`, etc. seas exactamente igual en cada
-   componente. Paleta con tinte azulado suave, nunca negro puro (pedido
-   explícito: "un dark bonito no negro negro"). */
+/* Modo oscuro — tres formas de activarse, todas reasignando los mismos
+   tokens de color (la escala `gray-*` de Tailwind + `surface`/`ink`/
+   `accent-50`/`accent-100`/`status-*`/`red-50`) en vez de agregar clases
+   `dark:` por componente: con cientos de pantallas ya construidas sobre
+   estos tokens, invertir el valor una sola vez aquí repinta toda la app.
+   1. Automático por `prefers-color-scheme` (sin sesión, p. ej. /login) —
+      bloque de abajo, guardado con `:not([data-theme="light"])` para que
+      el toggle manual pueda forzar claro incluso con el SO en oscuro.
+   2. `[data-theme="dark"]` explícito — lo pone `ThemeContext.tsx` en
+      `<html>` cuando el usuario elige "Oscuro" a mano (botón en Header,
+      preferencia real en `profiles.theme_preference`, NO localStorage).
+   La escala se invierte (gray-50 pasa de ser el fondo más claro a el más
+   oscuro, gray-900 de texto casi negro a texto casi blanco) para que
+   `bg-gray-50`/`text-gray-900`/`border-gray-200`, etc. sean exactamente
+   igual en cada componente. Paleta con tinte azulado suave, nunca negro
+   puro (pedido explícito: "un dark bonito no negro negro"). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
 
     --color-surface: #1f232c;
@@ -88,6 +91,39 @@
   }
 }
 
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-surface: #1f232c;
+
+  --color-gray-50: #1a1d24;
+  --color-gray-100: #262b35;
+  --color-gray-200: #323844;
+  --color-gray-300: #3d4451;
+  --color-gray-400: #5b6270;
+  --color-gray-500: #838a99;
+  --color-gray-600: #9aa1af;
+  --color-gray-700: #b7bcc6;
+  --color-gray-800: #d7dae0;
+  --color-gray-900: #f0f2f5;
+
+  --color-ink: #edeff2;
+
+  --color-accent-50: #2a1c12;
+  --color-accent-100: #3a2416;
+
+  --color-status-active: #4ade80;
+  --color-status-active-bg: #133321;
+  --color-status-stopped: #fb923c;
+  --color-status-stopped-bg: #3a2412;
+  --color-status-progress: #a5b4fc;
+  --color-status-progress-bg: #23253f;
+  --color-status-delayed: #f87171;
+  --color-status-delayed-bg: #3a1616;
+
+  --color-red-50: #2f1b1b;
+}
+
 html,
 body,
 #root {
@@ -107,9 +143,13 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-  body {
+  html:not([data-theme='light']) body {
     background: #14161c;
   }
+}
+
+html[data-theme='dark'] body {
+  background: #14161c;
 }
 
 button,

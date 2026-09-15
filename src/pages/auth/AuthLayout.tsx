@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <ThemeToggle className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))]" />
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <h1 className="text-lg font-semibold text-gray-900">FLOTAA</h1>

@@ -2634,12 +2634,45 @@ facturación) y configurarla también en Vercel para producción.
 ## Modo oscuro (agregado en esta fase)
 
 Pedido explícito del usuario: "pon modo dark en el sistema pero un dark
-bonito no negro negro". Sigue `prefers-color-scheme` del sistema
-operativo/navegador — **sin toggle manual ni `localStorage`**, consistente
-con la regla del proyecto de no persistir preferencias de UI ahí (no hay
-columna de perfil para esto tampoco; si en algún momento se pide un
-selector manual, evaluar entonces un campo en `profiles`, mismo criterio
-que `active_organization_id`).
+bonito no negro negro". Primera versión seguía solo `prefers-color-scheme`
+sin botón — el usuario reportó de inmediato "no veo el boton para poder
+ponerlo oscuro", así que se agregó un toggle manual real (`ThemeToggle`,
+ícono Monitor/Sun/Moon que rota automático→claro→oscuro→automático, en el
+header y en `AuthLayout` para /login).
+
+- **La preferencia SÍ se persiste, pero no en `localStorage`:**
+  `profiles.theme_preference` (columna nueva, migración
+  `add_theme_preference_to_profiles`, `text` con `check` en
+  `'system'|'light'|'dark'`, default `'system'`) — mismo criterio exacto
+  que `active_organization_id`: es una preferencia real del usuario, así
+  que vive en su fila de `profiles`, no en el navegador. Sin sesión
+  (`/login` y páginas públicas) el toggle sigue funcionando pero solo en
+  memoria de React (estado efímero, permitido por la regla del proyecto)
+  porque no hay a quién persistírselo todavía.
+- **`ThemeContext.tsx`** (nuevo, montado en `App.tsx` dentro de
+  `AuthProvider` y fuera de `Routes`, así aplica tanto a rutas públicas
+  como protegidas): `preference` (`'system'|'light'|'dark'`) +
+  `setPreference()`. Al cambiar, escribe `data-theme` en `<html>`
+  (`removeAttribute` para `'system'`) y, si hay sesión, guarda en
+  `profiles.theme_preference` (`updateThemePreference()`,
+  `organizationsApi.ts`) — reusa la misma `queryKey: ['profile', userId]`
+  que ya usaba `OrgContext`, así no duplica la consulta a Supabase. Al
+  iniciar sesión, sincroniza el estado local desde el valor guardado una
+  sola vez por usuario (`syncedUserIdRef`) para no pisar un cambio que el
+  usuario haga en la misma sesión con un refetch de la query.
+- **CSS**: el bloque `@media (prefers-color-scheme: dark)` de abajo ahora
+  está guardado con `:root:not([data-theme='light'])` (para que el toggle
+  pueda forzar claro aunque el SO esté en oscuro), y se agregó un bloque
+  gemelo explícito `:root[data-theme='dark']` fuera de cualquier media
+  query (para forzar oscuro aunque el SO esté en claro) — mismos valores
+  en los dos, solo cambia el selector que los activa. `body` (que tiene su
+  `background` fuera de cualquier token de Tailwind) recibió el mismo
+  tratamiento con `html:not([data-theme='light']) body` /
+  `html[data-theme='dark'] body`.
+- **Verificado con Playwright**: 3 clics sobre el botón en `/login`
+  (`colorScheme: 'light'` emulado) pasan por
+  automático→`data-theme=light` (fondo claro)→`data-theme=dark` (fondo
+  `rgb(20, 22, 28)`)→automático de vuelta, sin ningún error de consola.
 
 - **Un solo lugar, no `dark:` por componente:** con cientos de pantallas
   ya construidas sobre la escala `gray-*`/`white`/`ink`/`accent-*`/
@@ -2704,9 +2737,8 @@ que `active_organization_id`).
   sirviendo el build de producción (`vite preview`) — confirmó el fondo
   oscuro real (`rgb(20, 22, 28)`), texto/inputs legibles, botón de acento
   naranja con buen contraste, y el modo claro sin ningún cambio visual.
-- **No construido a propósito:** selector manual de tema (claro/oscuro/
-  automático) — no se pidió, y agregarlo requeriría decidir dónde vive esa
-  preferencia sin usar `localStorage` (ver arriba). Si se pide después, la
-  clase `dark:` de Tailwind ya funciona en modo `media` tal cual está
-  configurado; pasar a modo manual con `<html class="dark">` no
-  necesitaría rehacer la paleta, solo el mecanismo de activación.
+- **Selector manual de tema:** ver bullets de arriba — sí se construyó,
+  `ThemeToggle`/`ThemeContext`/`profiles.theme_preference`. Si se necesita
+  como pantalla de configuración en vez de solo un botón de header,
+  `useTheme()` ya expone `preference`/`setPreference` para armar un
+  `select`/radio ahí sin tocar el mecanismo de fondo.

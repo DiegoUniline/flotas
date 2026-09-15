@@ -27,6 +27,13 @@ export async function setActiveOrganization(userId: string, organizationId: stri
   if (error) throw error
 }
 
+export type ThemePreference = 'system' | 'light' | 'dark'
+
+export async function updateThemePreference(userId: string, themePreference: ThemePreference) {
+  const { error } = await supabase.from('profiles').update({ theme_preference: themePreference }).eq('id', userId)
+  if (error) throw error
+}
+
 export async function createOrganization(input: {
   name: string
   slug: string

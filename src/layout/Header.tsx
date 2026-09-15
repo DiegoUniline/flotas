@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ClipboardList, LocateFixed, LogOut, MoreVertical, PanelLeft } from 'lucide-react'
 import { OrgSwitcher } from '@/components/OrgSwitcher'
+import { ThemeToggle, ThemeToggleMenuItem } from '@/components/ui/ThemeToggle'
 import { InstallAppButton } from '@/components/pwa/InstallAppButton'
 import { SyncOfflineDataButton } from '@/features/offlineSync/components/SyncOfflineDataButton'
 import { useAuth } from '@/context/AuthContext'
@@ -67,6 +68,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         )}
         <SyncOfflineDataButton compact />
         <InstallAppButton />
+        <ThemeToggle />
         <span className="max-w-[220px] truncate text-sm text-gray-500">{user?.email}</span>
         <button
           type="button"
@@ -123,6 +125,8 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
                 <SyncOfflineDataButton />
                 <InstallAppButton />
               </div>
+              <div className="my-1 border-t border-gray-100" />
+              <ThemeToggleMenuItem />
               <div className="my-1 border-t border-gray-100" />
               <p className="truncate px-3.5 py-1.5 text-xs text-gray-400">{user?.email}</p>
               <button

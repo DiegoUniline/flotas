@@ -1950,6 +1950,7 @@ export type Database = {
           last_name: string | null
           phone: string | null
           status: string
+          theme_preference: string
           timezone: string
           updated_at: string
         }
@@ -1964,6 +1965,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           status?: string
+          theme_preference?: string
           timezone?: string
           updated_at?: string
         }
@@ -1978,6 +1980,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           status?: string
+          theme_preference?: string
           timezone?: string
           updated_at?: string
         }

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
 import { OrgProvider } from '@/context/OrgContext'
+import { ThemeProvider } from '@/context/ThemeContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { ToastViewport } from '@/components/ui/ToastViewport'
 import { PwaStatus } from '@/components/pwa/PwaStatus'
@@ -57,71 +58,73 @@ const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter(
 export function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/registro" element={<RegisterPage />} />
-          <Route path="/recuperar-password" element={<ForgotPasswordPage />} />
-          <Route path="/restablecer-password" element={<ResetPasswordPage />} />
-          <Route path="/invitacion/:token" element={<InviteAcceptPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <OrgProvider>
-                  <AppShell />
-                </OrgProvider>
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/centro-de-control" replace />} />
-            <Route path="centro-de-control" element={<ControlMapPage />} />
-            <Route path="sucursales" element={<LocationsPage />} />
-            <Route path="sucursales/:id" element={<LocationDetailPage />} />
-            <Route path="vehiculos" element={<VehiclesPage />} />
-            <Route path="vehiculos/:id" element={<VehicleDetailPage />} />
-            <Route path="operadores" element={<DriversPage />} />
-            <Route path="operadores/:id" element={<DriverDetailPage />} />
-            <Route path="clientes" element={<CustomersPage />} />
-            <Route path="clientes/:id" element={<CustomerDetailPage />} />
-            <Route path="pedidos" element={<JobsPage />} />
-            <Route path="pedidos/:id" element={<JobDetailPage />} />
-            <Route path="rutas" element={<RoutesPage />} />
-            <Route path="rutas/:id" element={<RouteDetailPage />} />
-            <Route path="mi-ubicacion" element={<MiUbicacionPage />} />
-            <Route path="mis-pedidos" element={<MyJobsPage />} />
-            <Route path="dispositivos" element={<DevicesPage />} />
-            <Route path="dispositivos/:id" element={<DeviceDetailPage />} />
-            <Route path="geocercas" element={<GeofencesPage />} />
-            <Route path="geocercas/:id" element={<GeofenceDetailPage />} />
-            <Route path="combustible" element={<FuelLogsPage />} />
-            <Route path="combustible/:id" element={<FuelLogDetailPage />} />
-            <Route path="gastos" element={<ExpensesPage />} />
-            <Route path="gastos/:id" element={<ExpenseDetailPage />} />
-            <Route path="costos" element={<CostsPage />} />
-            <Route path="mantenimientos/tipos" element={<MaintenanceTypesPage />} />
-            <Route path="mantenimientos/tipos/:id" element={<MaintenanceTypeDetailPage />} />
-            <Route path="mantenimientos" element={<MaintenanceRecordsPage />} />
-            <Route path="mantenimientos/:id" element={<MaintenanceRecordDetailPage />} />
-            <Route path="refacciones" element={<PartsPage />} />
-            <Route path="refacciones/:id" element={<PartDetailPage />} />
-            <Route path="inspecciones/plantillas" element={<InspectionTemplatesPage />} />
-            <Route path="inspecciones/plantillas/:id" element={<InspectionTemplateDetailPage />} />
-            <Route path="inspecciones" element={<InspectionsPage />} />
-            <Route path="inspecciones/:id" element={<InspectionDetailPage />} />
-            <Route path="usuarios" element={<UsersPage />} />
-            <Route path="roles" element={<RolesPage />} />
-            <Route path="roles/:id" element={<RoleDetailPage />} />
-            <Route path="empresa" element={<CompanyPage />} />
-            {comingSoonItems.map((item) => (
-              <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
-            ))}
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <ToastViewport />
-        <PwaStatus />
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/registro" element={<RegisterPage />} />
+            <Route path="/recuperar-password" element={<ForgotPasswordPage />} />
+            <Route path="/restablecer-password" element={<ResetPasswordPage />} />
+            <Route path="/invitacion/:token" element={<InviteAcceptPage />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <OrgProvider>
+                    <AppShell />
+                  </OrgProvider>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/centro-de-control" replace />} />
+              <Route path="centro-de-control" element={<ControlMapPage />} />
+              <Route path="sucursales" element={<LocationsPage />} />
+              <Route path="sucursales/:id" element={<LocationDetailPage />} />
+              <Route path="vehiculos" element={<VehiclesPage />} />
+              <Route path="vehiculos/:id" element={<VehicleDetailPage />} />
+              <Route path="operadores" element={<DriversPage />} />
+              <Route path="operadores/:id" element={<DriverDetailPage />} />
+              <Route path="clientes" element={<CustomersPage />} />
+              <Route path="clientes/:id" element={<CustomerDetailPage />} />
+              <Route path="pedidos" element={<JobsPage />} />
+              <Route path="pedidos/:id" element={<JobDetailPage />} />
+              <Route path="rutas" element={<RoutesPage />} />
+              <Route path="rutas/:id" element={<RouteDetailPage />} />
+              <Route path="mi-ubicacion" element={<MiUbicacionPage />} />
+              <Route path="mis-pedidos" element={<MyJobsPage />} />
+              <Route path="dispositivos" element={<DevicesPage />} />
+              <Route path="dispositivos/:id" element={<DeviceDetailPage />} />
+              <Route path="geocercas" element={<GeofencesPage />} />
+              <Route path="geocercas/:id" element={<GeofenceDetailPage />} />
+              <Route path="combustible" element={<FuelLogsPage />} />
+              <Route path="combustible/:id" element={<FuelLogDetailPage />} />
+              <Route path="gastos" element={<ExpensesPage />} />
+              <Route path="gastos/:id" element={<ExpenseDetailPage />} />
+              <Route path="costos" element={<CostsPage />} />
+              <Route path="mantenimientos/tipos" element={<MaintenanceTypesPage />} />
+              <Route path="mantenimientos/tipos/:id" element={<MaintenanceTypeDetailPage />} />
+              <Route path="mantenimientos" element={<MaintenanceRecordsPage />} />
+              <Route path="mantenimientos/:id" element={<MaintenanceRecordDetailPage />} />
+              <Route path="refacciones" element={<PartsPage />} />
+              <Route path="refacciones/:id" element={<PartDetailPage />} />
+              <Route path="inspecciones/plantillas" element={<InspectionTemplatesPage />} />
+              <Route path="inspecciones/plantillas/:id" element={<InspectionTemplateDetailPage />} />
+              <Route path="inspecciones" element={<InspectionsPage />} />
+              <Route path="inspecciones/:id" element={<InspectionDetailPage />} />
+              <Route path="usuarios" element={<UsersPage />} />
+              <Route path="roles" element={<RolesPage />} />
+              <Route path="roles/:id" element={<RoleDetailPage />} />
+              <Route path="empresa" element={<CompanyPage />} />
+              {comingSoonItems.map((item) => (
+                <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
+              ))}
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <ToastViewport />
+          <PwaStatus />
+        </ToastProvider>
+      </ThemeProvider>
     </AuthProvider>
   )
 }
