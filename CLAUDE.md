@@ -2242,6 +2242,34 @@ respaldo de iniciales. Se cierra ese hueco.
   como props), así que agregarlo a otra ficha con una columna de foto es
   solo conectar el componente — no hace falta rehacerlo.
 
+## Bug real: "Compartir ubicación" se apagaba en cada recargo (corregido en esta fase)
+
+Reportado por el usuario: "cada que recargo se pierden los permisos de
+compartir ubicación, tienen que guardarse". Causa real: `sharing` en
+`LocationSharingContext.tsx` era `useState(false)` puro, sin ninguna
+persistencia — cualquier recargo de la pestaña (F5, o que el sistema
+operativo suspenda y reactive el navegador) reiniciaba el estado a
+`false` y el operador tenía que acordarse de volver a tocar "Compartir mi
+ubicación" cada vez, sin ningún aviso de que se había apagado. No era un
+problema de permisos del navegador (esos sí persisten) — era que la app
+nunca recordaba que el operador *quería* seguir compartiendo.
+
+- **`SHARING_INTENT_KEY` en `sessionStorage`** (`LocationSharingContext.tsx`):
+  `start()`/`stop()` ahora escriben esa intención cada vez que el
+  operador prende/apaga el envío a mano. Un nuevo `useEffect` (guardado
+  con `resumedRef` para que solo corra una vez) retoma el envío solo si
+  hay intención guardada **y** el operador ya tiene vehículo asignado
+  (mismo requisito que el botón manual) — así un recargo de la pestaña ya
+  no apaga el envío en silencio.
+- **`sessionStorage`, no `localStorage`**: esto no es una preferencia ni
+  configuración de la organización (la regla de "nada de localStorage" es
+  para eso) — es la intención de una sesión de trabajo activa, mismo
+  criterio ya usado para el borrador del wizard de Pedidos. Se limpia
+  sola si el operador toca "Dejar de compartir", o al cerrar sesión
+  (`stop()` ya se llama ahí). Como es `sessionStorage`, si de verdad
+  cierra la pestaña/el navegador, el envío se apaga por completo — es lo
+  esperado, no debe seguir mandando posición con la app cerrada.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

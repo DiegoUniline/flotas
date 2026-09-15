@@ -5,6 +5,32 @@ import { fetchMyDriverProfile, updateMyVehiclePosition, type MyDriverProfile } f
 
 const SEND_INTERVAL_MS = 15000
 
+/** "¿El operador quería estar compartiendo?" — no es una preferencia ni
+ * configuración de la organización (la regla de "nada de localStorage"
+ * es para eso), es la intención de una sesión activa de trabajo, mismo
+ * criterio ya usado para el borrador del wizard de Pedidos. `sessionStorage`
+ * (no `localStorage`) porque solo debe sobrevivir mientras la pestaña
+ * sigue abierta — cerrarla de verdad si debe apagar el envío. */
+const SHARING_INTENT_KEY = 'flotaa:sharing-location'
+
+function readSharingIntent(): boolean {
+  try {
+    return sessionStorage.getItem(SHARING_INTENT_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeSharingIntent(active: boolean) {
+  try {
+    if (active) sessionStorage.setItem(SHARING_INTENT_KEY, '1')
+    else sessionStorage.removeItem(SHARING_INTENT_KEY)
+  } catch {
+    // almacenamiento no disponible (modo privado, cuota llena) — el
+    // interruptor sigue funcionando, solo sin recordar el estado tras recargar.
+  }
+}
+
 interface LocationSharingState {
   driverProfile: MyDriverProfile | null | undefined
   driverProfileLoading: boolean
@@ -42,6 +68,7 @@ export function LocationSharingProvider({ children }: { children: ReactNode }) {
   const [lastCoords, setLastCoords] = useState<{ lat: number; lng: number } | null>(null)
   const watchIdRef = useRef<number | null>(null)
   const lastSentAtRef = useRef(0)
+  const resumedRef = useRef(false)
 
   const mutation = useMutation({
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => updateMyVehiclePosition(lat, lng),
@@ -73,12 +100,14 @@ export function LocationSharingProvider({ children }: { children: ReactNode }) {
     )
     watchIdRef.current = id
     setSharing(true)
+    writeSharingIntent(true)
   }
 
   function stop() {
     if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
     watchIdRef.current = null
     setSharing(false)
+    writeSharingIntent(false)
   }
 
   // Si cierra sesión con el envío activo, se detiene — no debe seguir
@@ -87,6 +116,21 @@ export function LocationSharingProvider({ children }: { children: ReactNode }) {
     if (!user && watchIdRef.current != null) stop()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+
+  // Retoma sola el envío tras recargar la pestaña (F5, o que el sistema
+  // operativo suspenda y reactive la app) si el operador ya la había
+  // activado — antes, cualquier recargo apagaba el envío en silencio y
+  // había que acordarse de volver a tocar "Compartir mi ubicación". Solo
+  // una vez por sesión del provider (`resumedRef`), y solo si de verdad
+  // tiene vehículo asignado (mismo requisito que el botón manual).
+  useEffect(() => {
+    if (resumedRef.current) return
+    if (!profileQuery.data?.vehicle) return
+    if (!readSharingIntent()) return
+    resumedRef.current = true
+    start()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileQuery.data])
 
   useEffect(
     () => () => {
