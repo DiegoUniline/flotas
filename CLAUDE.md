@@ -2428,6 +2428,23 @@ control alrededor.
   dentro del mismo elemento que se manda a pantalla completa, nunca como
   hermano fuera de él.
 
+## Bug real: el botón de pantalla completa del Centro de control quedaba huérfano (corregido en esta fase)
+
+Reportado por el usuario con captura: el botón de pantalla completa
+(agregado en la fase anterior en la barra de filtros, junto al buscador
+de rutas) caía solo en su propia fila en pantallas no muy anchas —
+`flex-wrap` con las pastillas de fecha/ruta/repartidor y el buscador ya
+llenaban la fila, y el botón (pequeño, cuadrado, de otra altura que las
+pastillas) se iba a la fila siguiente completamente solo, robando una
+fila entera de espacio vertical sin necesidad.
+
+**Corrección:** se quitó de la barra de filtros y se movió como overlay
+sobre la esquina superior derecha del mapa (`absolute right-2.5 top-2.5
+z-[1000]`, mismo nivel que los controles internos del mapa) — mismo
+criterio visual que "Mapa/Satélite" en la esquina superior izquierda.
+Sigue controlando la pantalla completa de toda la página (no solo el
+mapa, ver sección de arriba), solo cambió dónde vive el botón.
+
 ## Sidebar: buscador + flyout al pasar el cursor en modo colapsado (agregado en esta fase)
 
 Pedido explícito del usuario: "poder contraer el menú y se van los

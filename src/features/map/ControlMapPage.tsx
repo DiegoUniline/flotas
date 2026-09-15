@@ -430,7 +430,6 @@ export function ControlMapPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-56 rounded-full"
             />
-            <FullscreenButton isFullscreen={pageFullscreen} onToggle={togglePageFullscreen} />
           </div>
         </div>
 
@@ -473,7 +472,20 @@ export function ControlMapPage() {
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row">
-          <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="relative flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white">
+            {/* Botón de pantalla completa de toda la página (filtros, KPIs,
+                panel, pedidos, timeline) — se mueve como overlay sobre la
+                esquina del mapa en vez de vivir en la barra de filtros:
+                ahí competía por espacio con las pastillas de fecha/ruta/
+                repartidor y el buscador, y en pantallas angostas caía solo
+                en su propia fila, huérfano. Mismo criterio visual que los
+                controles internos del mapa (Mapa/Satélite arriba a la
+                izquierda), este va arriba a la derecha para no chocar. */}
+            <FullscreenButton
+              isFullscreen={pageFullscreen}
+              onToggle={togglePageFullscreen}
+              className="absolute right-2.5 top-2.5 z-[1000]"
+            />
             {mappedQuery.isError ? (
               <ErrorState message="No se pudo cargar el mapa." onRetry={() => void mappedQuery.refetch()} />
             ) : mappedQuery.isLoading ? (
