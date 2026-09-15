@@ -94,9 +94,9 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
 
   function renderSection(section: NavSection, compact: boolean) {
     return (
-      <div key={section.label} className={compact ? 'group/section relative' : 'mb-5'}>
+      <div key={section.label} className={`mb-5 ${compact ? 'group/section relative' : ''}`}>
         {!compact && <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>}
-        <ul className={compact ? 'flex flex-col gap-0.5' : 'mb-5 flex flex-col gap-0.5'}>{section.items.map((item) => renderItem(item, compact))}</ul>
+        <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item, compact))}</ul>
 
         {/* Flyout al pasar el cursor en modo colapsado — mismo criterio que
             sidebars tipo Notion/Linear: no hace falta expandir todo el

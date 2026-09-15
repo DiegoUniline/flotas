@@ -2531,6 +2531,35 @@ con `0`/`none` a veces NO basta, como pasó aquí). **No confiar en el
 razonamiento teórico de CSS a ojo para casos así — verificar con una
 reproducción real y `elementFromPoint`, como se hizo aquí.**
 
+## Bug real: en modo colapsado, las secciones del sidebar no tenían separación (corregido en esta fase)
+
+Reportado por el usuario tras el fix de z-index: "cuando contraigo no
+deja solo los módulos, deja todo" — al colapsar a solo-íconos, los
+íconos de Operación/Flota/Mantenimiento/etc. se veían todos pegados uno
+tras otro sin ningún espacio entre secciones, como una sola lista
+continua en vez de grupos separados; eso también hacía parecer que el
+flyout "no respondía por módulo" (difícil saber a qué sección
+correspondía cada ícono sin separación visual).
+
+**Causa real:** al agregar el flyout (`Sidebar.tsx`, `renderSection`),
+el `mb-5` (margen entre secciones) que el código original tenía
+**siempre** presente quedó escrito como condicional
+`compact ? 'group/section relative' : 'mb-5'` — en modo colapsado
+(`compact = true`) esa rama nunca incluía `mb-5`, y tampoco lo tenía el
+`<ul>` interno (`compact ? 'flex flex-col gap-0.5' : 'mb-5 flex ...'`).
+El resultado: cero separación entre secciones solo en modo colapsado
+(en modo expandido sí se veía bien, por eso no se notó antes).
+
+**Corrección:** `mb-5` vuelve a estar siempre en el contenedor de la
+sección (`compact` o no), y se quitó el duplicado del `<ul>` (una sola
+fuente de espaciado). Verificado con Playwright contra las clases reales
+compilate: los tres grupos (Operación/Flota/Mantenimiento) ahora miden
+20px de separación entre sí, y se confirmó que el flyout de cada sección
+solo se activa con el hover de ESA sección (`visibility`/`opacity`
+correctos en las otras dos mientras se hace hover en la primera) — el
+mecanismo de agrupación por `group/section` en sí nunca estuvo roto,
+solo faltaba la señal visual de dónde empieza/termina cada grupo.
+
 ## Bug real: el mapa se pintaba encima del sidebar (fix incompleto, corregido de verdad arriba)
 
 Reportado por el usuario con captura: el flyout del sidebar colapsado
