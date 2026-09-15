@@ -45,6 +45,11 @@ interface MapProps {
   polylineColor?: string
   /** Se dispara al hacer click en un marcador, además de abrir su popup. */
   onMarkerClick?: (marker: MapMarker) => void
+  /** Oculta el botón de pantalla completa propio del mapa — para páginas
+   * como el Centro de control, donde la pantalla completa la controla la
+   * página entera (mapa + filtros + panel + pedidos), no solo el canvas
+   * del mapa, y tener dos botones de pantalla completa sería confuso. */
+  hideFullscreen?: boolean
 }
 
 function escapeAttr(value: string): string {
@@ -188,7 +193,7 @@ function getHtmlMarkerOverlayCtor() {
   return HtmlMarkerOverlayCtor
 }
 
-export function Map({ markers, className = '', polyline, polylineColor = '#f97316', onMarkerClick }: MapProps) {
+export function Map({ markers, className = '', polyline, polylineColor = '#f97316', onMarkerClick, hideFullscreen = false }: MapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
@@ -339,7 +344,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
             </button>
           </div>
           <div className="absolute bottom-2.5 right-2.5 z-[1000] flex flex-col gap-1.5">
-            <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />
+            {!hideFullscreen && <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />}
             <button
               type="button"
               onClick={handleLocate}

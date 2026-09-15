@@ -22,6 +22,8 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { FullscreenButton } from '@/components/ui/FullscreenButton'
+import { useFullscreen } from '@/hooks/useFullscreen'
 import { formatCurrency, formatDateTime, getInitials } from '@/lib/format'
 import { LOCATION_TYPES } from '@/features/locations/api/locationsApi'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
@@ -195,6 +197,12 @@ export function ControlMapPage() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [resolvingJobRoute, setResolvingJobRoute] = useState(false)
   const [viewJobId, setViewJobId] = useState<string | null>(null)
+  // Pantalla completa de TODA la operación (filtros, KPIs, mapa, panel de
+  // la unidad, pedidos del día, timeline) — no solo el canvas del mapa.
+  // Pedido explícito del usuario: al hacer pantalla completa en el mapa
+  // seguía necesitando ver filtros/entregas, no solo el mapa pelón.
+  const pageRef = useRef<HTMLDivElement>(null)
+  const { isFullscreen: pageFullscreen, toggle: togglePageFullscreen } = useFullscreen(pageRef)
 
   const mappedQuery = useMappedLocations()
   const countsQuery = useLocationCounts()
@@ -365,9 +373,11 @@ export function ControlMapPage() {
   }
 
   return (
-    <>
     <PageScroll>
-      <div className="flex flex-col gap-4 p-6">
+      <div
+        ref={pageRef}
+        className={`flex flex-col gap-4 p-6 ${pageFullscreen ? 'h-screen overflow-y-auto bg-gray-50' : ''}`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-lg font-semibold text-ink">Centro de control</h1>
@@ -420,6 +430,7 @@ export function ControlMapPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-56 rounded-full"
             />
+            <FullscreenButton isFullscreen={pageFullscreen} onToggle={togglePageFullscreen} />
           </div>
         </div>
 
@@ -469,7 +480,13 @@ export function ControlMapPage() {
               <Skeleton className="h-[380px] lg:h-[620px]" />
             ) : markers.length > 0 ? (
               <>
-                <Map className="h-[380px] w-full lg:h-[620px]" markers={markers} polyline={routePolyline} onMarkerClick={handleMarkerClick} />
+                <Map
+                  className={pageFullscreen ? 'h-[60vh] w-full' : 'h-[380px] w-full lg:h-[620px]'}
+                  markers={markers}
+                  polyline={routePolyline}
+                  onMarkerClick={handleMarkerClick}
+                  hideFullscreen
+                />
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
                   {(liveVehiclesQuery.data?.length ?? 0) > 0 && (
                     <>
@@ -763,16 +780,21 @@ export function ControlMapPage() {
         {withoutCoordinates > 0 && (
           <p className="text-xs text-gray-400">{withoutCoordinates} sucursal(es) sin coordenadas no aparecen en el mapa.</p>
         )}
+
+        {/* El Modal vive DENTRO del contenedor que se pone en pantalla
+            completa (no como hermano después de `PageScroll`) — un elemento
+            en pantalla completa se pinta en su propia capa por encima de
+            todo lo demás sin importar z-index; si el Modal quedara afuera,
+            "Ver pedido completo" se abriría invisible detrás del mapa
+            mientras estás en pantalla completa. */}
+        {viewJobId && (
+          <Modal open title="Pedido" onClose={() => setViewJobId(null)}>
+            <div className="-mx-6 -my-5 h-[75vh]">
+              <JobDetailContent id={viewJobId} onBack={() => setViewJobId(null)} backLabel="Cerrar" />
+            </div>
+          </Modal>
+        )}
       </div>
     </PageScroll>
-
-    {viewJobId && (
-      <Modal open title="Pedido" onClose={() => setViewJobId(null)}>
-        <div className="-mx-6 -my-5 h-[75vh]">
-          <JobDetailContent id={viewJobId} onBack={() => setViewJobId(null)} backLabel="Cerrar" />
-        </div>
-      </Modal>
-    )}
-    </>
   )
 }

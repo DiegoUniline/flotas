@@ -2390,6 +2390,44 @@ declarar `class X extends libreria.Clase` a nivel de módulo — construirla
 dentro de una función, llamada solo después de confirmar que la librería
 ya cargó.
 
+## Pantalla completa del Centro de control: toda la operación, no solo el mapa (agregado en esta fase)
+
+Pedido explícito del usuario: "cuando haga pantalla completa en el mapa
+tiene que ver los filtros, las entregas y todo eso" — el botón de
+pantalla completa del componente `Map` genérico (agregado en la fase
+anterior) solo agranda el canvas del mapa, sin el resto del Centro de
+control alrededor.
+
+- **`ControlMapPage.tsx`** ahora tiene su propia pantalla completa a
+  nivel de página: `pageRef` + `useFullscreen(pageRef)` en el `<div>` que
+  envuelve TODO el contenido (filtros en pastilla, KPIs, mapa + panel de
+  la unidad, "Pedidos del día", timeline de paradas) — no solo el mapa.
+  Botón `FullscreenButton` nuevo junto al buscador de rutas, en la barra
+  de filtros. En pantalla completa el mapa reduce su alto a `60vh` (en
+  vez de los `620px` fijos) para dejar espacio real a los KPIs/panel/lista
+  debajo sin tener que scrollear tanto; el contenedor gana
+  `h-screen overflow-y-auto bg-gray-50` mientras está en pantalla
+  completa, para poder hacer scroll dentro de la pantalla completa si el
+  contenido no cabe.
+- **`components/map/Map.tsx`** ganó `hideFullscreen` — el Centro de
+  control lo pasa para ocultar el botón de pantalla completa propio del
+  mapa (tener dos botones de pantalla completa, uno solo-mapa y otro
+  página-completa, sería confuso). GPS de Pedidos y Geocercas siguen sin
+  este prop — ahí sí tiene sentido que la pantalla completa sea solo del
+  mapa, no hay "filtros/entregas" alrededor que preservar.
+- **Bug evitado, no solo el pedido en sí:** el `Modal` de "Ver pedido
+  completo" (`viewJobId`) vivía como hermano de `PageScroll` en el árbol
+  de React — un elemento en pantalla completa real (Fullscreen API) se
+  pinta en su propia capa por encima de TODO lo demás sin importar
+  z-index, así que si el modal se hubiera quedado afuera del contenedor
+  que entra a pantalla completa, "Ver pedido completo" se habría abierto
+  invisible, tapado detrás del mapa en pantalla completa. Se movió el
+  `Modal` adentro del mismo `<div ref={pageRef}>` para que quede dentro
+  de esa misma capa. **Regla para cualquier modal/diálogo futuro dentro
+  de una sección que pueda entrar a pantalla completa:** debe vivir
+  dentro del mismo elemento que se manda a pantalla completa, nunca como
+  hermano fuera de él.
+
 ## Sidebar: buscador + flyout al pasar el cursor en modo colapsado (agregado en esta fase)
 
 Pedido explícito del usuario: "poder contraer el menú y se van los
