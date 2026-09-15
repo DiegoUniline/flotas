@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Package, Phone } from 'lucide-react'
+import { MapPin, Navigation, Package, Phone } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -73,6 +73,26 @@ function addressLabel(job: MyJob): string {
   return location.address ? `${location.name} — ${location.address}` : location.name
 }
 
+/** Link real de navegación (Google Maps, misma app que ya se usa en todo
+ * el proyecto para mapas) con la ruta al destino — no es tracking en vivo
+ * ni un mapa embebido por tarjeta (costaría una instancia de mapa por
+ * pedido en pantalla), es el patrón estándar de apps de reparto: un botón
+ * que abre la app de mapas del dispositivo con direcciones reales.
+ * Prioriza coordenadas reales del domicilio si existen; si no, cae a
+ * buscar por dirección de texto. `null` solo si no hay ningún dato de
+ * ubicación que mandarle a Maps. */
+function directionsUrl(job: MyJob): string | null {
+  const location = job.customer_locations
+  if (!location) return null
+  if (location.latitude != null && location.longitude != null) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`
+  }
+  if (location.address) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.address)}`
+  }
+  return null
+}
+
 function JobCard({ job, onOpen }: { job: MyJob; onOpen: () => void }) {
   const { showToast } = useToast()
   const updateMutation = useUpdateJobSilent()
@@ -106,39 +126,60 @@ function JobCard({ job, onOpen }: { job: MyJob; onOpen: () => void }) {
   }
 
   const actions = NEXT_ACTIONS[job.status] ?? []
+  const maps = directionsUrl(job)
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-surface p-4">
-      <div className="flex items-start justify-between gap-2">
-        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
-          <p className="truncate text-sm font-semibold text-ink">{job.job_number ?? 'Sin número'}</p>
-          <p className="truncate text-sm text-gray-700">{job.customers?.name ?? 'Sin cliente'}</p>
-        </button>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_TONE[job.status] ?? 'bg-gray-100 text-gray-500'}`}>
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-surface shadow-sm">
+      <button type="button" onClick={onOpen} className="flex w-full items-start justify-between gap-2 p-4 pb-3 text-left">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium uppercase tracking-wide text-gray-400">{job.job_number ?? 'Sin número'}</p>
+          <p className="truncate text-base font-semibold text-ink">{job.customers?.name ?? 'Sin cliente'}</p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_TONE[job.status] ?? 'bg-gray-100 text-gray-500'}`}>
           {STATUS_LABEL[job.status] ?? job.status}
         </span>
-      </div>
-
-      <button type="button" onClick={onOpen} className="flex flex-col gap-1.5 text-left text-sm text-gray-600">
-        <span className="flex items-start gap-1.5">
-          <MapPin size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-gray-400" />
-          <span className="min-w-0">{addressLabel(job)}</span>
-        </span>
-        {job.receiver_name && (
-          <span className="flex items-center gap-1.5">
-            <Package size={14} strokeWidth={2} className="shrink-0 text-gray-400" />
-            {job.receiver_name}
-          </span>
-        )}
-        {job.receiver_phone && (
-          <span className="flex items-center gap-1.5">
-            <Phone size={14} strokeWidth={2} className="shrink-0 text-gray-400" />
-            {job.receiver_phone}
-          </span>
-        )}
       </button>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+      <div className="mx-4 flex flex-col gap-2 rounded-lg bg-gray-50 p-3">
+        <button type="button" onClick={onOpen} className="flex items-start gap-2 text-left text-sm text-gray-700">
+          <MapPin size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-gray-400" />
+          <span className="min-w-0">{addressLabel(job)}</span>
+        </button>
+        {maps && (
+          <a
+            href={maps}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1.5 rounded-full bg-accent-500 py-1.5 text-xs font-semibold text-white hover:bg-accent-600"
+          >
+            <Navigation size={13} strokeWidth={2.5} />
+            Cómo llegar
+          </a>
+        )}
+      </div>
+
+      {(job.receiver_name || job.receiver_phone) && (
+        <div className="mx-4 mt-2 flex items-center justify-between gap-2 text-sm text-gray-600">
+          {job.receiver_name && (
+            <span className="flex min-w-0 items-center gap-1.5 truncate">
+              <Package size={14} strokeWidth={2} className="shrink-0 text-gray-400" />
+              {job.receiver_name}
+            </span>
+          )}
+          {job.receiver_phone && (
+            <a
+              href={`tel:${job.receiver_phone}`}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              <Phone size={13} strokeWidth={2} />
+              {job.receiver_phone}
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="mx-4 mb-4 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
         {job.scheduled_date && <span>{formatDate(job.scheduled_date)}</span>}
         {job.time_window_start && <span>{job.time_window_start.slice(0, 5)}–{job.time_window_end?.slice(0, 5) ?? ''}</span>}
         {job.amount != null && <span className="font-medium text-ink">{formatCurrency(job.amount)}</span>}
@@ -146,12 +187,11 @@ function JobCard({ job, onOpen }: { job: MyJob; onOpen: () => void }) {
       </div>
 
       {actions.length > 0 && (
-        <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 p-4 pt-3">
           {actions.map((action) => (
             <Button
               key={action.status}
               variant={action.danger ? 'danger' : 'primary'}
-              className="flex-1"
               loading={pendingStatus === action.status}
               disabled={updateMutation.isPending && pendingStatus !== action.status}
               onClick={() => void handleStatusChange(action.status)}

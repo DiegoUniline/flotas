@@ -2794,3 +2794,42 @@ sección con menú inferior tipo app real.
   reproducción estática (mismas clases reales + CSS compilado real) en
   viewport de celular, en claro y oscuro — no se pudo probar logueado
   como operador real en este entorno (no hay credenciales de prueba).
+
+## Tarjeta de "Mis pedidos" rediseñada + navegación real a la entrega (agregada en esta fase)
+
+Pedido explícito del usuario con captura real de la tarjeta en modo
+oscuro: "esta muy fea y falta el mapa de entregas para que los dirija a
+la ruta destino". Dos problemas reales en `MyJobsPage.tsx` (`JobCard`):
+el botón "Rechazado" (4to botón de estado, solo aparece en `arrived`)
+quedaba solo en su propia fila con `flex-wrap`/`flex-1`, y no había
+ninguna forma de navegar al domicilio de entrega — solo texto.
+
+- **Botones de estado en grid, no `flex-wrap`:** `grid grid-cols-2 gap-2`
+  en vez de `flex flex-wrap` — con 2, 3 o 4 acciones siempre quedan
+  parejas (2×1 o 2×2), nunca un botón huérfano ocupando una fila entera.
+- **"Cómo llegar" — navegación real, no un mapa embebido por tarjeta:**
+  un botón que abre Google Maps (la misma app de mapas que ya usa todo
+  el proyecto) con direcciones reales al domicilio de entrega —
+  `directionsUrl()` nueva en `MyJobsPage.tsx`, prioriza
+  `customer_locations.latitude/longitude` reales (ya venían en
+  `MY_JOB_SELECT`, no fue necesario tocar la query) y cae a buscar por
+  la dirección de texto si no hay coordenadas; `null` (botón oculto) solo
+  si el pedido no tiene ningún dato de ubicación. Es un `<a target="_blank">`
+  real a `https://www.google.com/maps/dir/?api=1&destination=...`, el
+  mismo patrón que usan apps de reparto reales (Uber/DoorDash) — no se
+  intentó embeber un mapa interactivo por tarjeta (sería una instancia de
+  `google.maps.Map` por pedido visible en pantalla, caro y sin ganancia
+  real sobre abrir la app de navegación de verdad para ir manejando).
+- **Rediseño completo de la tarjeta**: encabezado con folio en gris chico
+  (`uppercase tracking-wide`) + nombre de cliente grande, pill de estado
+  a la derecha; bloque de domicilio en su propio recuadro `bg-gray-50`
+  con el botón "Cómo llegar" debajo (ancho completo, mejor blanco de tap
+  que junto al texto); fila de contacto con el teléfono del destinatario
+  como link real `tel:` (antes era texto plano) en vez de mezclado con la
+  dirección; meta de fecha/hora/monto/COD como su propia fila chica antes
+  del divisor de acciones. Mismos datos de siempre, ninguno inventado —
+  solo mejor jerarquía visual.
+- **Verificado** con una reproducción estática (mismas clases reales +
+  CSS compilado real de `npm run build`) vía Playwright, en claro y
+  oscuro — no se pudo probar logueado como operador real en este entorno
+  (sin credenciales de prueba), igual que la fase anterior.
