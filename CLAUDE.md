@@ -2474,7 +2474,64 @@ uno a la vez) para saber qué es cada ícono.
   el proyecto) lo cierra al hacer click fuera; seleccionar un ítem
   también lo cierra y limpia la búsqueda.
 
-## Bug real: el mapa se pintaba encima del sidebar (corregido en esta fase)
+## Bug real (esta vez sí, verificado con Playwright): el `lg:translate-x-0` del sidebar atrapaba el flyout en su propio contexto de apilamiento (corregido en esta fase)
+
+El fix anterior (subir el flyout/aside a `z-[1100]`) **no era suficiente**
+— el usuario insistió en que seguía viendo el mapa encima del menú
+incluso tras hard-refresh/incógnito, y tenía razón: no era caché.
+
+**Cómo se verificó de verdad esta vez:** en vez de confiar en los
+números de z-index, se construyó una reproducción fiel del DOM/CSS real
+(mismas clases exactas de `Sidebar.tsx`/`Map.tsx`/`ControlMapPage.tsx`,
+mismo CSS compilado por Tailwind) y se probó con Playwright headless
+(`document.elementFromPoint` en el punto exacto de traslape) — el mapa
+sí seguía ganando con los números "correctos" puestos. Se hizo bisección
+sistemática quitando una clase a la vez hasta aislar la causa exacta.
+
+**Causa real:** `<aside>` tenía `lg:translate-x-0` (para "cancelar"
+visualmente la animación de deslizamiento de celular en escritorio,
+donde el `<aside>` ya es `position: static`). El problema:
+**cualquier `translate`/`transform` distinto de `none` — incluido
+`translateX(0)`, aunque no mueva nada — crea su propio contexto de
+apilamiento**, sin importar si el elemental es `position: static`. Eso
+significa que el `<aside>` completo (con TODO su contenido, incluido el
+flyout con `z-[1100]`) queda encerrado dentro de un contexto de
+apilamiento propio. Dentro de ese contexto el flyout sí gana con su
+z-index alto — pero el `<aside>` como bloque, comparado contra su
+hermano `<main>` en el contexto PADRE, no tiene ningún z-index efectivo
+(los `z-index` de elementos `position: static` se ignoran) y pierde por
+puro orden de aparición en el DOM (`<main>` va después). Tailwind v4
+además complica esto: `translate-x-*` ya no compone dentro de la
+propiedad `transform` (como v3), usa la propiedad CSS `translate`
+directa — por eso `lg:transform-none` (el intento obvio de "cancelarlo")
+tampoco sirve, esa propiedad ya estaba en `none`, la que hay que resetear
+es `translate`, y Tailwind v4 no generó una clase que la reseteara
+limpio en las pruebas.
+
+**Corrección real:** en vez de pelear con el cascade de Tailwind para
+"cancelar" el transform en `lg:`, `Sidebar.tsx` ahora recibe `isDesktop`
+(mismo `useMediaQuery('(min-width: 1024px)')` que ya calculaba
+`AppShell` para el botón de hamburguesa) y **directamente omite** la
+clase de `translate`/`transition` por completo cuando `isDesktop` es
+`true` — nunca se aplica ningún `transform`/`translate` en escritorio,
+así que nunca se crea ese contexto de apilamiento ahí. En celular
+(`isDesktop === false`) el comportamiento es idéntico a antes (sigue
+deslizando con `translate-x-0`/`-translate-x-full`).
+
+**Regla reforzada, más específica que la anterior:** subir el z-index
+por encima de 1000 NO basta si el elemento (o cualquier ancestro suyo)
+tiene una clase `translate-*`/`rotate-*`/`scale-*`/`transform-*` con
+valor distinto de "ninguno" — eso ya lo mete en un contexto de
+apilamiento aislado sin importar el número. Antes de subir un z-index
+para "arreglar" un elemento tapado, revisar primero si algún ancestro
+tiene transform/opacity<1/filter/isolation/will-change/contain, y si el
+propio elemento es realmente necesario que se mueva ahí (si no, quitar
+la clase por completo en vez de "cancelarla" con otra clase — cancelar
+con `0`/`none` a veces NO basta, como pasó aquí). **No confiar en el
+razonamiento teórico de CSS a ojo para casos así — verificar con una
+reproducción real y `elementFromPoint`, como se hizo aquí.**
+
+## Bug real: el mapa se pintaba encima del sidebar (fix incompleto, corregido de verdad arriba)
 
 Reportado por el usuario con captura: el flyout del sidebar colapsado
 (sección/buscador) se veía tapado detrás del mapa, en vez de encima.

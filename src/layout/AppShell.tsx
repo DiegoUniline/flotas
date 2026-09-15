@@ -62,7 +62,7 @@ export function AppShell() {
         <div className="flex h-screen flex-col">
           <Header onToggleSidebar={() => (isDesktop ? setCollapsed((c) => !c) : setMobileNavOpen((o) => !o))} />
           <div className="flex flex-1 overflow-hidden">
-            <Sidebar iconOnly={collapsed && isDesktop} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
+            <Sidebar iconOnly={collapsed && isDesktop} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} isDesktop={isDesktop} />
             <main className="flex-1 overflow-hidden bg-gray-50">
               <Outlet />
             </main>

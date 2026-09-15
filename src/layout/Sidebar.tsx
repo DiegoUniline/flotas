@@ -15,6 +15,12 @@ interface SidebarProps {
    * escritorio, donde el sidebar siempre está visible en el flujo normal. */
   mobileOpen: boolean
   onCloseMobile: () => void
+  /** Breakpoint real calculado en JS (mismo `useMediaQuery` de `AppShell`).
+   * Se usa para no aplicar NINGUNA clase de `translate`/`transition` en
+   * escritorio — ver el comentario junto a `<aside>` sobre por qué un
+   * `lg:translate-x-0` (para "cancelar" la animación de celular) rompía
+   * el z-index del flyout. */
+  isDesktop: boolean
 }
 
 const DIACRITICS_RANGE = String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f)
@@ -35,7 +41,7 @@ function ItemLabel({ item }: { item: NavItem }) {
   )
 }
 
-export function Sidebar({ iconOnly, mobileOpen, onCloseMobile }: SidebarProps) {
+export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: SidebarProps) {
   const { can } = usePermissions()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -117,9 +123,23 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile }: SidebarProps) {
           encimado al menú"). */}
       {mobileOpen && <div className="fixed inset-0 z-[1090] bg-black/30 lg:hidden" onClick={onCloseMobile} aria-hidden="true" />}
 
+      {/* La animación de deslizamiento (`translate-x-*`) es solo para
+          celular — en escritorio el `<aside>` es `position: static` (el
+          `translate` no mueve nada visualmente ahí). Antes se "cancelaba"
+          con `lg:translate-x-0`, pero CUALQUIER `translate`/`transform`
+          distinto de `none` (incluido `translateX(0)`) crea su propio
+          contexto de apilamiento — eso atrapaba el `z-[1100]` del flyout
+          DENTRO del `<aside>`, así que como conjunto perdía contra
+          `<main>` (que va después en el DOM) sin importar el z-index
+          interno: el mapa se seguía pintando encima del flyout aunque los
+          números dijeran lo contrario. Bug real, verificado con
+          Playwright comparando el DOM real. Por eso ahora la clase de
+          `translate`/`transition` ni siquiera se aplica en escritorio —
+          se omite en JS (`isDesktop`) en vez de intentar cancelarla con
+          `lg:`. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-72 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:transition-[width] ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-72 flex-col border-r border-gray-200 bg-white lg:static lg:z-auto lg:w-auto lg:transition-[width] ${
+          isDesktop ? '' : `transition-transform duration-200 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
         } ${iconOnly ? 'lg:w-16' : 'lg:w-60'}`}
       >
         <div className="flex items-center gap-2 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
