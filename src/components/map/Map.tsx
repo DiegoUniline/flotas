@@ -119,59 +119,80 @@ function popupHtml(marker: MapMarker): string {
 /** Marcador HTML libre sobre `OverlayView` — da el mismo control visual que
  * Leaflet `divIcon` (punto de color, anillo animado de "en vivo", avatar
  * circular con foto real) que Google Maps no ofrece de forma nativa sin un
- * Map ID de "Advanced Markers" configurado en Google Cloud. */
-class HtmlMarkerOverlay extends google.maps.OverlayView {
-  private div: HTMLDivElement | null = null
-  private position: google.maps.LatLng
-  private html: string
-  private onClick?: () => void
-  private anchor: 'center' | 'bottom'
+ * Map ID de "Advanced Markers" configurado en Google Cloud.
+ *
+ * La clase NO se declara a nivel de módulo (`class X extends
+ * google.maps.OverlayView`) a propósito — eso evaluaría `google.maps` en
+ * cuanto este archivo se importa, antes de que el script de Google Maps
+ * termine de cargar (`google` ni siquiera existe como global todavía), y
+ * como el build no divide el bundle por ruta, tronaba la app ENTERA en
+ * blanco desde el primer render, no solo las pantallas con mapa (bug real
+ * encontrado en producción). Se construye perezosamente la primera vez que
+ * hace falta, momento en el que `loadGoogleMaps()` ya se resolvió. */
+let HtmlMarkerOverlayCtor: (new (
+  position: google.maps.LatLng,
+  html: string,
+  onClick?: () => void,
+  anchor?: 'center' | 'bottom',
+) => google.maps.OverlayView) | null = null
 
-  constructor(position: google.maps.LatLng, html: string, onClick?: () => void, anchor: 'center' | 'bottom' = 'center') {
-    super()
-    this.position = position
-    this.html = html
-    this.onClick = onClick
-    this.anchor = anchor
-  }
+function getHtmlMarkerOverlayCtor() {
+  if (!HtmlMarkerOverlayCtor) {
+    HtmlMarkerOverlayCtor = class extends google.maps.OverlayView {
+      private div: HTMLDivElement | null = null
+      private position: google.maps.LatLng
+      private html: string
+      private onClick?: () => void
+      private anchor: 'center' | 'bottom'
 
-  override onAdd() {
-    const div = document.createElement('div')
-    div.style.position = 'absolute'
-    div.style.transform = this.anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)'
-    div.innerHTML = this.html
-    if (this.onClick) {
-      div.style.cursor = 'pointer'
-      div.addEventListener('click', (e) => {
-        e.stopPropagation()
-        this.onClick?.()
-      })
+      constructor(position: google.maps.LatLng, html: string, onClick?: () => void, anchor: 'center' | 'bottom' = 'center') {
+        super()
+        this.position = position
+        this.html = html
+        this.onClick = onClick
+        this.anchor = anchor
+      }
+
+      override onAdd() {
+        const div = document.createElement('div')
+        div.style.position = 'absolute'
+        div.style.transform = this.anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)'
+        div.innerHTML = this.html
+        if (this.onClick) {
+          div.style.cursor = 'pointer'
+          div.addEventListener('click', (e) => {
+            e.stopPropagation()
+            this.onClick?.()
+          })
+        }
+        this.div = div
+        this.getPanes()?.overlayMouseTarget.appendChild(div)
+      }
+
+      override draw() {
+        if (!this.div) return
+        const projection = this.getProjection()
+        const point = projection?.fromLatLngToDivPixel(this.position)
+        if (point) {
+          this.div.style.left = `${point.x}px`
+          this.div.style.top = `${point.y}px`
+        }
+      }
+
+      override onRemove() {
+        this.div?.remove()
+        this.div = null
+      }
     }
-    this.div = div
-    this.getPanes()?.overlayMouseTarget.appendChild(div)
   }
-
-  override draw() {
-    if (!this.div) return
-    const projection = this.getProjection()
-    const point = projection?.fromLatLngToDivPixel(this.position)
-    if (point) {
-      this.div.style.left = `${point.x}px`
-      this.div.style.top = `${point.y}px`
-    }
-  }
-
-  override onRemove() {
-    this.div?.remove()
-    this.div = null
-  }
+  return HtmlMarkerOverlayCtor
 }
 
 export function Map({ markers, className = '', polyline, polylineColor = '#f97316', onMarkerClick }: MapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
-  const overlaysRef = useRef<HtmlMarkerOverlay[]>([])
+  const overlaysRef = useRef<google.maps.OverlayView[]>([])
   const pinMarkersRef = useRef<google.maps.Marker[]>([])
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
   const polylineRef = useRef<google.maps.Polyline | null>(null)
@@ -239,7 +260,8 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
 
       const html = markerHtml(marker)
       if (html) {
-        const overlay = new HtmlMarkerOverlay(position, html, handleClick, marker.locationType !== undefined ? 'bottom' : 'center')
+        const OverlayCtor = getHtmlMarkerOverlayCtor()
+        const overlay = new OverlayCtor(position, html, handleClick, marker.locationType !== undefined ? 'bottom' : 'center')
         overlay.setMap(map)
         overlaysRef.current.push(overlay)
       } else {

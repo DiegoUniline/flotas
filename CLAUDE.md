@@ -2357,6 +2357,39 @@ tocó) ni ninguna lógica de negocio.
   demás. Solo se usa en `ControlMapPage.tsx` (únicas Sucursales que se
   grafican en un mapa hoy).
 
+## Bug real: la app entera se quedaba en blanco tras integrar Google Maps (corregido en esta fase)
+
+Reportado por el usuario justo después del despliegue del mapa nuevo:
+"se quedó en blanco la pantalla" — y no solo el Centro de control, **toda
+la app**, incluido `/login`. Causa raíz: `components/map/Map.tsx`
+declaraba `class HtmlMarkerOverlay extends google.maps.OverlayView` a
+nivel de módulo (fuera de cualquier función). Esa línea se evalúa en
+cuanto el archivo se importa — pero `google.maps` no existe como global
+hasta que `loadGoogleMaps()` termina de inyectar y cargar el script real
+de Google, algo que solo pasa dentro del componente `Map`, ya montado.
+Como el build **no divide el bundle por ruta** (un solo `index-*.js` para
+toda la app, advertencia de tamaño que ya salía en el build y no se había
+atendido), ese `import` se evalúa al cargar cualquier página, no solo las
+que tienen mapa — `ReferenceError: google is not defined` tronaba la
+app completa antes de que React alcanzara a montar nada, ni siquiera
+`/login`. El `ErrorBoundary` global no lo alcanzó a capturar porque el
+error ocurre durante la evaluación del módulo (import), no durante un
+render de React.
+
+**Corrección:** la clase ya no se declara a nivel de módulo — se
+construye perezosamente la primera vez que hace falta
+(`getHtmlMarkerOverlayCtor()`, cacheada en una variable module-level),
+llamada solo dentro del efecto que crea el mapa, momento en el que
+`loadGoogleMaps()` ya se resolvió y `google.maps` sí existe. Verificado
+sirviendo el build de producción (`vite preview`) y cargando `/login` con
+Playwright headless: antes de este fix el `<div id="root">` quedaba
+vacío, después carga el formulario real. **Regla para cualquier
+integración futura que envuelva una clase de una librería cargada por
+script externo (Google Maps, cualquier SDK con carga asíncrona):** nunca
+declarar `class X extends libreria.Clase` a nivel de módulo — construirla
+dentro de una función, llamada solo después de confirmar que la librería
+ya cargó.
+
 ## Sidebar: buscador + flyout al pasar el cursor en modo colapsado (agregado en esta fase)
 
 Pedido explícito del usuario: "poder contraer el menú y se van los
