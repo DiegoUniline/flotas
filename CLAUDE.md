@@ -1735,6 +1735,20 @@ social, RFC, teléfono/correo/sitio web, moneda/país/zona horaria/idioma.
 `settings.manage` (política `orgs_update` ya existente, no se agregó
 policy nueva).
 
+### Bug real: Usuarios no cargaba ("No se pudieron cargar los miembros") (corregido en esta fase)
+
+Mismo bug que ya se había corregido una vez en `audit_logs`
+(`fix_audit_logs_user_fk_to_profiles`), reaparecido en tabla distinta:
+`organization_members.user_id` apuntaba a `auth.users(id)`, no a
+`public.profiles(id)`, así que el embed `profiles(first_name, last_name,
+email)` de `organizationMembersApi.ts` no podía resolverse vía PostgREST y
+la query completa fallaba. Corregido con
+`fix_organization_members_user_fk_to_profiles` (misma técnica: la FK ahora
+apunta a `public.profiles(id)`, mismo espacio de valores, sin pérdida de
+integridad). **Recordatorio reforzado:** cualquier FK nueva a un
+usuario/autor debe apuntar a `public.profiles`, nunca a `auth.users`, si en
+algún momento se va a hacer un embed de PostgREST sobre ella.
+
 ### Deliberadamente no construido en esta fase
 
 Mismo criterio de "no inventar sin confirmar" de siempre — cada uno

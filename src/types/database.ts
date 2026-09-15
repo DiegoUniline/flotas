@@ -1748,6 +1748,13 @@ export type Database = {
             referencedRelation: "roles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organization_settings: {
