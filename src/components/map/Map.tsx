@@ -30,6 +30,11 @@ export interface MapMarker {
    * activa el ícono de avatar en vez del punto simple. */
   avatarUrl?: string | null
   avatarInitials?: string
+  /** Sucursal real (`locations.location_type`) — pinta un ícono de edificio
+   * (almacén/sucursal/taller/oficina) en vez del punto/pin genérico, para
+   * que se reconozca de un vistazo como una instalación fija y no como una
+   * posición de vehículo/pedido. */
+  locationType?: string
 }
 
 interface MapProps {
@@ -46,7 +51,28 @@ function escapeAttr(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
+const LOCATION_TYPE_ICON: Record<string, { emoji: string; color: string }> = {
+  branch: { emoji: '🏢', color: '#4f46e5' },
+  warehouse: { emoji: '🏭', color: '#0f766e' },
+  workshop: { emoji: '🔧', color: '#b45309' },
+  office: { emoji: '🏬', color: '#6b7280' },
+}
+const LOCATION_TYPE_FALLBACK = { emoji: '🏢', color: '#4f46e5' }
+
+/** Pin tipo "edificio" (cuadro blanco con ícono + punta hacia el suelo) en
+ * vez del pin de gota o el punto de color genérico — pedido explícito del
+ * usuario ("que se vean como almacén literal, no como pin"). */
+function locationMarkerHtml(marker: MapMarker): string {
+  const { emoji, color } = (marker.locationType && LOCATION_TYPE_ICON[marker.locationType]) || LOCATION_TYPE_FALLBACK
+  return `<span style="display:flex;flex-direction:column;align-items:center">
+      <span style="width:32px;height:32px;border-radius:8px;border:2px solid ${color};background:white;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${emoji}</span>
+      <span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${color};margin-top:-1px"></span>
+    </span>`
+}
+
 function markerHtml(marker: MapMarker): string {
+  if (marker.locationType !== undefined) return locationMarkerHtml(marker)
+
   if (marker.avatarUrl !== undefined || marker.avatarInitials !== undefined) {
     const color = marker.color ?? '#16a34a'
     const avatarSize = 44
@@ -99,18 +125,20 @@ class HtmlMarkerOverlay extends google.maps.OverlayView {
   private position: google.maps.LatLng
   private html: string
   private onClick?: () => void
+  private anchor: 'center' | 'bottom'
 
-  constructor(position: google.maps.LatLng, html: string, onClick?: () => void) {
+  constructor(position: google.maps.LatLng, html: string, onClick?: () => void, anchor: 'center' | 'bottom' = 'center') {
     super()
     this.position = position
     this.html = html
     this.onClick = onClick
+    this.anchor = anchor
   }
 
   override onAdd() {
     const div = document.createElement('div')
     div.style.position = 'absolute'
-    div.style.transform = 'translate(-50%, -50%)'
+    div.style.transform = this.anchor === 'bottom' ? 'translate(-50%, -100%)' : 'translate(-50%, -50%)'
     div.innerHTML = this.html
     if (this.onClick) {
       div.style.cursor = 'pointer'
@@ -211,7 +239,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
 
       const html = markerHtml(marker)
       if (html) {
-        const overlay = new HtmlMarkerOverlay(position, html, handleClick)
+        const overlay = new HtmlMarkerOverlay(position, html, handleClick, marker.locationType !== undefined ? 'bottom' : 'center')
         overlay.setMap(map)
         overlaysRef.current.push(overlay)
       } else {

@@ -263,6 +263,7 @@ export function ControlMapPage() {
       description: [LOCATION_TYPE_LABELS[location.location_type] ?? location.location_type, location.city]
         .filter(Boolean)
         .join(' · '),
+      locationType: location.location_type,
     }))
 
     const stopMarkers: MapMarker[] = stops

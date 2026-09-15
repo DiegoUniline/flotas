@@ -2330,8 +2330,63 @@ tocó) ni ninguna lógica de negocio.
   paso de configuración extra); Google Geocoding API para el buscador de
   direcciones (se dejó Nominatim, que ya funcionaba bien y no tiene
   costo — el pedido fue sobre el mapa visual, no sobre el buscador).
+- **API key real ya configurada** (pedido explícito del usuario, la
+  compartió directo en el chat): vive en `.env` local (gitignored, nunca
+  se commiteó) y debe replicarse también en las variables de entorno de
+  Vercel para que el build de producción la tenga — sin eso el mapa en
+  producción sigue mostrando el error de "falta configurar la key". Una
+  API key de Maps JavaScript **no se puede "encriptar" ni mover al
+  backend** — el navegador la necesita en claro para poder pedir el
+  script del mapa, es pública por diseño (se ve en el código fuente de
+  cualquier visitante). La protección real es restringirla en Google
+  Cloud Console: por referrer HTTP (el dominio de Vercel) y por API
+  (solo "Maps JavaScript API") — pendiente de que el usuario lo configure
+  ahí, no es algo que se pueda hacer desde este repo.
+- **Marcadores de Sucursales como edificio, no pin genérico**: pedido
+  explícito del usuario viendo "Sucursal Autlán / Almacén · Autlán de
+  Navarro" con un pin rojo default en el mapa. `MapMarker` ganó
+  `locationType` (el `locations.location_type` real: sucursal/almacén/
+  taller/oficina) — `markerHtml()` lo detecta y usa
+  `locationMarkerHtml()` en vez del punto/avatar de siempre: una tarjeta
+  cuadrada blanca con borde de color + emoji por tipo (🏢 sucursal, 🏭
+  almacén, 🔧 taller, 🏬 oficina — `LOCATION_TYPE_ICON`) y una puntita
+  triangular abajo para que siga señalando el punto exacto en el suelo
+  como un pin, en vez de un punto/dot centrado. `HtmlMarkerOverlay` ganó
+  un parámetro `anchor` (`'center' | 'bottom'`) porque este marcador sí
+  necesita anclarse por la punta de abajo, no por el centro como los
+  demás. Solo se usa en `ControlMapPage.tsx` (únicas Sucursales que se
+  grafican en un mapa hoy).
 
-## Variables de entorno
+## Sidebar: buscador + flyout al pasar el cursor en modo colapsado (agregado en esta fase)
+
+Pedido explícito del usuario: "poder contraer el menú y se van los
+módulos al pasar el cursor, ver las vistas y seleccionar cuál quiero, y
+un buscador en el menú". El botón para contraer el sidebar a solo-íconos
+ya existía (`Header`/`AppShell`, `collapsed`/`iconOnly`) — lo nuevo es
+que colapsado ya no dependía solo del `title` nativo del navegador (lento,
+uno a la vez) para saber qué es cada ícono.
+
+- **Flyout por sección al pasar el cursor** (`Sidebar.tsx`,
+  `renderSection`): en modo colapsado, cada sección (Operación/Flota/…)
+  es un contenedor `group/section relative`; al hacer hover aparece un
+  panel (`group-hover/section:visible`, CSS puro, sin JS) con el título
+  de la sección y todos sus ítems con su etiqueta completa — se puede
+  hacer click directo ahí para navegar, sin tener que expandir todo el
+  menú. `nav` cambia de `overflow-y-auto` a `overflow-visible` cuando
+  está colapsado (el riel de íconos es corto, no necesita scroll) para
+  que el flyout no quede recortado por el contenedor con scroll — si en
+  algún momento el riel colapsado crece demasiado para cualquier
+  pantalla, revisar esto.
+- **Buscador real** (`normalize()` quita acentos y mayúsculas): en modo
+  expandido es un input siempre visible arriba del menú, filtra los
+  ítems por nombre en vivo y oculta las secciones sin resultados. En
+  modo colapsado, un botón de lupa abre un flyout (mismo estilo que los
+  de sección) con su propio input — mismo `query`, mismo filtro — para
+  poder buscar sin expandir el sidebar. `useClickOutside` (ya existía en
+  el proyecto) lo cierra al hacer click fuera; seleccionar un ítem
+  también lo cierra y limpia la búsqueda.
+
+## Mapa real de Google Maps + pantalla completa (agregado en esta fase)
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
 `VITE_GOOGLE_MAPS_API_KEY` en `.env` (gitignored) — esta última la debe
