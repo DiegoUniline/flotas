@@ -2187,6 +2187,61 @@ iniciales" que ya existía en el panel de la unidad (`drivers.photo_url`).
   el marcador muestra sus iniciales sobre fondo verde — nunca una foto
   inventada ni un ícono genérico sin identidad.
 
+## Foto de perfil real del operador (agregado en esta fase)
+
+Pedido explícito del usuario: "falta poder editar usuarios y agregar por
+ende foto de perfil" — `drivers.photo_url` existía en el esquema y ya se
+mostraba en varios lados (panel de la unidad, avatar del mapa de la fase
+anterior) pero **no había ninguna forma de subirla** — siempre caía al
+respaldo de iniciales. Se cierra ese hueco.
+
+- **Bucket nuevo `avatars` (migración `avatars_public_bucket`)**: a
+  diferencia de `attachments` (privado, requiere URL firmada), este
+  bucket es **público** a propósito — `photo_url` se usa directo en
+  `<img src>` en varios lugares sin firmar, así que la foto tiene que
+  vivir en un bucket público. Misma convención de path que `attachments`
+  (`<organization_id>/<entity_type>/<entity_id>/archivo`) para que la
+  policy de escritura sea idéntica (RLS exige que el primer segmento sea
+  un `organization_id` al que el usuario pertenezca); lectura abierta
+  (`bucket_id = 'avatars'`, sin filtro de organización — es pública por
+  diseño).
+- **`features/attachments/api/profilePhotoApi.ts`**, `uploadProfilePhoto()`:
+  sube el archivo y regresa la URL pública real
+  (`getPublicUrl`, no `createSignedUrl`). Si había una foto anterior, la
+  borra del storage para no dejar archivos huérfanos acumulándose —
+  reconstruye el `storage_path` a partir de la URL pública anterior.
+- **`components/ui/ProfilePhotoUploader.tsx`** (nuevo, genérico —
+  reutilizable para cualquier entidad con foto, no solo operadores):
+  avatar circular con botón de cámara superpuesto; foto real si existe,
+  iniciales sobre `accent-100` si no (mismo `getInitials()`, ver abajo).
+  Sube de inmediato al elegir el archivo — **no** pasa por el
+  draft/Guardar genérico de la ficha, mismo criterio ya establecido para
+  cualquier relación con efecto propio (como `VehicleAssignmentField`):
+  llama `onUploaded(url)` para que la pantalla actualice el registro real
+  de una vez, sin esperar a que el usuario presione "Guardar".
+- **`DriverDetailPage.tsx`**: el uploader aparece junto al nombre en el
+  encabezado de la ficha, **solo al editar** (`!isNew`, necesita el `id`
+  ya guardado — mismo patrón que licencias/documentos/adjuntos). Al subir,
+  `useUpdateDriverPhoto()` (nuevo en `useDrivers.ts`, como
+  `useUpdateDriver` pero sin su toast genérico — el uploader ya muestra
+  el suyo) hace `update({photo_url: url})` e invalida `['driver', id]`
+  (gap que `useUpdateDriver` tampoco cubría — se corrigió ahí también,
+  de paso, para que el guardado normal de la ficha también refresque el
+  registro individual, no solo la lista).
+- **`getInitials()` extraído a `src/lib/format.ts`**: vivía duplicado
+  como función local `initials()` dentro de `ControlMapPage.tsx` (2 usos
+  ahí) — con el uploader de foto ya son 3+ lugares mostrando iniciales de
+  una persona, así que se movió al helper compartido en vez de duplicarlo
+  otra vez. `ControlMapPage.tsx` ahora importa `getInitials` de
+  `lib/format.ts` en los 3 sitios que antes usaban la función local.
+- **No construido a propósito:** foto de perfil para `organization_members`
+  (el módulo "Usuarios" de configuración) ni para clientes/vehículos —
+  el pedido fue específicamente sobre operadores (es lo que se ve en el
+  mapa/Centro de control). `ProfilePhotoUploader` ya quedó genérico
+  (recibe `organizationId`/`entityType`/`entityId`/`photoUrl`/`name`
+  como props), así que agregarlo a otra ficha con una columna de foto es
+  solo conectar el componente — no hace falta rehacerlo.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

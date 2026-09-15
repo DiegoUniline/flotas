@@ -22,7 +22,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { formatCurrency, formatDateTime } from '@/lib/format'
+import { formatCurrency, formatDateTime, getInitials } from '@/lib/format'
 import { LOCATION_TYPES } from '@/features/locations/api/locationsApi'
 import { ROUTE_STATUSES } from '@/features/routes/api/routePlansApi'
 import { STOP_STATUSES } from '@/features/routes/api/routeStopsApi'
@@ -183,15 +183,6 @@ function driverName(driver: { first_name: string; last_name: string } | null) {
   return driver ? `${driver.first_name} ${driver.last_name}` : null
 }
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
-
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -324,7 +315,7 @@ export function ControlMapPage() {
           // simple — es la unidad más importante de reconocer en el mapa,
           // se gana el ícono grande.
           avatarUrl: v.drivers?.photo_url ?? null,
-          avatarInitials: initials(name),
+          avatarInitials: getInitials(name),
         }
       })
 
@@ -530,7 +521,7 @@ export function ControlMapPage() {
                       <img src={route.drivers.photo_url} alt={routeDriverName ?? ''} className="h-11 w-11 shrink-0 rounded-full object-cover" />
                     ) : (
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-sm font-semibold text-accent-600">
-                        {routeDriverName ? initials(routeDriverName) : <User size={18} strokeWidth={2} />}
+                        {routeDriverName ? getInitials(routeDriverName) : <User size={18} strokeWidth={2} />}
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
@@ -620,7 +611,7 @@ export function ControlMapPage() {
                     />
                   ) : (
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-50 text-sm font-semibold text-accent-600">
-                      {selectedJobDriverName ? initials(selectedJobDriverName) : <Building2 size={18} strokeWidth={2} />}
+                      {selectedJobDriverName ? getInitials(selectedJobDriverName) : <Building2 size={18} strokeWidth={2} />}
                     </span>
                   )}
                   <div className="min-w-0 flex-1">

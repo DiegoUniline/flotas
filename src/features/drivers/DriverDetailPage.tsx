@@ -10,12 +10,13 @@ import { SaveDiscardBar } from '@/components/ui/SaveDiscardBar'
 import { Tabs } from '@/components/ui/Tabs'
 import { RelationSelect } from '@/components/ui/RelationSelect'
 import { HistoryPanel } from '@/components/audit/HistoryPanel'
+import { ProfilePhotoUploader } from '@/components/ui/ProfilePhotoUploader'
 import { Can } from '@/components/Can'
 import { useOrg } from '@/context/OrgContext'
 import { searchLocations } from '@/features/locations/api/locationsApi'
 import { LocationQuickCreate } from '@/features/locations/components/LocationQuickCreate'
 import { DRIVER_STATUSES, type Driver } from '@/features/drivers/api/driversApi'
-import { useCreateDriver, useDeleteDriver, useUpdateDriver } from '@/features/drivers/hooks/useDrivers'
+import { useCreateDriver, useDeleteDriver, useUpdateDriver, useUpdateDriverPhoto } from '@/features/drivers/hooks/useDrivers'
 import { useDriver, useDriverLicenses, useDriverCertifications } from '@/features/drivers/hooks/useDriverDetail'
 import { DriverAssignmentSection } from './components/DriverAssignmentSection'
 import { DriverLicensesSection } from './components/DriverLicensesSection'
@@ -68,6 +69,7 @@ export function DriverDetailPage() {
   const driverQuery = useDriver(isNew ? undefined : id)
   const createMutation = useCreateDriver()
   const updateMutation = useUpdateDriver()
+  const updatePhotoMutation = useUpdateDriverPhoto()
   const deleteMutation = useDeleteDriver()
   const licensesQuery = useDriverLicenses(isNew ? undefined : id)
   const certificationsQuery = useDriverCertifications(isNew ? undefined : id)
@@ -186,11 +188,24 @@ export function DriverDetailPage() {
 
             {(isNew || driver) && (
               <div className="flex max-w-6xl flex-col gap-4">
-                <div>
-                  <h1 className="text-xl font-semibold text-ink">
-                    {draft.first_name || draft.last_name ? `${draft.first_name} ${draft.last_name}` : isNew ? 'Nuevo operador' : 'Operador'}
-                  </h1>
-                  <p className="text-sm text-gray-500">{draft.employee_number ? `No. ${draft.employee_number}` : 'Sin número de empleado'}</p>
+                <div className="flex items-center gap-4">
+                  {!isNew && id && (
+                    <ProfilePhotoUploader
+                      organizationId={activeOrg!.id}
+                      entityType="driver"
+                      entityId={id}
+                      photoUrl={driver?.photo_url ?? null}
+                      name={`${draft.first_name} ${draft.last_name}`.trim()}
+                      onUploaded={(url) => updatePhotoMutation.mutate({ id, photoUrl: url })}
+                    />
+                  )}
+                  <div>
+                    <h1 className="text-xl font-semibold text-ink">
+                      {draft.first_name || draft.last_name ? `${draft.first_name} ${draft.last_name}` : isNew ? 'Nuevo operador' : 'Operador'}
+                    </h1>
+                    <p className="text-sm text-gray-500">{draft.employee_number ? `No. ${draft.employee_number}` : 'Sin número de empleado'}</p>
+                    {isNew && <p className="mt-1 text-xs text-gray-400">La foto de perfil se puede agregar una vez guardado el operador.</p>}
+                  </div>
                 </div>
 
                 <DetailSection title="Identificación" description="Datos personales y estado del operador.">

@@ -72,12 +72,31 @@ export function useUpdateDriver() {
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: DriverUpdate }) => updateDriver(id, input),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['drivers', activeOrg?.id] })
       void queryClient.invalidateQueries({ queryKey: ['driver-options', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['driver', variables.id] })
       showToast('Operador actualizado', 'success')
     },
     onError: () => showToast('No se pudo actualizar el operador', 'error'),
+  })
+}
+
+/** Igual que `useUpdateDriver` pero sin su toast genérico — la foto de
+ * perfil se sube de inmediato desde `ProfilePhotoUploader` (fuera del
+ * draft/Guardar de la ficha) y ya muestra su propio toast "Foto de
+ * perfil actualizada". */
+export function useUpdateDriverPhoto() {
+  const { activeOrg } = useOrg()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, photoUrl }: { id: string; photoUrl: string }) => updateDriver(id, { photo_url: photoUrl }),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['drivers', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['driver-options', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['driver', variables.id] })
+    },
   })
 }
 

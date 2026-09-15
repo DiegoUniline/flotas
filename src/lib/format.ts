@@ -29,3 +29,16 @@ export function formatDateTime(value: string | null | undefined): string {
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${day}/${month}/${year} ${hours}:${minutes}`
 }
+
+/** Iniciales (máx. 2) para avatares sin foto — mismo criterio en todos
+ * lados donde se muestra a una persona (panel de la unidad en el Centro
+ * de control, marcador en vivo del mapa, `ProfilePhotoUploader`). */
+export function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
