@@ -48,13 +48,13 @@ export function ListToolbar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
-            className="w-full rounded-md border border-gray-300 py-2 pl-8 pr-8 text-sm text-gray-900 placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+            className="w-full rounded-md border border-gray-300 py-2.5 pl-8 pr-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
           />
           {search && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               aria-label="Limpiar búsqueda"
             >
               <X size={14} strokeWidth={2} />
@@ -80,7 +80,7 @@ export function ListToolbar({
               <button
                 type="button"
                 onClick={() => onFiltersChange(filters.filter((f) => f.id !== filter.id))}
-                className="text-gray-400 hover:text-gray-700"
+                className="-m-1 rounded-full p-1 text-gray-400 hover:text-gray-700"
               >
                 <X size={11} strokeWidth={2} />
               </button>
@@ -89,7 +89,7 @@ export function ListToolbar({
           {groupBy && groupFields && (
             <span className="flex items-center gap-1 rounded-full bg-accent-50 px-2.5 py-1 text-xs text-accent-600">
               Agrupado por {groupFields.find((g) => g.key === groupBy)?.label ?? groupBy}
-              <button type="button" onClick={() => onGroupByChange?.(null)} className="text-accent-400 hover:text-accent-700">
+              <button type="button" onClick={() => onGroupByChange?.(null)} className="-m-1 rounded-full p-1 text-accent-400 hover:text-accent-700">
                 <X size={11} strokeWidth={2} />
               </button>
             </span>
@@ -101,7 +101,7 @@ export function ListToolbar({
                 onFiltersChange([])
                 onGroupByChange?.(null)
               }}
-              className="text-xs font-medium text-gray-500 hover:text-gray-700"
+              className="-my-1 rounded px-1 py-1 text-xs font-medium text-gray-500 hover:text-gray-700"
             >
               Limpiar todo
             </button>

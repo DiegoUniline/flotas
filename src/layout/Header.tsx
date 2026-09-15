@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LogOut, MoreVertical, PanelLeft, Smartphone } from 'lucide-react'
 import { OrgSwitcher } from '@/components/OrgSwitcher'
+import { IconButton } from '@/components/ui/IconButton'
 import { ThemeToggle, ThemeToggleMenuItem } from '@/components/ui/ThemeToggle'
 import { InstallAppButton } from '@/components/pwa/InstallAppButton'
 import { useAuth } from '@/context/AuthContext'
@@ -44,15 +45,10 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 bg-surface px-3 pt-[env(safe-area-inset-top)] sm:px-4">
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          className="shrink-0 rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-ink sm:p-1.5"
-          aria-label="Alternar barra lateral"
-        >
+      <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+        <IconButton onClick={onToggleSidebar} aria-label="Alternar barra lateral">
           <PanelLeft size={18} strokeWidth={2} />
-        </button>
+        </IconButton>
         <div className="min-w-0 truncate">
           <OrgSwitcher />
         </div>
@@ -79,14 +75,9 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
           botón "⋮" en vez de amontonarse y desbordar el header. */}
       <div className="flex items-center gap-1 sm:hidden">
         <div ref={menuRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((current) => !current)}
-            className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
-            aria-label="Más opciones"
-          >
+          <IconButton onClick={() => setMenuOpen((current) => !current)} aria-label="Más opciones">
             <MoreVertical size={18} strokeWidth={2} />
-          </button>
+          </IconButton>
 
           {menuOpen && (
             <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-lg border border-gray-200 bg-surface py-1.5 shadow-lg">

@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTheme } from '@/context/ThemeContext'
 import type { ThemePreference } from '@/features/organizations/api/organizationsApi'
+import { IconButton } from './IconButton'
 
 const ORDER: ThemePreference[] = ['system', 'light', 'dark']
 const ICON: Record<ThemePreference, typeof Sun> = { system: Monitor, light: Sun, dark: Moon }
@@ -15,15 +16,9 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
   const Icon = ICON[preference]
 
   return (
-    <button
-      type="button"
-      onClick={() => setPreference(ORDER[(ORDER.indexOf(preference) + 1) % ORDER.length])}
-      title={LABEL[preference]}
-      aria-label={LABEL[preference]}
-      className={`flex items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-ink sm:p-1.5 ${className}`}
-    >
+    <IconButton onClick={() => setPreference(ORDER[(ORDER.indexOf(preference) + 1) % ORDER.length])} title={LABEL[preference]} aria-label={LABEL[preference]} className={className}>
       <Icon size={18} strokeWidth={2} />
-    </button>
+    </IconButton>
   )
 }
 

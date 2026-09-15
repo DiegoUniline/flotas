@@ -7,6 +7,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean
 }
 
+/** `min-h-11` = 44px real, el mínimo táctil recomendado (iOS/Android) —
+ * antes era ~36px (`py-2` + `text-sm`), cómodo con mouse pero justo para
+ * dedo en celular. `focus-visible:ring` da un anillo de foco real con
+ * teclado (antes solo dependía del `outline` del navegador, inconsistente
+ * entre navegadores). */
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary: 'bg-accent-500 text-white hover:bg-accent-600 disabled:bg-gray-300',
   secondary:
@@ -25,7 +30,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed ${VARIANT_CLASSES[variant]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >

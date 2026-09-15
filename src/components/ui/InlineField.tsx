@@ -43,6 +43,11 @@ export function InlineField({ value, onChange, type = 'text', options, placehold
           ))}
         </select>
       ) : type === 'buttons' ? (
+        /* Único punto de esta ficha "se ve como texto" que se toca a
+         * propósito: son botones-píldora reales (no texto de solo lectura
+         * como el resto de `InlineField`), así que necesitan un tap target
+         * real — antes `px-2.5 py-1` daba ~20px de alto, por debajo de
+         * cualquier mínimo táctil razonable. */
         <div id={id} className="flex flex-wrap gap-1.5">
           {options?.map((option) => (
             <button
@@ -50,7 +55,7 @@ export function InlineField({ value, onChange, type = 'text', options, placehold
               type="button"
               onClick={() => onChange(option.value)}
               aria-pressed={value === option.value}
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`min-h-9 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                 value === option.value
                   ? 'border-accent-500 bg-accent-500 text-white'
                   : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'

@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ClipboardList, LocateFixed, MapPinned, RefreshCw } from 'lucide-react'
+import { IconButton } from '@/components/ui/IconButton'
 import { useLocationSharing } from '@/context/LocationSharingContext'
 
 const TABS = [
@@ -28,15 +29,10 @@ export function AppTabLayout() {
 
   return (
     <div className="flex h-full flex-col bg-gray-50">
-      <div className="flex shrink-0 items-center gap-2 border-b border-gray-200 bg-surface px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))]">
-        <button
-          type="button"
-          onClick={() => navigate('/centro-de-control')}
-          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-ink"
-          aria-label="Volver"
-        >
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-gray-200 bg-surface py-1.5 pl-2 pr-3 pt-[max(0.375rem,env(safe-area-inset-top))]">
+        <IconButton onClick={() => navigate('/centro-de-control')} aria-label="Volver">
           <ArrowLeft size={18} strokeWidth={2} />
-        </button>
+        </IconButton>
         <span className="text-sm font-semibold text-ink">App del repartidor</span>
       </div>
 
@@ -50,7 +46,7 @@ export function AppTabLayout() {
             key={tab.to}
             to={tab.to}
             className={({ isActive }) =>
-              `relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium ${
+              `relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium active:bg-gray-50 ${
                 isActive ? 'text-accent-600' : 'text-gray-500'
               }`
             }

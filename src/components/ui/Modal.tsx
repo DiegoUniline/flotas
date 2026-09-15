@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
+import { X } from 'lucide-react'
+import { IconButton } from './IconButton'
 
 interface ModalProps {
   open: boolean
@@ -45,14 +47,9 @@ export function Modal({ open, title, description, onClose, children, footer, clo
             <h2 className="truncate text-base font-semibold text-gray-900 sm:text-lg">{title}</h2>
             {description && <p className="text-sm text-gray-500">{description}</p>}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 rounded-md p-1 text-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
+          <IconButton onClick={onClose} aria-label="Cerrar">
+            <X size={20} strokeWidth={2} />
+          </IconButton>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
         {footer && (

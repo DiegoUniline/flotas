@@ -95,7 +95,7 @@ export function RelationSelect({
               }
             }}
             placeholder="Buscar..."
-            className="w-full border-b border-gray-100 px-3 py-2 text-sm text-gray-900 focus:outline-none"
+            className="w-full min-h-11 border-b border-gray-100 px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none"
           />
           <div className="max-h-56 overflow-y-auto p-1">
             {value && (
@@ -105,7 +105,7 @@ export function RelationSelect({
                   onSelect(null)
                   setOpen(false)
                 }}
-                className="block w-full rounded px-2.5 py-1.5 text-left text-sm text-gray-400 hover:bg-gray-50"
+                className="block min-h-10 w-full rounded px-2.5 py-2 text-left text-sm text-gray-400 hover:bg-gray-50"
               >
                 Quitar selección
               </button>
@@ -118,7 +118,7 @@ export function RelationSelect({
                   key={option.id}
                   type="button"
                   onClick={() => handleSelect(option)}
-                  className="block w-full rounded px-2.5 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="block min-h-10 w-full rounded px-2.5 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                 >
                   {option.label}
                 </button>
@@ -130,7 +130,7 @@ export function RelationSelect({
               <button
                 type="button"
                 onClick={() => setCreating(true)}
-                className="flex w-full items-center gap-1.5 rounded px-2.5 py-1.5 text-left text-sm font-medium text-accent-600 hover:bg-accent-50"
+                className="flex min-h-10 w-full items-center gap-1.5 rounded px-2.5 py-2 text-left text-sm font-medium text-accent-600 hover:bg-accent-50"
               >
                 <Plus size={13} strokeWidth={2} />
                 Crear "{query.trim()}"…

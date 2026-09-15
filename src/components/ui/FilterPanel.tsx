@@ -23,7 +23,7 @@ function blankFilter(field: FilterFieldDef): AppliedFilter {
   }
 }
 
-const CONTROL_CLASSNAME = 'rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-accent-500 focus:outline-none'
+const CONTROL_CLASSNAME = 'min-h-9 rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-accent-500 focus:outline-none'
 
 export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange, groupBy, onGroupByChange }: FilterPanelProps) {
   const [open, setOpen] = useState(false)
@@ -50,7 +50,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        className="flex min-h-11 items-center gap-1.5 rounded-md border border-gray-300 bg-surface px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
       >
         <SlidersHorizontal size={14} strokeWidth={2} className="text-gray-400" />
         Filtros
@@ -131,7 +131,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
                       className={`${CONTROL_CLASSNAME} flex-1`}
                     />
                   )}
-                  <button type="button" onClick={() => removeFilter(filter.id)} className="text-gray-400 hover:text-red-600">
+                  <button type="button" onClick={() => removeFilter(filter.id)} className="-m-1 rounded p-1 text-gray-400 hover:text-red-600">
                     <X size={14} strokeWidth={2} />
                   </button>
                 </div>
@@ -140,7 +140,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
             <button
               type="button"
               onClick={addFilter}
-              className="mt-2 flex items-center gap-1 text-xs font-medium text-accent-600 hover:text-accent-700"
+              className="-ml-1.5 mt-1 flex items-center gap-1 rounded px-1.5 py-1.5 text-xs font-medium text-accent-600 hover:text-accent-700"
             >
               <Plus size={13} strokeWidth={2} />
               Agregar filtro
@@ -156,7 +156,7 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
                     key={group.key}
                     type="button"
                     onClick={() => onGroupByChange(groupBy === group.key ? null : group.key)}
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                    className={`min-h-9 rounded-full border px-3 py-1.5 text-xs font-medium ${
                       groupBy === group.key
                         ? 'border-accent-500 bg-accent-50 text-accent-600'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'

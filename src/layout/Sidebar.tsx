@@ -187,7 +187,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Buscar vista…"
-                      className="w-full rounded-md border border-gray-300 py-1.5 pl-8 pr-2.5 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+                      className="w-full rounded-md border border-gray-300 py-2 pl-8 pr-2.5 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
                     />
                   </div>
                   <div className="mt-1.5 max-h-80 overflow-y-auto">
@@ -212,13 +212,13 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar en el menú…"
-                className="w-full rounded-md border border-gray-300 py-1.5 pl-8 pr-7 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
+                className="w-full rounded-md border border-gray-300 py-2 pl-8 pr-7 text-sm text-gray-900 focus:border-accent-500 focus:outline-none focus:ring-1 focus:ring-accent-500"
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                   title="Limpiar búsqueda"
                 >
                   <X size={14} strokeWidth={2} />

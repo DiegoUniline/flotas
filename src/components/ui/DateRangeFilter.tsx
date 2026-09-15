@@ -18,7 +18,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        className="flex min-h-11 items-center gap-1.5 rounded-md border border-gray-300 bg-surface px-3.5 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
       >
         <Calendar size={14} strokeWidth={2} className="text-gray-400" />
         {formatDateRangeLabel(value)}
@@ -35,7 +35,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
                 onChange(computeDateRange(preset.value))
                 setOpen(false)
               }}
-              className={`block w-full rounded px-2.5 py-1.5 text-left text-sm hover:bg-gray-50 ${
+              className={`block min-h-10 w-full rounded px-2.5 py-2 text-left text-sm hover:bg-gray-50 ${
                 value.preset === preset.value ? 'bg-accent-50 text-accent-600' : 'text-gray-700'
               }`}
             >
@@ -50,14 +50,14 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
                 type="date"
                 value={value.preset === 'custom' ? (value.from ?? '') : ''}
                 onChange={(e) => onChange({ preset: 'custom', from: e.target.value || null, to: value.preset === 'custom' ? value.to : null })}
-                className="w-full rounded border border-gray-300 px-1.5 py-1 text-xs"
+                className="w-full min-h-9 rounded border border-gray-300 px-2 py-1.5 text-xs"
               />
               <span className="text-gray-400">–</span>
               <input
                 type="date"
                 value={value.preset === 'custom' ? (value.to ?? '') : ''}
                 onChange={(e) => onChange({ preset: 'custom', from: value.preset === 'custom' ? value.from : null, to: e.target.value || null })}
-                className="w-full rounded border border-gray-300 px-1.5 py-1 text-xs"
+                className="w-full min-h-9 rounded border border-gray-300 px-2 py-1.5 text-xs"
               />
             </div>
           </div>

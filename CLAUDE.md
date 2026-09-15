@@ -2887,3 +2887,90 @@ ahora: Pedidos/Mapa/Ubicación/Sincronizar), `features/app/AppRouteMapPage.tsx`.
   el cliente, ninguna de las dos piezas existe de forma continua todavía
   — ver sección de geocercas arriba). Si se pide un ruteo de verdad,
   evaluar entonces la API de Directions/Routes de Google (tiene costo).
+
+## Pasada de tamaños táctiles: componentes compartidos, móvil y escritorio (agregada en esta fase)
+
+Pedido explícito del usuario: "actua como super diseñador de ux y
+reconsruye todo muy bien para que funcione perfecto tanto movil como web
+los btoones tamaño etc". Con el proyecto ya en decenas de pantallas, la
+manera correcta de tocar "todo" sin reescribir cada una a mano es la
+misma que ya se usó para el modo oscuro y la pasada de responsividad
+móvil: **arreglar los primitivos compartidos una sola vez** (`components/ui/*`
++ `layout/Header.tsx`/`Sidebar.tsx` + `features/app/AppTabLayout.tsx`) y
+dejar que se propague solo a cada pantalla que ya los usa. No se tocó
+página por página.
+
+- **Criterio real usado, no "se ve más grande porque sí":** 44×44px es el
+  mínimo de tap target recomendado tanto por Apple (iOS HIG) como por
+  Google (Material Design) — se verificó con Playwright que el botón
+  primario del login y el botón × del `Modal` miden exactamente 44px de
+  alto/ancho después del cambio (antes ~36px y ~28px respectivamente).
+- **`components/ui/Button.tsx`**: `px-3.5 py-2` (~36px) → `px-4 py-2.5
+  min-h-11` (44px real). Ganó también `focus-visible:ring` real (antes
+  dependía del `outline` por defecto del navegador, inconsistente entre
+  Chrome/Safari/Firefox). Se propaga solo a cada `<Button>` del proyecto
+  — Pagination, ConfirmDialog, SaveDiscardBar, wizard de Pedidos, tarjetas
+  de `MyJobsPage`, formularios en `Drawer`, etc.
+- **`components/ui/Input.tsx`**: `px-3 py-2` → `px-3.5 py-2.5 min-h-11` —
+  mismo criterio, se propaga a cada `<Input>` de cada formulario.
+- **`components/ui/IconButton.tsx`** (nuevo): antes cada botón de-solo-
+  ícono (hamburguesa del header, "⋮" de opciones, × de `Modal`/`Drawer`,
+  toggle de tema) tenía su propio `<button className="p-2 ...">`
+  improvisado, varios por debajo de 36px reales. Un solo componente con
+  dos tamaños (`md` = 44px real, el default; `sm` = 36px, solo para
+  contextos con varios íconos muy juntos) y foco visible consistente.
+  Aplicado en: `Header.tsx` (hamburguesa, "⋮"), `Modal.tsx`/`Drawer.tsx`
+  (× de cerrar, que además pasó de un glyph "×" crudo a un ícono `X` real
+  de `lucide-react`, más nítido en cualquier densidad de pantalla),
+  `ThemeToggle.tsx`, `AppTabLayout.tsx` (botón "Volver"). **No aplicado
+  a propósito** en los controles internos de `components/map/Map.tsx`
+  (Mapa/Satélite, mi ubicación, `FullscreenButton.tsx`) — esos ya estaban
+  documentados como deliberadamente del mismo tamaño que los controles
+  nativos equivalentes de Google Maps, no es un bug, cambiarlos rompería
+  ese criterio ya decidido.
+- **Buscadores y filtros** (`ListToolbar.tsx`, `FilterPanel.tsx`,
+  `DateRangeFilter.tsx`, `RelationSelect.tsx`, `Tabs.tsx`): inputs y
+  botones de estas piezas compartidas pasaron de alturas de ~28-32px a
+  36-44px según qué tan primario sea el control (el buscador principal y
+  el trigger de "Filtros"/rango de fecha a 44px reales; las opciones
+  dentro de un dropdown ya abierto, donde no compiten por espacio con
+  nada más, a ~36-40px). Los botones "×" de quitar un filtro/chip
+  ganaron el mismo truco que ya usa el resto del proyecto para no
+  engordar visualmente un elemento pequeño: padding real +
+  margen negativo (`-m-1 p-1`) que agranda el área de toque sin mover el
+  layout ni el tamaño visible del ícono.
+- **`InlineField.tsx` tipo `buttons`** (las píldoras de Estado/Tipo/
+  Prioridad en Vehículos y Pedidos): `px-2.5 py-1` (~20px de alto, un
+  botón real, no texto) → `px-3.5 py-1.5 min-h-9` (36px). **Deliberadamente
+  NO se tocó** el resto de `InlineField`/`RelationSelect` (el input
+  "fantasma" que se ve como texto plano) — esa densidad sigue siendo la
+  decisión documentada en la fase de responsividad móvil ("reducir su
+  tamaño ahí afectaría la densidad de cada ficha del proyecto entero, no
+  se pidió eso"); el tipo `buttons` es distinto porque es un botón real
+  con el que hay que acertar el tap, no un campo de texto denso.
+- **`ConfirmDialog.tsx`**: ganó `px-4` en el contenedor — en una pantalla
+  de ~360px de ancho real (no todas llegan a los 375px de un iPhone SE),
+  el diálogo (`max-w-sm` = 384px) podía tocar los bordes sin ningún
+  margen.
+- **`ToastViewport.tsx`**: el "×" crudo pasó a ícono `X` real con su
+  propio botón de padding (32px) en vez de texto suelto sin ningún área
+  de toque alrededor. Se mantiene la restricción ya documentada de no
+  usar `IconButton` genérico aquí (sus variantes asumen fondo claro; el
+  toast tiene fondo de color sólido fijo) — se resolvió a mano con
+  `hover:bg-white/10` en su lugar.
+- **Verificado con Playwright**: capturas en `/login` a 390px (celular,
+  claro y oscuro) y 1280px (escritorio), más una reproducción estática
+  del `Modal` con el CSS compilado real — medido el tamaño real en
+  píxeles del botón primario (44×~308 en celular, 44×334 en escritorio)
+  y del botón × del modal (44×44 exacto) para confirmar que el número no
+  es solo teórico. `npx tsc -b`/`npm run build`/lint limpios.
+- **No tocado a propósito** (mismo criterio de siempre, no reinventar lo
+  que ya está bien): la densidad tipo Odoo de las tablas (filas
+  clickeables completas, no botones por celda — ya es el patrón correcto
+  para touch, tocar cualquier parte de la fila funciona), `Sidebar.tsx`
+  colapsado (los rieles de sección ya median ~40px, dentro de rango), y
+  cualquier control interno de mapas (ver arriba). "Reconstruir todo"
+  se interpretó como "que cada botón/input compartido tenga un tamaño de
+  toque real", no como rediseñar la identidad visual (colores, tipografía,
+  densidad Odoo) que el usuario ya aprobó en fases anteriores — nada de
+  eso se tocó aquí.

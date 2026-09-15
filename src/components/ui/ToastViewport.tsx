@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 
 // `slate-800`, no `gray-800`: la escala `gray-*` se invierte en modo oscuro
@@ -20,16 +21,16 @@ export function ToastViewport() {
         <div
           key={toast.id}
           role="status"
-          className={`${VARIANT_STYLES[toast.variant]} flex items-center gap-3 rounded-md px-4 py-2.5 text-sm text-white shadow-lg`}
+          className={`${VARIANT_STYLES[toast.variant]} flex items-center gap-2 rounded-md py-2.5 pl-4 pr-2 text-sm text-white shadow-lg`}
         >
           <span>{toast.message}</span>
           <button
             type="button"
             onClick={() => dismissToast(toast.id)}
-            className="text-white/70 hover:text-white"
+            className="flex shrink-0 items-center justify-center rounded-md p-2 text-white/70 hover:bg-white/10 hover:text-white"
             aria-label="Cerrar"
           >
-            ×
+            <X size={16} strokeWidth={2} />
           </button>
         </div>
       ))}

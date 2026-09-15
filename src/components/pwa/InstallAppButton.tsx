@@ -23,7 +23,7 @@ export function InstallAppButton() {
       <button
         type="button"
         onClick={() => (canInstall ? void promptInstall() : setShowIosHelp((current) => !current))}
-        className="flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        className="flex min-h-11 items-center gap-1.5 rounded-md border border-gray-300 px-3.5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         <Download size={15} strokeWidth={2} />
         Instalar app
