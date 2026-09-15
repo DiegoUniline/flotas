@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import L from 'leaflet'
-import '@/lib/leafletIconFix'
 import { LocateFixed, Search } from 'lucide-react'
 import { formatDateTime } from '@/lib/format'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useFullscreen } from '@/hooks/useFullscreen'
 import { searchAddress, type AddressResult } from '@/lib/geocode'
+import { loadGoogleMaps } from '@/lib/googleMaps'
+import { FullscreenButton } from '@/components/ui/FullscreenButton'
 
-const MEXICO_CENTER: [number, number] = [23.6345, -102.5528]
+const MEXICO_CENTER = { lat: 23.6345, lng: -102.5528 }
 
 interface GpsCaptureFieldProps {
   latitude: number | null
@@ -20,9 +21,10 @@ interface GpsCaptureFieldProps {
 /** Captura la ubicación GPS real del dispositivo al momento de recolectar o
  * entregar un pedido (geolocalización del navegador, mismo mecanismo que
  * "Usar mi ubicación" en domicilios de cliente — no requiere proveedor de
- * rastreo externo). Es una foto puntual, no tracking en vivo. El mapa con
- * pin arrastrable, más el buscador de direcciones, permiten corregir o fijar
- * la posición a mano si el GPS del dispositivo se equivocó o no aplica. */
+ * rastreo externo). Es una foto puntual, no tracking en vivo. El mapa (real
+ * de Google Maps) con pin arrastrable, más el buscador de direcciones
+ * (Nominatim, sin costo), permiten corregir o fijar la posición a mano si el
+ * GPS del dispositivo se equivocó o no aplica. */
 export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, label = 'Capturar ubicación actual' }: GpsCaptureFieldProps) {
   const [locating, setLocating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,75 +33,73 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [resultsOpen, setResultsOpen] = useState(false)
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [mapError, setMapError] = useState('')
   const debouncedQuery = useDebouncedValue(query, 400)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const searchBoxRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
-  const markerRef = useRef<L.Marker | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const markerRef = useRef<google.maps.Marker | null>(null)
   const onCaptureRef = useRef(onCapture)
   onCaptureRef.current = onCapture
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(wrapperRef)
 
   useClickOutside(searchBoxRef, () => setResultsOpen(false), resultsOpen)
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
-
-    const map = L.map(containerRef.current, { zoomControl: true }).setView(
-      latitude != null && longitude != null ? [latitude, longitude] : MEXICO_CENTER,
-      latitude != null && longitude != null ? 15 : 5,
-    )
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map)
-
-    if (latitude != null && longitude != null) {
-      markerRef.current = L.marker([latitude, longitude], { draggable: true }).addTo(map)
-      markerRef.current.on('dragend', () => {
-        const pos = markerRef.current!.getLatLng()
-        onCaptureRef.current(pos.lat, pos.lng, new Date().toISOString())
+    let cancelled = false
+    loadGoogleMaps()
+      .then((maps) => {
+        if (cancelled || !containerRef.current || mapRef.current) return
+        const map = new maps.maps.Map(containerRef.current, {
+          center: latitude != null && longitude != null ? { lat: latitude, lng: longitude } : MEXICO_CENTER,
+          zoom: latitude != null && longitude != null ? 15 : 5,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        })
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (!e.latLng) return
+          onCaptureRef.current(e.latLng.lat(), e.latLng.lng(), new Date().toISOString())
+        })
+        mapRef.current = map
+        setMapStatus('ready')
       })
-    }
-
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      onCaptureRef.current(e.latlng.lat, e.latlng.lng, new Date().toISOString())
-    })
-
-    mapRef.current = map
-
+      .catch((err: Error) => {
+        if (cancelled) return
+        setMapError(err.message)
+        setMapStatus('error')
+      })
     return () => {
-      map.remove()
-      mapRef.current = null
-      markerRef.current = null
+      cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || mapStatus !== 'ready') return
 
     if (latitude == null || longitude == null) {
-      if (markerRef.current) {
-        markerRef.current.remove()
-        markerRef.current = null
-      }
+      markerRef.current?.setMap(null)
+      markerRef.current = null
       return
     }
 
     if (!markerRef.current) {
-      markerRef.current = L.marker([latitude, longitude], { draggable: true }).addTo(map)
-      markerRef.current.on('dragend', () => {
-        const pos = markerRef.current!.getLatLng()
-        onCaptureRef.current(pos.lat, pos.lng, new Date().toISOString())
+      const marker = new google.maps.Marker({ position: { lat: latitude, lng: longitude }, map, draggable: true })
+      marker.addListener('dragend', () => {
+        const pos = marker.getPosition()
+        if (pos) onCaptureRef.current(pos.lat(), pos.lng(), new Date().toISOString())
       })
+      markerRef.current = marker
     } else {
-      markerRef.current.setLatLng([latitude, longitude])
+      markerRef.current.setPosition({ lat: latitude, lng: longitude })
     }
-    map.setView([latitude, longitude], Math.max(map.getZoom(), 15))
-    // También recalcula el tamaño del mapa por si el contenedor cambió de tamaño entre renders.
-    map.invalidateSize()
-  }, [latitude, longitude])
+    map.setCenter({ lat: latitude, lng: longitude })
+    if ((map.getZoom() ?? 0) < 15) map.setZoom(15)
+  }, [latitude, longitude, mapStatus])
 
   useEffect(() => {
     if (!debouncedQuery.trim() || debouncedQuery.trim().length < 3) {
@@ -221,7 +221,22 @@ export function GpsCaptureField({ latitude, longitude, capturedAt, onCapture, la
         )}
       </div>
 
-      <div ref={containerRef} className="h-[420px] w-full rounded-md border border-gray-200" />
+      <div ref={wrapperRef} className="relative h-[420px] w-full overflow-hidden rounded-md border border-gray-200 bg-white">
+        <div ref={containerRef} className="h-full w-full" />
+        {mapStatus === 'error' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 p-4 text-center">
+            <p className="text-sm text-gray-500">{mapError}</p>
+          </div>
+        )}
+        {mapStatus === 'loading' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <p className="text-sm text-gray-400">Cargando mapa…</p>
+          </div>
+        )}
+        {mapStatus === 'ready' && (
+          <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} className="absolute bottom-2.5 right-2.5 z-[1000]" />
+        )}
+      </div>
       {latitude != null && longitude != null && <p className="text-xs text-gray-400">Arrastra el pin o toca el mapa para corregirlo.</p>}
     </div>
   )

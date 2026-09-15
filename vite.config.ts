@@ -67,10 +67,15 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ url }) => url.hostname.endsWith('tile.openstreetmap.org') || url.hostname.endsWith('arcgisonline.com'),
+            // Tiles/recursos de Google Maps (el mapa visual, decisión del
+            // usuario de reemplazar Leaflet/OSM) — el buscador de
+            // direcciones sigue en Nominatim (fuera de este cacheo, no se
+            // tocó). CacheFirst para que el mapa se vea con lo último
+            // cargado sin conexión, mismo criterio que antes con OSM/Esri.
+            urlPattern: ({ url }) => url.hostname === 'maps.googleapis.com' || url.hostname === 'maps.gstatic.com',
             handler: 'CacheFirst',
             options: {
-              cacheName: 'map-tiles',
+              cacheName: 'google-maps',
               cacheableResponse: { statuses: [0, 200] },
               expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 14 },
             },

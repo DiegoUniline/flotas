@@ -2270,6 +2270,70 @@ nunca recordaba que el operador *quería* seguir compartiendo.
   cierra la pestaña/el navegador, el envío se apaga por completo — es lo
   esperado, no debe seguir mandando posición con la app cerrada.
 
+## Mapa real de Google Maps + pantalla completa (agregado en esta fase)
+
+Pedido explícito del usuario: "usemos solo para ver el mapa la app de
+Google Maps... está horrible [Leaflet/OSM] y falta ver en pantalla
+completa para ver dónde andan". Se reemplazó el motor de mapas en los 3
+componentes que lo usaban — **solo el mapa visual**, no el buscador de
+direcciones (`lib/geocode.ts` sigue en Nominatim/OSM, gratuito, no se
+tocó) ni ninguna lógica de negocio.
+
+- **`src/lib/googleMaps.ts`**: cargador único (singleton) del script de
+  Google Maps JavaScript API, inyectado una sola vez aunque haya varios
+  mapas montados a la vez. Lee `VITE_GOOGLE_MAPS_API_KEY` de `.env` — a
+  diferencia de Nominatim/OSM/Esri (gratis, sin key), Google Maps **sí
+  requiere una API key de Google Cloud con facturación activada** (tiene
+  capa gratuita mensual). Sin la key configurada, cada mapa muestra un
+  estado de error real ("Falta configurar VITE_GOOGLE_MAPS_API_KEY"), no
+  una pantalla en blanco silenciosa — mismo criterio de errores visibles
+  del resto del proyecto. **`.env` tiene la variable vacía** — el usuario
+  debe generar su propia API key en Google Cloud Console (Maps JavaScript
+  API habilitada) y ponerla ahí y en las variables de entorno de Vercel
+  para producción; no se inventó ni se compartió ninguna key.
+- **`components/map/Map.tsx`** (Centro de control, Mi ubicación),
+  **`components/ui/GpsCaptureField.tsx`** (GPS de recolección/entrega en
+  Pedidos), **`features/geofences/components/GeofenceMapField.tsx`**
+  (círculo de geocerca): los 3 reescritos sobre `google.maps.Map` en vez
+  de `L.map` de Leaflet, misma interfaz pública (props sin cambios) —
+  ninguna pantalla que los usa tuvo que cambiar. Los marcadores de color/
+  avatar/anillo animado que antes eran `L.divIcon` ahora son un overlay
+  HTML propio (`HtmlMarkerOverlay`, clase sobre `google.maps.OverlayView`)
+  para conservar el mismo control visual sin depender de un "Map ID" de
+  Advanced Markers de Google Cloud (paso de configuración extra que no
+  se pidió). El popup de marcador usa `google.maps.InfoWindow`; la
+  polyline de ruta usa `google.maps.Polyline` con el patrón oficial de
+  Google para línea punteada (símbolo repetido, no hay `dashArray` nativo
+  como en Leaflet). Toggle Mapa/Satélite ahora usa el satélite real de
+  Google (`mapTypeId`), no el mosaico de Esri de antes.
+- **Pantalla completa real** (`hooks/useFullscreen.ts` +
+  `components/ui/FullscreenButton.tsx`, botón nuevo junto a "Mi
+  ubicación" en los 3 mapas): usa la Fullscreen API nativa del navegador
+  (`element.requestFullscreen()`), no un modal que simula ocupar toda la
+  pantalla — el mapa realmente toma todo el viewport del dispositivo para
+  ver mejor dónde andan los operadores, con el mismo botón para salir.
+  Aplicado a los 3 mapas de la app (Centro de control, captura de GPS de
+  Pedidos, geocercas), como pidió el usuario ("todos los mapas").
+- **Leaflet se quitó del proyecto por completo**: `leaflet`/
+  `@types/leaflet` fuera de `package.json`, `src/lib/leafletIconFix.ts`
+  eliminado, `@import 'leaflet/dist/leaflet.css'` quitado de
+  `index.css`. `@types/google.maps` agregado como dev dependency y a
+  `tsconfig.app.json` → `compilerOptions.types` (el proyecto declara
+  `types` explícito, así que un `@types/*` nuevo no se detecta solo, hay
+  que agregarlo ahí).
+- **PWA (`vite.config.ts`)**: la regla de cacheo `CacheFirst` de tiles
+  del mapa se cambió de `tile.openstreetmap.org`/`arcgisonline.com` a
+  `maps.googleapis.com`/`maps.gstatic.com` — mismo criterio de que el
+  mapa se siga viendo con lo último cargado sin conexión.
+- **No construido a propósito:** Advanced Markers con Map ID propio de
+  Google Cloud (el overlay HTML ya da el mismo resultado visual sin ese
+  paso de configuración extra); Google Geocoding API para el buscador de
+  direcciones (se dejó Nominatim, que ya funcionaba bien y no tiene
+  costo — el pedido fue sobre el mapa visual, no sobre el buscador).
+
 ## Variables de entorno
 
-`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
+`VITE_GOOGLE_MAPS_API_KEY` en `.env` (gitignored) — esta última la debe
+generar el usuario en Google Cloud Console (Maps JavaScript API +
+facturación) y configurarla también en Vercel para producción.

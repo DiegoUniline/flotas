@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import L from 'leaflet'
-import '@/lib/leafletIconFix'
 import { Search } from 'lucide-react'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useFullscreen } from '@/hooks/useFullscreen'
 import { searchAddress, type AddressResult } from '@/lib/geocode'
+import { loadGoogleMaps } from '@/lib/googleMaps'
+import { FullscreenButton } from '@/components/ui/FullscreenButton'
 
-const MEXICO_CENTER: [number, number] = [23.6345, -102.5528]
+const MEXICO_CENTER = { lat: 23.6345, lng: -102.5528 }
 
 interface GeofenceMapFieldProps {
   latitude: number | null
@@ -16,92 +17,106 @@ interface GeofenceMapFieldProps {
   onChangeCenter: (latitude: number, longitude: number) => void
 }
 
-/** Mapa con un círculo (centro arrastrable + radio en metros) para definir
- * una geocerca — mismo patrón de `GpsCaptureField` (buscador de dirección
- * con Nominatim, click en el mapa reposiciona) pero dibuja un `L.circle`
- * en vez de solo un pin, porque una geocerca es una zona, no un punto. */
+/** Mapa (real de Google Maps) con un círculo (centro arrastrable + radio en
+ * metros) para definir una geocerca — mismo patrón de `GpsCaptureField`
+ * (buscador de dirección con Nominatim, click en el mapa reposiciona) pero
+ * dibuja un `google.maps.Circle` en vez de solo un pin, porque una geocerca
+ * es una zona, no un punto. */
 export function GeofenceMapField({ latitude, longitude, radiusMeters, color, onChangeCenter }: GeofenceMapFieldProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<AddressResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [resultsOpen, setResultsOpen] = useState(false)
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [mapError, setMapError] = useState('')
   const debouncedQuery = useDebouncedValue(query, 400)
   const searchBoxRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
-  const markerRef = useRef<L.Marker | null>(null)
-  const circleRef = useRef<L.Circle | null>(null)
+  const mapRef = useRef<google.maps.Map | null>(null)
+  const markerRef = useRef<google.maps.Marker | null>(null)
+  const circleRef = useRef<google.maps.Circle | null>(null)
   const onChangeCenterRef = useRef(onChangeCenter)
   onChangeCenterRef.current = onChangeCenter
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(wrapperRef)
 
   useClickOutside(searchBoxRef, () => setResultsOpen(false), resultsOpen)
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
-
-    const map = L.map(containerRef.current, { zoomControl: true }).setView(
-      latitude != null && longitude != null ? [latitude, longitude] : MEXICO_CENTER,
-      latitude != null && longitude != null ? 14 : 5,
-    )
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map)
-
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      onChangeCenterRef.current(e.latlng.lat, e.latlng.lng)
-    })
-
-    mapRef.current = map
+    let cancelled = false
+    loadGoogleMaps()
+      .then((maps) => {
+        if (cancelled || !containerRef.current || mapRef.current) return
+        const map = new maps.maps.Map(containerRef.current, {
+          center: latitude != null && longitude != null ? { lat: latitude, lng: longitude } : MEXICO_CENTER,
+          zoom: latitude != null && longitude != null ? 14 : 5,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        })
+        map.addListener('click', (e: google.maps.MapMouseEvent) => {
+          if (!e.latLng) return
+          onChangeCenterRef.current(e.latLng.lat(), e.latLng.lng())
+        })
+        mapRef.current = map
+        setMapStatus('ready')
+      })
+      .catch((err: Error) => {
+        if (cancelled) return
+        setMapError(err.message)
+        setMapStatus('error')
+      })
     return () => {
-      map.remove()
-      mapRef.current = null
-      markerRef.current = null
-      circleRef.current = null
+      cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || mapStatus !== 'ready') return
 
     if (latitude == null || longitude == null) {
-      markerRef.current?.remove()
-      circleRef.current?.remove()
+      markerRef.current?.setMap(null)
+      circleRef.current?.setMap(null)
       markerRef.current = null
       circleRef.current = null
       return
     }
 
+    const position = { lat: latitude, lng: longitude }
+
     if (!markerRef.current) {
-      markerRef.current = L.marker([latitude, longitude], { draggable: true }).addTo(map)
-      markerRef.current.on('dragend', () => {
-        const pos = markerRef.current!.getLatLng()
-        onChangeCenterRef.current(pos.lat, pos.lng)
+      const marker = new google.maps.Marker({ position, map, draggable: true })
+      marker.addListener('dragend', () => {
+        const pos = marker.getPosition()
+        if (pos) onChangeCenterRef.current(pos.lat(), pos.lng())
       })
+      markerRef.current = marker
     } else {
-      markerRef.current.setLatLng([latitude, longitude])
+      markerRef.current.setPosition(position)
     }
 
     if (!circleRef.current) {
-      circleRef.current = L.circle([latitude, longitude], {
+      circleRef.current = new google.maps.Circle({
+        center: position,
         radius: radiusMeters,
-        color,
+        strokeColor: color,
+        strokeWeight: 2,
         fillColor: color,
         fillOpacity: 0.15,
-        weight: 2,
-      }).addTo(map)
+        map,
+      })
     } else {
-      circleRef.current.setLatLng([latitude, longitude])
+      circleRef.current.setCenter(position)
       circleRef.current.setRadius(radiusMeters)
-      circleRef.current.setStyle({ color, fillColor: color })
+      circleRef.current.setOptions({ strokeColor: color, fillColor: color })
     }
 
-    map.invalidateSize()
-    map.fitBounds(circleRef.current.getBounds(), { maxZoom: 16 })
-  }, [latitude, longitude, radiusMeters, color])
+    const bounds = circleRef.current.getBounds()
+    if (bounds) map.fitBounds(bounds, 16)
+  }, [latitude, longitude, radiusMeters, color, mapStatus])
 
   useEffect(() => {
     if (!debouncedQuery.trim() || debouncedQuery.trim().length < 3) {
@@ -184,7 +199,22 @@ export function GeofenceMapField({ latitude, longitude, radiusMeters, color, onC
         )}
       </div>
 
-      <div ref={containerRef} className="h-[380px] w-full rounded-md border border-gray-200" />
+      <div ref={wrapperRef} className="relative h-[380px] w-full overflow-hidden rounded-md border border-gray-200 bg-white">
+        <div ref={containerRef} className="h-full w-full" />
+        {mapStatus === 'error' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 p-4 text-center">
+            <p className="text-sm text-gray-500">{mapError}</p>
+          </div>
+        )}
+        {mapStatus === 'loading' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <p className="text-sm text-gray-400">Cargando mapa…</p>
+          </div>
+        )}
+        {mapStatus === 'ready' && (
+          <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} className="absolute bottom-2.5 right-2.5 z-[1000]" />
+        )}
+      </div>
       {latitude != null && longitude != null && <p className="text-xs text-gray-400">Arrastra el pin o toca el mapa para mover el centro.</p>}
     </div>
   )
