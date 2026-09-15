@@ -58,7 +58,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Operación',
     icon: Compass,
     items: [
-      { label: 'Inicio', to: '/inicio', icon: Home, implemented: false },
+      { label: 'Inicio', to: '/inicio', icon: Home, implemented: true },
       { label: 'Centro de control', to: '/centro-de-control', permission: 'locations.view', icon: Map, implemented: true },
       { label: 'Rutas', to: '/rutas', permission: 'routes.view', icon: Route, implemented: true },
       { label: 'Pedidos', to: '/pedidos', permission: 'jobs.view', icon: ClipboardList, implemented: true },
@@ -97,17 +97,17 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Seguridad',
     icon: ShieldAlert,
     items: [
-      { label: 'Incidentes', to: '/incidentes', permission: 'alerts.view', icon: AlertTriangle, implemented: false },
-      { label: 'Alertas', to: '/alertas', permission: 'alerts.view', icon: Bell, implemented: false },
-      { label: 'Documentos', to: '/documentos', permission: 'drivers.view', icon: FileText, implemented: false },
+      { label: 'Incidentes', to: '/incidentes', permission: 'alerts.view', icon: AlertTriangle, implemented: true },
+      { label: 'Alertas', to: '/alertas', permission: 'alerts.view', icon: Bell, implemented: true },
+      { label: 'Documentos', to: '/documentos', permission: 'drivers.view', icon: FileText, implemented: true },
     ],
   },
   {
     label: 'Analítica',
     icon: BarChart3,
     items: [
-      { label: 'Reportes', to: '/reportes', permission: 'reports.view', icon: BarChart3, implemented: false },
-      { label: 'Indicadores', to: '/indicadores', permission: 'reports.view', icon: Gauge, implemented: false },
+      { label: 'Reportes', to: '/reportes', permission: 'reports.view', icon: BarChart3, implemented: true },
+      { label: 'Indicadores', to: '/indicadores', permission: 'reports.view', icon: Gauge, implemented: true },
     ],
   },
   {

@@ -2974,3 +2974,122 @@ página por página.
   toque real", no como rediseñar la identidad visual (colores, tipografía,
   densidad Odoo) que el usuario ya aprobó en fases anteriores — nada de
   eso se tocó aquí.
+
+## Módulos finales: Incidentes, Alertas, Documentos, Reportes, Indicadores, Inicio (agregado en esta fase)
+
+Pedido explícito del usuario: "termina todo los modulos que faltan
+completos" — de los 11 ítems `implemented: false` que quedaban en
+`navConfig.ts`, se construyeron estos 6 (los otros 5 quedan fuera de
+alcance a propósito, ver el bullet al final). Ninguno agregó tablas nuevas
+salvo Incidentes (cuyo esquema ya existía, ver abajo) — Alertas/
+Documentos/Reportes/Indicadores/Inicio son agregaciones de solo lectura
+sobre tablas que el proyecto ya tenía.
+
+- **Incidentes** (`/incidentes`, permiso `alerts.view` para el gate del
+  menú): único de los 6 con CRUD completo, mismo patrón Odoo exacto que
+  Dispositivos/Geocercas (`features/incidents/api/incidentsApi.ts` +
+  `hooks/useIncidents.ts` + `components/IncidentsTable.tsx` +
+  `IncidentsPage.tsx` + `IncidentDetailPage.tsx`). La tabla `incidents` ya
+  existía en el esquema con RLS completo (select por membresía de
+  organización, write gateado por `has_permission(org, 'alerts.manage')`
+  — mismo criterio de permiso único que Dispositivos/Geocercas, no hay
+  `incidents.view` separado) y `src/types/database.ts` ya la incluía; no
+  se tocó el esquema. `incident_type` (accidente/descompostura/
+  infracción/robo/otro) y `severity` (baja/media/alta, ≤6 opciones →
+  `InlineField type="buttons"`) son texto libre sugerido, mismo criterio
+  que `vehicles.status`. Cerrar el incidente (`status` → resuelto) sella
+  `resolved_at` con la hora del guardado si no lo tenía — mismo patrón
+  que `maintenance_records` al completarse. Obligatorios: **Fecha** y
+  **Descripción** (asterisco + validación en `handleSave`, mismo patrón
+  que Pedidos/Vehículos). Ruta dinámica `:id` únicamente (sin
+  `incidentes/nuevo` estática) — mismo bug ya documentado arriba con
+  Pedidos/Vehículos, no se repitió.
+- **Alertas** (`/alertas`, `alerts.view`): dashboard de solo lectura, **NO
+  es un motor de alertas/notificaciones** (eso sigue en Fase 6 del
+  roadmap, sin construir). `features/alerts/api/alertsApi.ts` agrega 5
+  fuentes reales sin duplicar ninguna lógica: mantenimientos vencidos/
+  próximos (reutiliza `maintenanceDueApi.fetchMaintenanceDue`, filtrado a
+  `overdue`/`due_soon`), refacciones con stock bajo (`parts` donde
+  `quantity_on_hand <= min_stock`), documentos por vencer (reutiliza
+  `documentsApi.fetchAllDocuments`, ver abajo), incidentes abiertos
+  (`incidents.status = 'open'`, tabla de arriba) y gastos pendientes de
+  aprobar (`expenses.status = 'pending'`). Cada fila enlaza a la ficha
+  real (vehículo, refacción, documento en su entidad dueña, incidente,
+  gasto) — sin `HistoryPanel` ni `DetailGrid`, es un tablero, no un CRUD.
+- **Documentos** (`/documentos`, `drivers.view` — la mayoría de
+  documentos existentes son de operador, mismo criterio ya documentado
+  para este mismo permiso reutilizado en `navConfig.ts`): índice de solo
+  lectura, **sin tabla nueva** — `features/documents/api/documentsApi.ts`
+  une `driver_licenses` + `driver_certifications` (con
+  `drivers(first_name,last_name)` embebido, FK directa) +
+  `entity_documents` con `entity_type = 'vehicle'` (sin FK directa a
+  `vehicles` por ser polimórfica, así que se hace un segundo `select` por
+  lote de `entity_id` para resolver el nombre del vehículo). Estado
+  calculado en el cliente a partir de `expires_at` (vencido/próximo a
+  vencer a 30 días/vigente/sin vencimiento) — independiente del campo
+  `status` que cada tabla ya tenía capturado a mano, este es el estado
+  real por fecha. Cada fila enlaza a la ficha del operador/vehículo
+  dueño — **editar sigue siendo ahí**, este índice no tiene su propio
+  CRUD. Reutilizado también por Alertas e Indicadores (mismo criterio de
+  "no duplicar la unión/cálculo en dos lugares").
+- **Reportes** (`/reportes`, `reports.view`): tablas simples (sin
+  librería de gráficas — el proyecto no tiene una instalada y no se
+  agregó una para esto) sobre columnas que ya existían: pedidos por
+  estado, entregas a tiempo vs. tarde (compara `route_stops.completed_at`
+  contra `estimated_arrival_at` — el único par de columnas reales que
+  sirve para medir esto; se descartó `jobs.time_window_end` porque ese
+  campo es la ventana pactada con el cliente, no la hora estimada de
+  llegada real de la ruta), top clientes por monto y actividad por
+  operador (pedidos entregados). Mismo criterio de agregación en cliente
+  con `ROW_LIMIT` ya aceptado en `costsApi.ts`.
+- **Indicadores** (`/indicadores`, `reports.view`): KPIs operativos con
+  tendencia (↑/↓ % vs. el día anterior), distinto de Costos (financiero)
+  y Reportes (tabular por periodo) — reutiliza literalmente el mismo
+  cálculo de tendencia (`trendPct`) y el mismo componente visual de
+  badge que ya existía en `ControlMapPage.tsx`/`fetchControlKpis`. Con
+  tendencia: % de entregas a tiempo, pedidos entregados. Sin tendencia
+  (backlog del momento, mismo criterio ya documentado para "Paradas
+  pendientes" del Centro de control — un % ahí sería ruido): flota
+  activa, mantenimientos vencidos, documentos por vencer.
+- **Inicio** (`/inicio`, **sin permiso** — visible para cualquier
+  miembro de la organización, como ya contempla `navConfig.ts` para
+  ítems sin `permission`): tarjetas de KPI reales (vehículos activos,
+  pedidos de hoy, mantenimientos vencidos, refacciones con stock bajo,
+  documentos por vencer) + accesos rápidos a Centro de control/Pedidos/
+  Vehículos. Reutiliza las mismas fuentes que Alertas/Indicadores/
+  Documentos, no se duplicó ningún cálculo. Cada conteo ya está
+  protegido por la RLS de su propia tabla vía membresía de organización
+  — no hace falta gate de permiso adicional para un resumen de solo
+  lectura.
+- **Recortes deliberados dentro de estos 6** (mismo criterio de "no
+  inventar sin confirmar" de siempre): en Incidentes no se agregó un
+  segundo permiso `incidents.view` (se reutiliza `alerts.manage`/
+  `alerts.view`, igual que Dispositivos/Geocercas con un solo permiso).
+  En Reportes/Indicadores no se agregó ninguna librería de gráficas —
+  todo son tablas y tarjetas de texto, consistente con que el proyecto
+  nunca ha tenido una dependencia de charts. En Alertas no hay ningún
+  mecanismo de notificación push/correo/badge en tiempo real — es una
+  vista que hay que abrir para consultar, no un sistema que avisa solo
+  (eso es exactamente el motor de alertas de Fase 6, sigue sin
+  construirse). En Documentos no se agregó edición inline — sigue siendo
+  un índice, editar cada documento vive en la ficha de su entidad dueña,
+  igual que se documentó para todo el resto del proyecto (evitar
+  duplicar formularios que ya existen).
+- **Los otros 5 ítems `implemented: false` que quedan en `navConfig.ts`
+  (Campos personalizados, Vistas, Integraciones, API, Suscripción) se
+  dejaron fuera de esta pasada a propósito** — cada uno requiere una
+  decisión de producto/arquitectura/procesador de pagos que no se puede
+  inventar, mismo razonamiento ya usado arriba en este documento para
+  estos mismos ítems: Campos personalizados/Vistas son un framework
+  genérico grande (Fase 2b del roadmap), mejor esperar a que 2+
+  entidades reales lo necesiten antes de construirlo; Integraciones/API
+  no tienen ningún proveedor ni contrato definido todavía; Suscripción
+  requiere elegir un procesador de pagos (Stripe u otro) que el usuario
+  no ha decidido. No se tocó su `implemented` ni se les dio ruta.
+- **Verificación:** `npx tsc -b` y `npm run build` limpios; `npm run
+  lint` sin errores (los únicos warnings nuevos —
+  `react(set-state-in-effect)` en `IncidentDetailPage.tsx`,
+  `react-hooks(exhaustive-deps)` en `DocumentsPage.tsx` — son el mismo
+  patrón preexistente que ya tienen decenas de fichas del proyecto
+  (`DeviceDetailPage.tsx`, `ExpenseDetailPage.tsx`, etc.), no una
+  regresión nueva.
