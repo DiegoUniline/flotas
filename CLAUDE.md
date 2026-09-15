@@ -2457,6 +2457,37 @@ uno a la vez) para saber qué es cada ícono.
   el proyecto) lo cierra al hacer click fuera; seleccionar un ítem
   también lo cierra y limpia la búsqueda.
 
+## Bug real: el mapa se pintaba encima del sidebar (corregido en esta fase)
+
+Reportado por el usuario con captura: el flyout del sidebar colapsado
+(sección/buscador) se veía tapado detrás del mapa, en vez de encima.
+Causa real — mismo tipo de bug ya documentado antes con
+Leaflet/`Modal`, no atendido todavía en el sidebar: los flyouts nuevos
+(`Sidebar.tsx`) se agregaron con `z-50`, pero los controles propios del
+mapa (`Map.tsx`, botones Mapa/Satélite/ubicación/pantalla completa) usan
+`z-[1000]`. Como ni `<main>` ni sus ancestros crean su propio contexto de
+apilamiento, ese `z-[1000]` competía directo contra el `z-50` del sidebar
+en la raíz del documento — y ganaba.
+
+**Corrección:** el `<aside>` (antes `z-50`, aplica en celular donde es
+`position: fixed`) y ambos flyouts (sección al pasar el cursor, buscador
+colapsado) subieron a `z-[1100]` — mismo nivel que `Modal`/`Drawer` en la
+escala ya documentada del proyecto (por encima de 1000, donde vive
+Leaflet/Google Maps). El fondo oscuro del overlay móvil subió de `z-40`
+a `z-[1090]` para seguir justo debajo. **Recordatorio reforzado:**
+cualquier capa fija/absoluta nueva que deba convivir con un mapa en
+pantalla (sidebar, dropdown, tooltip custom, lo que sea) tiene que usar
+esta misma escala por encima de 1000 — `z-50`/`z-40` por defecto de
+Tailwind nunca es suficiente en esta app.
+
+De paso se encontró y corrigió `normalize()` (usado por el buscador del
+sidebar): el rango de diacríticos `̀-ͯ` había quedado escrito
+como caracteres Unicode literales dentro del regex en vez de la
+secuencia de escape — funcionaba, pero es frágil (un editor/herramienta
+que normalice el archivo a NFC podría corromper silenciosamente el
+regex). Se reescribió con `String.fromCharCode(0x0300)`/`(0x036f)` para
+que el código fuente solo tenga ASCII.
+
 ## Mapa real de Google Maps + pantalla completa (agregado en esta fase)
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,

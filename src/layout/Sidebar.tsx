@@ -17,11 +17,11 @@ interface SidebarProps {
   onCloseMobile: () => void
 }
 
+const DIACRITICS_RANGE = String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f)
+const DIACRITICS_REGEX = new RegExp(`[${DIACRITICS_RANGE}]`, 'g')
+
 function normalize(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
+  return value.normalize('NFD').replace(DIACRITICS_REGEX, '').toLowerCase()
 }
 
 function ItemLabel({ item }: { item: NavItem }) {
@@ -96,7 +96,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile }: SidebarProps) {
             sidebars tipo Notion/Linear: no hace falta expandir todo el
             menú para ver y elegir una vista de esta sección. */}
         {compact && (
-          <div className="invisible absolute left-full top-0 z-50 ml-1.5 w-56 rounded-lg border border-gray-200 bg-white p-2 opacity-0 shadow-lg transition-opacity duration-100 group-hover/section:visible group-hover/section:opacity-100">
+          <div className="invisible absolute left-full top-0 z-[1100] ml-1.5 w-56 rounded-lg border border-gray-200 bg-white p-2 opacity-0 shadow-lg transition-opacity duration-100 group-hover/section:visible group-hover/section:opacity-100">
             <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
             <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item, false))}</ul>
           </div>
@@ -108,11 +108,17 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile }: SidebarProps) {
   return (
     <>
       {/* Fondo del overlay en celular — no existe en `lg:` porque ahí el
-          sidebar ya no es un overlay, es parte del layout normal. */}
-      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={onCloseMobile} aria-hidden="true" />}
+          sidebar ya no es un overlay, es parte del layout normal. Igual que
+          Modal/Drawer/ConfirmDialog, por encima de 1000: el mapa (Leaflet/
+          Google Maps) pinta sus propios controles a `z-[1000]` y, como
+          `main` no crea su propio contexto de apilamiento, esos controles
+          competían directo contra el `z-50` que tenía antes el sidebar y
+          ganaban — bug real reportado por el usuario ("el mapa está
+          encimado al menú"). */}
+      {mobileOpen && <div className="fixed inset-0 z-[1090] bg-black/30 lg:hidden" onClick={onCloseMobile} aria-hidden="true" />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-72 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:transition-[width] ${
+        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-72 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:transition-[width] ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } ${iconOnly ? 'lg:w-16' : 'lg:w-60'}`}
       >
@@ -135,7 +141,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile }: SidebarProps) {
                 <Search size={18} strokeWidth={2} />
               </button>
               {searchOpen && (
-                <div className="absolute left-full top-0 z-50 ml-1.5 w-64 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
+                <div className="absolute left-full top-0 z-[1100] ml-1.5 w-64 rounded-lg border border-gray-200 bg-white p-2 shadow-lg">
                   <div className="relative">
                     <Search size={14} strokeWidth={2} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
