@@ -56,18 +56,35 @@ export function AppShell() {
     return <OnboardingWizard />
   }
 
+  // "App del repartidor" (`/app/*`) es su propia experiencia tipo app
+  // móvil nativa, con su propio header + menú inferior (`AppTabLayout`) —
+  // pedido explícito del usuario ("cuando navegan a la app móvil no ven
+  // el escritorio"). Antes esas pantallas seguían viviendo DENTRO del
+  // `<main>` de este shell, así que el header/sidebar de escritorio
+  // (OrgSwitcher, hamburguesa, etc.) se seguía viendo encima — dos headers
+  // apilados, nada de "app real". Aquí se salta ese chrome por completo
+  // para esas rutas (los providers de abajo sí se conservan, es la misma
+  // sesión/organización/permiso de siempre, solo cambia qué se pinta).
+  const isAppSection = location.pathname.startsWith('/app')
+
   return (
     <PermissionsProvider>
       <LocationSharingProvider>
-        <div className="flex h-screen flex-col">
-          <Header onToggleSidebar={() => (isDesktop ? setCollapsed((c) => !c) : setMobileNavOpen((o) => !o))} />
-          <div className="flex flex-1 overflow-hidden">
-            <Sidebar iconOnly={collapsed && isDesktop} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} isDesktop={isDesktop} />
-            <main className="flex-1 overflow-hidden bg-gray-50">
-              <Outlet />
-            </main>
+        {isAppSection ? (
+          <div className="h-screen bg-gray-50">
+            <Outlet />
           </div>
-        </div>
+        ) : (
+          <div className="flex h-screen flex-col">
+            <Header onToggleSidebar={() => (isDesktop ? setCollapsed((c) => !c) : setMobileNavOpen((o) => !o))} />
+            <div className="flex flex-1 overflow-hidden">
+              <Sidebar iconOnly={collapsed && isDesktop} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} isDesktop={isDesktop} />
+              <main className="flex-1 overflow-hidden bg-gray-50">
+                <Outlet />
+              </main>
+            </div>
+          </div>
+        )}
       </LocationSharingProvider>
     </PermissionsProvider>
   )
