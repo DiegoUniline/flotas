@@ -30,6 +30,7 @@ import { MiUbicacionPage } from '@/features/tracking/MiUbicacionPage'
 import { MyJobsPage } from '@/features/jobs/MyJobsPage'
 import { AppTabLayout } from '@/features/app/AppTabLayout'
 import { AppSyncPage } from '@/features/app/AppSyncPage'
+import { AppRouteMapPage } from '@/features/app/AppRouteMapPage'
 import { DevicesPage } from '@/features/devices/DevicesPage'
 import { DeviceDetailPage } from '@/features/devices/DeviceDetailPage'
 import { GeofencesPage } from '@/features/geofences/GeofencesPage'
@@ -97,6 +98,7 @@ export function App() {
               <Route path="app" element={<AppTabLayout />}>
                 <Route index element={<Navigate to="pedidos" replace />} />
                 <Route path="pedidos" element={<MyJobsPage />} />
+                <Route path="mapa" element={<AppRouteMapPage />} />
                 <Route path="ubicacion" element={<MiUbicacionPage />} />
                 <Route path="sincronizar" element={<AppSyncPage />} />
               </Route>

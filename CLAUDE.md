@@ -2833,3 +2833,57 @@ ninguna forma de navegar al domicilio de entrega — solo texto.
   CSS compilado real de `npm run build`) vía Playwright, en claro y
   oscuro — no se pudo probar logueado como operador real en este entorno
   (sin credenciales de prueba), igual que la fase anterior.
+
+## Pestaña "Mapa" en la app del repartidor: orden de entrega + navegación real (agregada en esta fase)
+
+Pedido explícito del usuario: "ponle un mapa con orden de entrega y que
+ahi el mapa me lleve al siguiente destino y todo osea una app
+profesional". Nueva pestaña **"Mapa"** en `AppTabLayout` (4 pestañas
+ahora: Pedidos/Mapa/Ubicación/Sincronizar), `features/app/AppRouteMapPage.tsx`.
+
+- **Orden real, no ruteo optimizado por algoritmo:** `sortJobsForDelivery()`
+  (nueva, `jobsApi.ts`) ordena los pedidos activos con domicilio
+  geolocalizado por `priority` real del pedido (urgente > alta > normal >
+  baja) y luego por `scheduled_date`/`time_window_start` — campos que el
+  pedido ya tiene capturados, no una ruta calculada por distancia/tráfico
+  (un motor de ruteo real (VRP/TSP) es una feature aparte con su propio
+  costo de API que no se ha pedido; construirlo especulativamente aquí
+  habría sido inventar lógica de negocio, contra la regla del proyecto).
+  Se documenta así de explícito en el código para que quede claro qué es y
+  qué no es esta "ruta".
+- **El mapa "te lleva" con navegación real, no un mapa que calcula su
+  propia ruta:** cada parada numerada tiene su "Cómo llegar"
+  (`directionsUrl()`, ya existía) y hay un botón grande **"Iniciar ruta
+  completa"** nuevo — `multiStopDirectionsUrl()` en `jobsApi.ts` arma un
+  link de Google Maps con **waypoints nativos** (`&waypoints=lat,lng|...`)
+  sobre las paradas ya ordenadas, origen = ubicación actual del
+  dispositivo (Maps la resuelve sola al abrir la app en el celular, no se
+  manda ninguna). Tope de 10 paradas (destino + 9 waypoints, límite
+  práctico documentado del esquema de URL de Maps) — con más de 10, el
+  botón sigue abriendo una ruta real a las primeras 10, no se rompe.
+- **`components/map/Map.tsx`** ganó `MapMarker.sequence` (número real de
+  orden) → `numberedMarkerHtml()`, un pin circular con el número dentro
+  (mismo patrón visual que Uber/DoorDash marcan sus paradas), con
+  prioridad sobre el punto/avatar de siempre pero por debajo de
+  `locationType` (sucursales). El mapa de esta pestaña además dibuja la
+  `polyline` (ya existía como prop) conectando las paradas en el orden
+  calculado — es la secuencia real elegida, no una ruta por carretera
+  calculada (eso requeriría la API de Directions de Google, con costo
+  aparte).
+- **Solo entran al mapa/lista los pedidos con coordenadas reales**
+  (`hasCoordinates()`, type guard) — un pedido sin domicilio
+  geolocalizado no puede dirigirse a ningún lado, así que no aparece
+  numerado ahí (sigue viendo en la pestaña "Pedidos" normal).
+- **Compartido con `MyJobsPage.tsx`:** `addressLabel`/`directionsUrl`
+  (antes locales ahí) y el nuevo `ACTIVE_JOB_STATUSES` se movieron a
+  `jobsApi.ts` como exports — evita que la definición de "qué es un
+  pedido activo/pendiente" quede duplicada entre la lista y el mapa.
+  `MyJobsPage` ganó un link "Mapa" junto al título para llegar directo a
+  esta pestaña desde la lista.
+- **No construido a propósito:** motor de ruteo/optimización real
+  (ordenar por distancia/tiempo de traslado real entre paradas, no solo
+  prioridad+horario) y detección automática de "llegaste a la siguiente
+  parada" (requeriría posición en vivo confiable + geocercas evaluadas en
+  el cliente, ninguna de las dos piezas existe de forma continua todavía
+  — ver sección de geocercas arriba). Si se pide un ruteo de verdad,
+  evaluar entonces la API de Directions/Routes de Google (tiene costo).

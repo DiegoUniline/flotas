@@ -35,6 +35,12 @@ export interface MapMarker {
    * que se reconozca de un vistazo como una instalación fija y no como una
    * posición de vehículo/pedido. */
   locationType?: string
+  /** Número de orden real (1, 2, 3…) — pinta un pin circular con el número
+   * en vez del punto/avatar de siempre, para paradas de entrega en
+   * secuencia (app del repartidor). No es una posición en vivo ni un
+   * edificio fijo, así que es su propia variante, con prioridad sobre
+   * `color` pero no sobre `locationType`. */
+  sequence?: number
 }
 
 interface MapProps {
@@ -75,8 +81,21 @@ function locationMarkerHtml(marker: MapMarker): string {
     </span>`
 }
 
+/** Pin circular numerado (mismo patrón visual que apps de reparto reales:
+ * Uber/DoorDash marcan cada parada con su número de orden) — para la ruta
+ * de entregas del repartidor (`AppRouteMapPage`), en vez del punto/avatar
+ * de siempre. */
+function numberedMarkerHtml(marker: MapMarker): string {
+  const color = marker.color ?? '#ff6a3d'
+  return `<span style="display:flex;flex-direction:column;align-items:center">
+      <span style="width:26px;height:26px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white">${marker.sequence}</span>
+      <span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${color};margin-top:-1px"></span>
+    </span>`
+}
+
 function markerHtml(marker: MapMarker): string {
   if (marker.locationType !== undefined) return locationMarkerHtml(marker)
+  if (marker.sequence !== undefined) return numberedMarkerHtml(marker)
 
   if (marker.avatarUrl !== undefined || marker.avatarInitials !== undefined) {
     const color = marker.color ?? '#16a34a'
@@ -266,7 +285,12 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
       const html = markerHtml(marker)
       if (html) {
         const OverlayCtor = getHtmlMarkerOverlayCtor()
-        const overlay = new OverlayCtor(position, html, handleClick, marker.locationType !== undefined ? 'bottom' : 'center')
+        const overlay = new OverlayCtor(
+          position,
+          html,
+          handleClick,
+          marker.locationType !== undefined || marker.sequence !== undefined ? 'bottom' : 'center',
+        )
         overlay.setMap(map)
         overlaysRef.current.push(overlay)
       } else {

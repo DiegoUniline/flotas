@@ -254,6 +254,75 @@ export async function fetchMyJobs(driverId: string): Promise<MyJob[]> {
   return (data ?? []) as unknown as MyJob[]
 }
 
+export function addressLabel(job: MyJob): string {
+  const location = job.customer_locations
+  if (!location) return 'Sin domicilio de entrega'
+  return location.address ? `${location.name} — ${location.address}` : location.name
+}
+
+/** Link real de navegación (Google Maps, misma app que ya usa todo el
+ * proyecto) con direcciones al domicilio de entrega — prioriza
+ * coordenadas reales si existen, cae a buscar por dirección de texto si
+ * no. `null` solo si el pedido no tiene ningún dato de ubicación. */
+export function directionsUrl(job: MyJob): string | null {
+  const location = job.customer_locations
+  if (!location) return null
+  if (location.latitude != null && location.longitude != null) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}&travelmode=driving`
+  }
+  if (location.address) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.address)}&travelmode=driving`
+  }
+  return null
+}
+
+/** Estados que cuentan como "todavía por entregar" para la app del
+ * repartidor (pestaña "Activos" de `/app/pedidos` y las paradas que se
+ * grafican en `/app/mapa`) — compartido entre ambas pantallas para que
+ * nunca queden desincronizadas sobre qué es "pendiente". */
+export const ACTIVE_JOB_STATUSES = ['pending', 'en_route', 'arrived']
+
+const PRIORITY_WEIGHT: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 }
+
+/** Orden real de entrega para la app del repartidor: prioridad capturada
+ * en el pedido primero (urgente > alta > normal > baja), luego fecha/
+ * ventana de horario programada. No es una ruta optimizada por algoritmo
+ * (un motor de ruteo real es una feature aparte que no se ha pedido) —
+ * es el orden que ya dictan los campos reales que el pedido ya tiene. */
+export function sortJobsForDelivery(jobs: MyJob[]): MyJob[] {
+  return [...jobs].sort((a, b) => {
+    const priorityDiff = (PRIORITY_WEIGHT[a.priority] ?? 2) - (PRIORITY_WEIGHT[b.priority] ?? 2)
+    if (priorityDiff !== 0) return priorityDiff
+    const dateDiff = (a.scheduled_date ?? '9999-12-31').localeCompare(b.scheduled_date ?? '9999-12-31')
+    if (dateDiff !== 0) return dateDiff
+    return (a.time_window_start ?? '99:99').localeCompare(b.time_window_start ?? '99:99')
+  })
+}
+
+/** Link de navegación multi-parada real de Google Maps (waypoints nativos,
+ * origen = ubicación actual del dispositivo — Maps la resuelve sola al
+ * abrir la app en el celular) sobre las paradas ya ordenadas por
+ * `sortJobsForDelivery`. No es un motor de ruteo propio, es la función de
+ * waypoints que Maps ya ofrece. Se limita a 10 paradas (destino + 9
+ * waypoints, tope práctico del esquema de URL de Maps) — con más paradas
+ * que eso, el botón sigue abriendo una ruta real y correcta, solo no
+ * cubre las que quedan después de la parada 10 en un solo trazo. */
+export function multiStopDirectionsUrl(stops: { latitude: number; longitude: number }[]): string | null {
+  if (stops.length === 0) return null
+  const capped = stops.slice(0, 10)
+  const destination = capped[capped.length - 1]
+  const waypoints = capped.slice(0, -1)
+  const params = new URLSearchParams({
+    api: '1',
+    destination: `${destination.latitude},${destination.longitude}`,
+    travelmode: 'driving',
+  })
+  if (waypoints.length > 0) {
+    params.set('waypoints', waypoints.map((w) => `${w.latitude},${w.longitude}`).join('|'))
+  }
+  return `https://www.google.com/maps/dir/?${params.toString()}`
+}
+
 export interface JobForStop {
   id: string
   job_number: string | null

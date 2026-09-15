@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ClipboardList, LocateFixed, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ClipboardList, LocateFixed, MapPinned, RefreshCw } from 'lucide-react'
 import { useLocationSharing } from '@/context/LocationSharingContext'
 
 const TABS = [
   { to: '/app/pedidos', label: 'Pedidos', icon: ClipboardList },
+  { to: '/app/mapa', label: 'Mapa', icon: MapPinned },
   { to: '/app/ubicacion', label: 'Ubicación', icon: LocateFixed },
   { to: '/app/sincronizar', label: 'Sincronizar', icon: RefreshCw },
 ]
@@ -13,13 +14,14 @@ const TABS = [
  * ("eso... deberia de haber un boton que diga app... con menu abajo"): un
  * solo botón en el header (gateado igual que antes por
  * `useLocationSharing().driverProfile`) trae al operador aquí, una sección
- * de tres pestañas con menú inferior tipo app real en vez de links sueltos
- * arriba. Sigue viviendo dentro del `AppShell` normal (mismo `OrgProvider`/
- * `PermissionsProvider`/`LocationSharingProvider`, la barra lateral sigue
- * existiendo en escritorio) — no es un shell aparte, solo un layout propio
- * para estas 3 pantallas ya construidas (`MyJobsPage`/`MiUbicacionPage`/
- * `AppSyncPage`, sin cambios de lógica, solo dejaron de tener su propio
- * acceso directo en el header). */
+ * con menú inferior tipo app real en vez de links sueltos arriba. La
+ * pestaña "Mapa" (`AppRouteMapPage`) se agregó después, también pedido
+ * explícito: mapa con orden de entrega real + navegación al siguiente
+ * destino. Sigue viviendo dentro del `AppShell` normal (mismo
+ * `OrgProvider`/`PermissionsProvider`/`LocationSharingProvider`, la barra
+ * lateral sigue existiendo en escritorio) — no es un shell aparte, solo un
+ * layout propio para estas 4 pantallas (`MyJobsPage`/`AppRouteMapPage`/
+ * `MiUbicacionPage`/`AppSyncPage`). */
 export function AppTabLayout() {
   const navigate = useNavigate()
   const { sharing } = useLocationSharing()

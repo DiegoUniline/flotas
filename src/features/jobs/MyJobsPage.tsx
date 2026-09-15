@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MapPin, Navigation, Package, Phone } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { MapPin, MapPinned, Navigation, Package, Phone } from 'lucide-react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { useLocationSharing } from '@/context/LocationSharingContext'
 import { JobDetailContent } from '@/features/jobs/JobDetailContent'
 import { useMyJobs, useUpdateJobSilent } from '@/features/jobs/hooks/useJobs'
-import { JOB_STATUSES, type MyJob } from '@/features/jobs/api/jobsApi'
+import { ACTIVE_JOB_STATUSES, JOB_STATUSES, addressLabel, directionsUrl, type MyJob } from '@/features/jobs/api/jobsApi'
 import { useToast } from '@/context/ToastContext'
 import { formatCurrency, formatDate } from '@/lib/format'
 
@@ -26,7 +27,6 @@ const STATUS_TONE: Record<string, string> = {
   rescheduled: 'bg-status-stopped-bg text-status-stopped',
 }
 
-const ACTIVE_STATUSES = ['pending', 'en_route', 'arrived']
 const FINAL_STATUSES = ['delivered', 'partial', 'not_delivered', 'rejected']
 
 /** Siguiente(s) acción(es) sugerida(s) según el estado actual — un flujo
@@ -65,32 +65,6 @@ function captureCurrentPosition(): Promise<{ lat: number; lng: number } | null> 
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 },
     )
   })
-}
-
-function addressLabel(job: MyJob): string {
-  const location = job.customer_locations
-  if (!location) return 'Sin domicilio de entrega'
-  return location.address ? `${location.name} — ${location.address}` : location.name
-}
-
-/** Link real de navegación (Google Maps, misma app que ya se usa en todo
- * el proyecto para mapas) con la ruta al destino — no es tracking en vivo
- * ni un mapa embebido por tarjeta (costaría una instancia de mapa por
- * pedido en pantalla), es el patrón estándar de apps de reparto: un botón
- * que abre la app de mapas del dispositivo con direcciones reales.
- * Prioriza coordenadas reales del domicilio si existen; si no, cae a
- * buscar por dirección de texto. `null` solo si no hay ningún dato de
- * ubicación que mandarle a Maps. */
-function directionsUrl(job: MyJob): string | null {
-  const location = job.customer_locations
-  if (!location) return null
-  if (location.latitude != null && location.longitude != null) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${location.latitude},${location.longitude}`
-  }
-  if (location.address) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.address)}`
-  }
-  return null
 }
 
 function JobCard({ job, onOpen }: { job: MyJob; onOpen: () => void }) {
@@ -243,14 +217,23 @@ export function MyJobsPage() {
   }
 
   const rows = jobsQuery.data ?? []
-  const visibleRows = tab === 'active' ? rows.filter((job) => ACTIVE_STATUSES.includes(job.status)) : rows
+  const visibleRows = tab === 'active' ? rows.filter((job) => ACTIVE_JOB_STATUSES.includes(job.status)) : rows
 
   return (
     <PageScroll>
       <div className="mx-auto flex max-w-md flex-col gap-4 p-4 pb-10">
-        <div>
-          <h1 className="text-lg font-semibold text-ink">Mis pedidos</h1>
-          <p className="text-sm text-gray-500">Hola {driverProfile.driverName}, estos son tus pedidos asignados.</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold text-ink">Mis pedidos</h1>
+            <p className="text-sm text-gray-500">Hola {driverProfile.driverName}, estos son tus pedidos asignados.</p>
+          </div>
+          <Link
+            to="/app/mapa"
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent-50 px-3 py-1.5 text-xs font-semibold text-accent-600"
+          >
+            <MapPinned size={14} strokeWidth={2} />
+            Mapa
+          </Link>
         </div>
 
         <div className="flex gap-1.5">
