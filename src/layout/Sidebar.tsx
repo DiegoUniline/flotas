@@ -156,7 +156,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
           se omite en JS (`isDesktop`) en vez de intentar cancelarla con
           `lg:`. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-72 flex-col border-r border-gray-200 bg-surface lg:static lg:z-auto lg:w-auto lg:transition-[width] ${
+        className={`fixed inset-y-0 left-0 z-[1100] flex h-full w-64 max-w-[80vw] flex-col border-r border-gray-200 bg-surface lg:static lg:z-auto lg:w-auto lg:max-w-none lg:transition-[width] ${
           isDesktop ? '' : `transition-transform duration-200 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`
         } ${iconOnly ? 'lg:w-16' : 'lg:w-60'}`}
       >
