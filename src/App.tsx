@@ -44,6 +44,11 @@ import { InspectionsPage } from '@/features/inspections/InspectionsPage'
 import { InspectionDetailPage } from '@/features/inspections/InspectionDetailPage'
 import { InspectionTemplatesPage } from '@/features/inspections/InspectionTemplatesPage'
 import { InspectionTemplateDetailPage } from '@/features/inspections/InspectionTemplateDetailPage'
+import { UsersPage } from '@/features/users/UsersPage'
+import { RolesPage } from '@/features/roles/RolesPage'
+import { RoleDetailPage } from '@/features/roles/RoleDetailPage'
+import { CompanyPage } from '@/features/company/CompanyPage'
+import { InviteAcceptPage } from '@/features/invite/InviteAcceptPage'
 
 const comingSoonItems = NAV_SECTIONS.flatMap((section) => section.items).filter((item) => !item.implemented)
 
@@ -56,6 +61,7 @@ export function App() {
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/recuperar-password" element={<ForgotPasswordPage />} />
           <Route path="/restablecer-password" element={<ResetPasswordPage />} />
+          <Route path="/invitacion/:token" element={<InviteAcceptPage />} />
           <Route
             path="/"
             element={
@@ -100,6 +106,10 @@ export function App() {
             <Route path="inspecciones/plantillas/:id" element={<InspectionTemplateDetailPage />} />
             <Route path="inspecciones" element={<InspectionsPage />} />
             <Route path="inspecciones/:id" element={<InspectionDetailPage />} />
+            <Route path="usuarios" element={<UsersPage />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="roles/:id" element={<RoleDetailPage />} />
+            <Route path="empresa" element={<CompanyPage />} />
             {comingSoonItems.map((item) => (
               <Route key={item.to} path={item.to.slice(1)} element={<ComingSoonPage title={item.label} />} />
             ))}

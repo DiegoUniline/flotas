@@ -1652,6 +1652,110 @@ tabla lo contempla). Replicar esta estructura antes de inventar una nueva.
   ítems del sidebar (`layout/navConfig.ts`) se filtran igual. Las políticas
   RLS son la autoridad real — `can()` solo controla qué se pinta.
 
+## Módulo Configuración: Usuarios, Roles, Empresa (agregado en esta fase)
+
+Pedido explícito del usuario tras terminar Flota/Mantenimiento/Costos:
+"termina mi proyecto de Flotas". De los ~13 ítems `implemented: false` que
+quedaban en `navConfig.ts`, se construyeron los tres que no requerían
+inventar lógica de negocio nueva (esquema y permisos ya existían desde el
+arranque del proyecto): **Usuarios**, **Roles**, **Empresa**. Se dejaron
+deliberadamente sin construir (ver bullet al final de esta sección):
+Inicio, Incidentes, Alertas, Documentos, Reportes, Indicadores, Campos
+personalizados, Vistas, Integraciones, API, Suscripción.
+
+### Invitaciones sin envío de correo automático (migración `organization_invites_and_owner_guard`)
+
+No hay integración de envío de correo en el proyecto y las invitaciones no
+pueden usar `supabase.auth.admin.inviteUserByEmail()` (requiere
+`service_role`, nunca expuesto al navegador, y este proyecto nunca ha usado
+Edge Functions). Se resolvió con una tabla de tokens + dos RPCs
+`SECURITY DEFINER` angostas, mismo patrón que
+`assign_vehicle_to_driver`/`update_my_vehicle_position`:
+
+- **`organization_invites`**: `email`, `role_id`, `location_id` opcional,
+  `token` (aleatorio, único), `status` (pending/accepted/revoked/expired),
+  `expires_at` (7 días). RLS: select/insert/update/delete gateados por
+  `has_permission(org, 'users.manage')`. Índice único parcial
+  `(organization_id, lower(email)) where status = 'pending'` — no se puede
+  invitar dos veces al mismo correo mientras la invitación previa siga
+  pendiente.
+- **`get_invite_by_token(p_token)`**: lookup público (sin depender de RLS,
+  el visitante no está autenticado todavía) — nombre de organización, rol,
+  correo, estado, vencimiento.
+- **`accept_organization_invite(p_token)`**: valida token/estado/vencimiento
+  y que `auth.jwt()->>'email'` coincida con el correo invitado, luego
+  inserta/actualiza `organization_members` (`on conflict` por si la persona
+  ya era miembro con otro rol) y marca la invitación `accepted`.
+- **Como no se envía correo real**, `InviteMemberDrawer.tsx` muestra el
+  enlace (`/invitacion/<token>`) para copiar y compartir a mano (WhatsApp,
+  correo, etc.) — explícito en la UI, no se simula un envío que no existe.
+- **Guard de último Propietario**: trigger `prevent_last_owner_removal()`
+  (`BEFORE UPDATE OR DELETE` en `organization_members`) bloquea, a nivel de
+  base de datos, quitar el rol de Propietario o eliminar al único miembro
+  activo con rol `owner` de una organización — protección real, no solo de
+  UI, para no dejar una empresa sin nadie que pueda administrarla.
+- **`profiles.email`** (migración `profiles_email`): no existía columna de
+  correo en `profiles` y `auth.users` no es consultable desde el cliente —
+  necesaria para que la lista de Usuarios muestre el correo de cada
+  miembro. Backfill desde `auth.users` + `handle_new_user()` actualizado
+  para poblarla en cada alta nueva.
+- **Redirección post-confirmación de correo**: Supabase regresa al usuario
+  a la raíz del sitio tras confirmar su correo, no a `/invitacion/:token`.
+  `InviteAcceptPage.tsx` guarda el token en `sessionStorage`
+  (`flotaa:pending-invite-token`) al montar; `ProtectedRoute.tsx` revisa
+  esa llave en cada render y redirige a `/invitacion/:token` si existe —
+  mismo mecanismo de `sessionStorage` ya usado para el borrador del wizard
+  de Pedidos, no una persistencia nueva. Se limpia al aceptar la
+  invitación o si el usuario cierra sesión desde ahí.
+
+### Roles: sistema (solo lectura) vs. personalizados por organización
+
+`RoleDetailPage.tsx` distingue `role.organization_id == null` (rol de
+sistema, sembrado para todas las orgs: admin/viewer/dispatcher/finance/
+fleet_manager/mechanic/driver/owner/supervisor) de un rol propio de la
+organización. **Los roles de sistema son de solo lectura incluso a nivel
+de RLS** (`roles_write` exige `organization_id is not null`), no solo en
+la UI — la ficha los muestra con todos los campos `readOnly` y el checklist
+de permisos deshabilitado, sin `SaveDiscardBar`, con un botón "Duplicar
+como rol personalizado" que copia nombre/descripción/permisos a un rol
+nuevo de la organización (`duplicateRoleAsCustom`). Roles personalizados
+son completamente editables: nombre, descripción, y una matriz de
+checkboxes de permisos agrupada por `permissions.module`
+(`setRolePermissions` hace diff contra `role_permissions` existente, no
+borra e inserta todo). `RolesPage.tsx` gateada por `roles.view`, escritura
+por `roles.manage`.
+
+### Empresa
+
+`CompanyPage.tsx` (`/empresa`) edita `activeOrg` directamente (no hay
+lista/creación, cada organización solo edita la suya) — nombre, razón
+social, RFC, teléfono/correo/sitio web, moneda/país/zona horaria/idioma.
+`slug` y `status` de solo lectura. Gateada por `organization.view`
+(lectura vía RLS ya existente `orgs_select`) y escritura por
+`settings.manage` (política `orgs_update` ya existente, no se agregó
+policy nueva).
+
+### Deliberadamente no construido en esta fase
+
+Mismo criterio de "no inventar sin confirmar" de siempre — cada uno
+requiere una decisión de producto que no se ha pedido:
+
+- **Inicio**: sin definir qué contenido/dashboard debe tener.
+- **Incidentes/Alertas**: dependen del motor de alertas genérico (Fase 6
+  del roadmap, sigue sin construirse).
+- **Documentos** (vista agregada): ya existen `driver_licenses`/
+  `entity_documents`/documentos de vehículo, pero no una vista cruzada de
+  "todos los documentos con vencimiento" — se puede construir cuando se
+  pida, agregando sobre las tablas ya existentes.
+- **Reportes/Indicadores**: sin definir qué reportes/KPIs necesita el
+  usuario más allá de lo que ya vive en Costos/Mantenimiento.
+- **Campos personalizados/Vistas**: framework genérico grande (Fase 2b del
+  roadmap), mejor esperar a que se pida explícitamente.
+- **Integraciones/API**: no hay proveedor ni contrato de API definido
+  todavía.
+- **Suscripción**: requiere elegir procesador de pagos (Stripe u otro), no
+  se puede inventar sin decisión del usuario.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

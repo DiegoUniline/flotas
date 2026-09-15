@@ -1616,6 +1616,76 @@ export type Database = {
           },
         ]
       }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          location_id: string | null
+          organization_id: string
+          role_id: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          location_id?: string | null
+          organization_id: string
+          role_id: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          location_id?: string | null
+          organization_id?: string
+          role_id?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1866,6 +1936,7 @@ export type Database = {
           active_organization_id: string | null
           avatar_url: string | null
           created_at: string
+          email: string | null
           first_name: string | null
           id: string
           language: string
@@ -1879,6 +1950,7 @@ export type Database = {
           active_organization_id?: string | null
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string | null
           id: string
           language?: string
@@ -1892,6 +1964,7 @@ export type Database = {
           active_organization_id?: string | null
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string | null
           id?: string
           language?: string
@@ -2428,6 +2501,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invite: { Args: { p_token: string }; Returns: string }
       assign_vehicle_to_driver: {
         Args: { p_driver_id: string; p_notes?: string; p_vehicle_id: string }
         Returns: string
@@ -2445,6 +2519,16 @@ export type Database = {
       generate_job_number: {
         Args: { p_organization_id: string }
         Returns: string
+      }
+      get_invite_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          organization_name: string
+          role_name: string
+          status: string
+        }[]
       }
       has_permission: {
         Args: { p_org: string; p_perm: string }

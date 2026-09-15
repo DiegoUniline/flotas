@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AuthLayout } from './AuthLayout'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/Button'
 import { signUpWithPassword } from '@/features/auth/api/authApi'
 
 export function RegisterPage() {
+  const [searchParams] = useSearchParams()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
