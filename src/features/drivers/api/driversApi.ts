@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
 import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
 import type { DateRangeValue } from '@/lib/dateRanges'
+import { offlineSyncKeys, searchWithOfflineFallback } from '@/lib/offlineCache'
 
 export type Driver = Tables<'drivers'>
 export type DriverInsert = Omit<TablesInsert<'drivers'>, 'organization_id'>
@@ -117,17 +118,24 @@ export async function fetchDriverOptions(organizationId: string): Promise<Driver
 }
 
 export async function searchDrivers(organizationId: string, query: string): Promise<DriverOption[]> {
-  let q = supabase
-    .from('drivers')
-    .select('id, first_name, last_name')
-    .eq('organization_id', organizationId)
-    .eq('active', true)
-    .is('deleted_at', null)
+  return searchWithOfflineFallback(
+    offlineSyncKeys.drivers(organizationId),
+    (item: DriverOption, term) => `${item.first_name} ${item.last_name}`.toLowerCase().includes(term),
+    async () => {
+      let q = supabase
+        .from('drivers')
+        .select('id, first_name, last_name')
+        .eq('organization_id', organizationId)
+        .eq('active', true)
+        .is('deleted_at', null)
 
-  const term = query.trim()
-  if (term) q = q.or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
+      const term = query.trim()
+      if (term) q = q.or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
 
-  const { data, error } = await q.order('first_name', { ascending: true }).limit(20)
-  if (error) throw error
-  return data ?? []
+      const { data, error } = await q.order('first_name', { ascending: true }).limit(20)
+      if (error) throw error
+      return data ?? []
+    },
+    query,
+  )
 }

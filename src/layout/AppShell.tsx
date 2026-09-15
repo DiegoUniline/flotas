@@ -5,12 +5,18 @@ import { PermissionsProvider } from '@/context/PermissionsContext'
 import { LocationSharingProvider } from '@/context/LocationSharingContext'
 import { OnboardingWizard } from '@/features/onboarding/components/OnboardingWizard'
 import { ErrorState } from '@/components/ui/ErrorState'
+import { useAutoSyncOfflineData } from '@/features/offlineSync/hooks/useOfflineSync'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 
 export function AppShell() {
   const { loading, error, needsOnboarding, refetch } = useOrg()
   const [collapsed, setCollapsed] = useState(false)
+  // Antes de cualquier `return` condicional de abajo — reglas de hooks. La
+  // sincronización automática (al recuperar señal, o la primera vez sin
+  // nada sincronizado todavía) vive aquí porque es lo primero que se monta
+  // con una organización activa resuelta.
+  useAutoSyncOfflineData()
 
   if (loading) {
     return (

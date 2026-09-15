@@ -356,7 +356,7 @@ export function JobDetailContent({ id, onBack, backLabel = 'Pedidos', hideHeader
               placeholder={draft.customer_id ? 'Selecciona domicilio' : 'Selecciona cliente primero'}
               disabled={!draft.customer_id}
               onSearch={(query) =>
-                searchCustomerLocations(draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+                searchCustomerLocations(activeOrg!.id, draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
               }
               onSelect={(option) => {
                 update('origin_customer_location_id', option?.id ?? '')
@@ -414,7 +414,7 @@ export function JobDetailContent({ id, onBack, backLabel = 'Pedidos', hideHeader
             placeholder={draft.customer_id ? 'Selecciona domicilio' : 'Selecciona cliente primero'}
             disabled={!draft.customer_id}
             onSearch={(query) =>
-              searchCustomerLocations(draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
+              searchCustomerLocations(activeOrg!.id, draft.customer_id, query).then((rows) => rows.map((r) => ({ id: r.id, label: r.name })))
             }
             onSelect={(option) => {
               update('customer_location_id', option?.id ?? '')

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
 import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
 import type { DateRangeValue } from '@/lib/dateRanges'
+import { offlineSyncKeys, searchWithOfflineFallback } from '@/lib/offlineCache'
 
 export type Location = Tables<'locations'>
 export type LocationInsert = Omit<TablesInsert<'locations'>, 'organization_id'>
@@ -112,18 +113,25 @@ export async function fetchLocationOptions(organizationId: string): Promise<Loca
 }
 
 export async function searchLocations(organizationId: string, query: string): Promise<LocationOption[]> {
-  let q = supabase
-    .from('locations')
-    .select('id, name')
-    .eq('organization_id', organizationId)
-    .eq('active', true)
-    .is('deleted_at', null)
+  return searchWithOfflineFallback(
+    offlineSyncKeys.locations(organizationId),
+    (item: LocationOption, term) => item.name.toLowerCase().includes(term),
+    async () => {
+      let q = supabase
+        .from('locations')
+        .select('id, name')
+        .eq('organization_id', organizationId)
+        .eq('active', true)
+        .is('deleted_at', null)
 
-  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+      if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
 
-  const { data, error } = await q.order('name', { ascending: true }).limit(20)
-  if (error) throw error
-  return data ?? []
+      const { data, error } = await q.order('name', { ascending: true }).limit(20)
+      if (error) throw error
+      return data ?? []
+    },
+    query,
+  )
 }
 
 export async function softDeleteLocation(id: string): Promise<void> {

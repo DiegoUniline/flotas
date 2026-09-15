@@ -7,6 +7,7 @@ import { PageScroll } from '@/components/ui/PageScroll'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { useLocationSharing } from '@/context/LocationSharingContext'
+import { SyncOfflineDataButton } from '@/features/offlineSync/components/SyncOfflineDataButton'
 import { JobDetailContent } from '@/features/jobs/JobDetailContent'
 import { useMyJobs, useUpdateJobSilent } from '@/features/jobs/hooks/useJobs'
 import { JOB_STATUSES, type MyJob } from '@/features/jobs/api/jobsApi'
@@ -212,6 +213,8 @@ export function MyJobsPage() {
           <h1 className="text-lg font-semibold text-ink">Mis pedidos</h1>
           <p className="text-sm text-gray-500">Hola {driverProfile.driverName}, estos son tus pedidos asignados.</p>
         </div>
+
+        <SyncOfflineDataButton />
 
         <div className="flex gap-1.5">
           <button

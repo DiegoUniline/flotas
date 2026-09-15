@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
 import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
 import type { DateRangeValue } from '@/lib/dateRanges'
+import { offlineSyncKeys, searchWithOfflineFallback } from '@/lib/offlineCache'
 
 export type Customer = Tables<'customers'>
 export type CustomerInsert = Omit<TablesInsert<'customers'>, 'organization_id'>
@@ -118,16 +119,23 @@ export async function fetchCustomerOptions(organizationId: string): Promise<Cust
 }
 
 export async function searchCustomers(organizationId: string, query: string): Promise<CustomerOption[]> {
-  let q = supabase
-    .from('customers')
-    .select('id, name')
-    .eq('organization_id', organizationId)
-    .eq('status', 'active')
-    .is('deleted_at', null)
+  return searchWithOfflineFallback(
+    offlineSyncKeys.customers(organizationId),
+    (item: CustomerOption, term) => item.name.toLowerCase().includes(term),
+    async () => {
+      let q = supabase
+        .from('customers')
+        .select('id, name')
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .is('deleted_at', null)
 
-  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
+      if (query.trim()) q = q.ilike('name', `%${query.trim()}%`)
 
-  const { data, error } = await q.order('name', { ascending: true }).limit(20)
-  if (error) throw error
-  return data ?? []
+      const { data, error } = await q.order('name', { ascending: true }).limit(20)
+      if (error) throw error
+      return data ?? []
+    },
+    query,
+  )
 }

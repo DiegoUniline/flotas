@@ -1975,6 +1975,64 @@ debe nacer offline y ser el único, sin importar cuándo llega a la base.
   patrón (`mutationKey` + `setMutationDefaults`) en otra mutación si se
   pide la misma garantía ahí.
 
+## "Sincronizar mis datos": offline real para los combos de Pedidos (agregado en esta fase)
+
+Pedido explícito del usuario, tras la fase anterior de PWA: "buscar la
+forma de que sea súper fácil sincronizar todo para que esté disponible
+sin conexión". Se descartó a propósito construir una réplica local
+completa tipo IndexedDB con sync bidireccional (proyecto mucho más grande,
+con resolución de conflictos, que no se pidió) — en su lugar, un botón
+"Sincronizar" que trae de un jalón las listas completas (no solo lo que
+ya se había buscado, que era el límite real documentado en la fase de la
+PWA) que los formularios de Pedidos necesitan para armarse sin conexión.
+
+- **`features/offlineSync/api/offlineSyncApi.ts`**, `syncOfflineData(organizationId)`:
+  trae en paralelo la lista completa de clientes, domicilios (de todos los
+  clientes, `fetchAllCustomerLocationsForOrg` nuevo en
+  `customerLocationsApi.ts`), sucursales, operadores y vehículos activos
+  de la organización — reutilizando los `fetchXOptions()` que ya existían
+  para llenar `<select>` en otras pantallas, no se inventó una query
+  nueva por catálogo. Las guarda en la caché de TanStack Query bajo
+  `offlineSyncKeys` (`src/lib/offlineCache.ts`) y un resumen
+  (`{customers, customerLocations, locations, drivers, vehicles,
+  syncedAt}`) bajo `offlineSyncKeys.meta`. Como esa caché ya está
+  persistida en `localStorage` (`PersistQueryClientProvider`, fase
+  anterior), lo sincronizado sobrevive cerrar la pestaña.
+- **`lib/offlineCache.ts`**, `searchWithOfflineFallback()`: intenta la
+  búsqueda real en red primero; si no hay conexión o la petición falla
+  (señal intermitente, falso positivo de `navigator.onLine`), filtra en
+  el dispositivo la última lista sincronizada. `searchCustomers`
+  (`customersApi.ts`), `searchLocations` (`locationsApi.ts`),
+  `searchDrivers` (`driversApi.ts`) y `searchVehicles` (`vehiclesApi.ts`)
+  ahora pasan por este helper — mismo nombre/firma de siempre, así que
+  ningún `RelationSelect` que ya los usaba tuvo que cambiar.
+  `searchCustomerLocations` (`customerLocationsApi.ts`) es la excepción:
+  como está acotada a un cliente (`customer_id`), no a toda la org, ganó
+  un parámetro `organizationId` nuevo (los 4 sitios que la llaman, en
+  `JobDetailContent.tsx`/`JobDetailPage.tsx`, ya tenían `activeOrg.id` a
+  la mano) y su propio filtro inline en vez de usar el helper genérico.
+- **Se sincroniza sola, además del botón**: `useAutoSyncOfflineData()`
+  (`features/offlineSync/hooks/useOfflineSync.ts`, montado una sola vez
+  en `AppShell.tsx`) dispara `syncOfflineData` sin que el usuario tenga
+  que acordarse — al recuperar señal después de haber estado sin
+  conexión, y la primera vez que hay una organización activa y todavía no
+  se había sincronizado nada. El botón **"Sincronizar"**
+  (`SyncOfflineDataButton.tsx`) sigue ahí para forzarla a mano cuando el
+  usuario sabe que algo cambió (cliente nuevo, sucursal nueva) y no
+  quiere esperar al siguiente reconecte — versión compacta en el header
+  (visible siempre, no solo para operadores) y versión completa (con
+  "Última sincronización: …") en `/mis-pedidos`, la pantalla donde más
+  importa.
+- **Deliberadamente no sincronizado:** pedidos (`jobs` ya se refrescan
+  solos vía `useMyJobs`, no son un catálogo estático), y cualquier tabla
+  fuera del flujo de creación/edición de un pedido (mantenimientos,
+  gastos, inspecciones, etc.) — sincronizar "toda la base" a cada
+  dispositivo sin que se haya pedido sería un problema de escala y de
+  privacidad, no solo de alcance. Si se necesita offline para otro
+  módulo, replicar el mismo patrón (`fetchXOptions` ya existente +
+  `offlineSyncKeys` nueva + `searchWithOfflineFallback`) en vez de
+  construir algo distinto.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

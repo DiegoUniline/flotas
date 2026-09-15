@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database'
 import { applyFilters, type AppliedFilter } from '@/lib/queryFilters'
 import type { DateRangeValue } from '@/lib/dateRanges'
+import { offlineSyncKeys, searchWithOfflineFallback } from '@/lib/offlineCache'
 
 export type Vehicle = Tables<'vehicles'>
 export type VehicleInsert = Omit<TablesInsert<'vehicles'>, 'organization_id'>
@@ -208,19 +209,26 @@ export async function fetchVehicleOptions(organizationId: string): Promise<Vehic
 }
 
 export async function searchVehicles(organizationId: string, query: string): Promise<VehicleOption[]> {
-  let q = supabase
-    .from('vehicles')
-    .select('id, economic_number, plate')
-    .eq('organization_id', organizationId)
-    .eq('active', true)
-    .is('deleted_at', null)
+  return searchWithOfflineFallback(
+    offlineSyncKeys.vehicles(organizationId),
+    (item: VehicleOption, term) => (item.economic_number ?? '').toLowerCase().includes(term) || (item.plate ?? '').toLowerCase().includes(term),
+    async () => {
+      let q = supabase
+        .from('vehicles')
+        .select('id, economic_number, plate')
+        .eq('organization_id', organizationId)
+        .eq('active', true)
+        .is('deleted_at', null)
 
-  if (query.trim()) {
-    const term = escapeIlikeTerm(query)
-    q = q.or(`economic_number.ilike.%${term}%,plate.ilike.%${term}%`)
-  }
+      if (query.trim()) {
+        const term = escapeIlikeTerm(query)
+        q = q.or(`economic_number.ilike.%${term}%,plate.ilike.%${term}%`)
+      }
 
-  const { data, error } = await q.order('economic_number', { ascending: true }).limit(20)
-  if (error) throw error
-  return data ?? []
+      const { data, error } = await q.order('economic_number', { ascending: true }).limit(20)
+      if (error) throw error
+      return data ?? []
+    },
+    query,
+  )
 }
