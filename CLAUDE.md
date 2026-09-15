@@ -1770,6 +1770,65 @@ requiere una decisión de producto que no se ha pedido:
 - **Suscripción**: requiere elegir procesador de pagos (Stripe u otro), no
   se puede inventar sin decisión del usuario.
 
+## App del repartidor: Mis pedidos + ubicación en vivo confiable (agregado en esta fase)
+
+Pedido explícito del usuario: que el operador pueda ver sus pedidos,
+actualizar su estado, y que la señal de ubicación "se guarde bien" y se
+vea en el mapa. Dos partes: un bug real de confiabilidad en el envío de
+ubicación, y una pantalla nueva para el operador.
+
+- **Bug real corregido — la ubicación dejaba de compartirse al navegar:**
+  `useShareLocation` (el `watchPosition` que manda la posición cada ~15s)
+  vivía como estado local dentro de `MiUbicacionPage.tsx`. Al navegar a
+  cualquier otra pantalla (p. ej. a revisar sus pedidos), React desmontaba
+  la página, el efecto de limpieza corría `clearWatch()` y el envío se
+  detenía **en silencio** — el operador seguía viendo "Compartiendo tu
+  ubicación" la última vez que miró esa pantalla, pero en realidad ya no
+  mandaba nada. Corregido moviendo todo ese estado a
+  **`LocationSharingContext`** (`src/context/LocationSharingContext.tsx`),
+  montado una sola vez en `AppShell` (junto a `PermissionsProvider`) en vez
+  de en una página — ahora sobrevive a cualquier navegación interna de
+  React Router dentro de la app autenticada, y solo se detiene con "Dejar
+  de compartir", cerrar sesión, o cerrar la pestaña. `MiUbicacionPage`
+  quedó como una vista delgada que solo lee el contexto (`useLocationSharing()`).
+- **Indicador persistente en el header**: `Header.tsx` ahora muestra un
+  punto verde animado (`animate-ping`) junto a "Compartiendo ubicación"
+  cuando el envío está activo, visible en cualquier pantalla — antes solo
+  se sabía el estado real entrando a `/mi-ubicacion`. Mismo criterio para
+  el mapa: los marcadores de posición en vivo en el Centro de control
+  (`MapMarker.pulse`, nuevo en `components/map/Map.tsx`) ahora tienen un
+  anillo animado real (no solo el emoji 🟢 del label) para que sean
+  obvios a simple vista entre el resto de pines.
+- **`/mis-pedidos`** (`features/jobs/MyJobsPage.tsx`, nuevo): la app del
+  repartidor — tarjetas grandes y táctiles (no la tabla densa 90/10 de
+  `/pedidos`, que sigue siendo la vista administrativa completa),
+  filtradas a los pedidos con `assigned_driver_id` = el operador logueado
+  (`fetchMyJobs` en `jobsApi.ts` — filtro de UX, RLS de `jobs_select` ya
+  permite ver cualquier pedido de la org a cualquier miembro). Pestañas
+  "Activos" (pending/en_route/arrived) / "Todos". Cada tarjeta tiene
+  **botones de acción contextual según el estado actual** (`NEXT_ACTIONS`:
+  pendiente → Iniciar viaje/Rechazado; en camino → Llegué/No entregado;
+  llegó → Entregado/Entrega parcial/No entregado/Rechazado) — un tap
+  cambia el estado de inmediato vía `useUpdateJobSilent` (mismo
+  `updateJob` de siempre, sin el toast genérico de la ficha completa,
+  con su propio toast "Pedido X → Estado"). Tocar el cuerpo de la
+  tarjeta abre `JobDetailContent` (la misma ficha completa que usan
+  Pedidos y el Centro de control) en un `Modal`, para ver/editar todo lo
+  demás sin salir de la pantalla — mismo patrón ya usado en
+  `ControlMapPage.tsx` para "Ver pedido completo".
+- **Captura de GPS automática al cerrar un pedido**: al pasar a un estado
+  final (`delivered`/`partial`/`not_delivered`/`rejected`) y si el pedido
+  todavía no tiene `delivery_latitude`, `MyJobsPage` intenta una lectura
+  puntual de `navigator.geolocation.getCurrentPosition` (mismo mecanismo
+  que `GpsCaptureField`, timeout 8s) y la manda junto con el cambio de
+  estado — mejor esfuerzo, nunca bloquea el cambio de estado si el
+  operador no dio permiso o el GPS tarda. Igual que siempre, `delivered`
+  sella `received_at` automáticamente si no lo tenía.
+- Link "Mis pedidos" en el header (junto a "Compartir mi ubicación"),
+  visible solo si `useLocationSharing().driverProfile` existe — mismo
+  gate que ya existía para el link de ubicación, ahora ambos leen del
+  mismo contexto en vez de cada uno tener su propia query duplicada.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

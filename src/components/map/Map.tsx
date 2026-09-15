@@ -16,6 +16,10 @@ export interface MapMarker {
   /** Ruta real (p. ej. `/pedidos/:id`) — si se define, el popup del marcador
    * incluye un link "Ver detalle" hacia ahí. */
   href?: string
+  /** Anillo animado alrededor del punto — para posiciones en vivo reales
+   * (celular del operador compartiendo ubicación), no decorativo en otros
+   * casos. */
+  pulse?: boolean
 }
 
 interface MapProps {
@@ -28,13 +32,26 @@ interface MapProps {
   onMarkerClick?: (marker: MapMarker) => void
 }
 
-function coloredDivIcon(color: string): L.DivIcon {
+function coloredDivIcon(color: string, pulse = false): L.DivIcon {
+  if (!pulse) {
+    return L.divIcon({
+      className: '',
+      html: `<span style="display:block;width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -7],
+    })
+  }
+  const size = 22
   return L.divIcon({
     className: '',
-    html: `<span style="display:block;width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -7],
+    html: `<span style="position:relative;display:block;width:${size}px;height:${size}px">
+        <span class="animate-ping" style="position:absolute;inset:0;border-radius:9999px;background:${color};opacity:0.6"></span>
+        <span style="position:absolute;top:4px;left:4px;width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>
+      </span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
   })
 }
 
@@ -123,7 +140,7 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
         popup.appendChild(link)
       }
       const leafletMarker = marker.color
-        ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color) })
+        ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color, marker.pulse), zIndexOffset: marker.pulse ? 1000 : 0 })
         : L.marker([marker.lat, marker.lng])
       leafletMarker.addTo(layer).bindPopup(popup)
       leafletMarker.on('click', () => onMarkerClickRef.current?.(marker))

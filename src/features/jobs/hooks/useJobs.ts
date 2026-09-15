@@ -5,6 +5,7 @@ import {
   createJob,
   fetchJobById,
   fetchJobs,
+  fetchMyJobs,
   softDeleteJob,
   updateJob,
   type JobFilters,
@@ -64,6 +65,32 @@ export function useUpdateJob() {
       showToast('Pedido actualizado', 'success')
     },
     onError: () => showToast('No se pudo actualizar el pedido', 'error'),
+  })
+}
+
+export function useMyJobs(driverId: string | undefined) {
+  return useQuery({
+    queryKey: ['my-jobs', driverId],
+    queryFn: () => fetchMyJobs(driverId!),
+    enabled: !!driverId,
+    refetchInterval: 60000,
+  })
+}
+
+/** Igual que `useUpdateJob` pero sin el toast genérico "Pedido actualizado"
+ * — la app del repartidor (`MyJobsPage`) usa su propio toast con el nombre
+ * del estado nuevo, más claro para ese flujo de una sola acción por tap. */
+export function useUpdateJobSilent() {
+  const { activeOrg } = useOrg()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: JobUpdate }) => updateJob(id, input),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['jobs', activeOrg?.id] })
+      void queryClient.invalidateQueries({ queryKey: ['job', variables.id] })
+      void queryClient.invalidateQueries({ queryKey: ['my-jobs'] })
+    },
   })
 }
 

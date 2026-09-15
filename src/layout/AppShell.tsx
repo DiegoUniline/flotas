@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { useState } from 'react'
 import { useOrg } from '@/context/OrgContext'
 import { PermissionsProvider } from '@/context/PermissionsContext'
+import { LocationSharingProvider } from '@/context/LocationSharingContext'
 import { OnboardingWizard } from '@/features/onboarding/components/OnboardingWizard'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Sidebar } from './Sidebar'
@@ -36,15 +37,17 @@ export function AppShell() {
 
   return (
     <PermissionsProvider>
-      <div className="flex h-screen flex-col">
-        <Header onToggleSidebar={() => setCollapsed((current) => !current)} />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar collapsed={collapsed} />
-          <main className="flex-1 overflow-hidden bg-gray-50">
-            <Outlet />
-          </main>
+      <LocationSharingProvider>
+        <div className="flex h-screen flex-col">
+          <Header onToggleSidebar={() => setCollapsed((current) => !current)} />
+          <div className="flex flex-1 overflow-hidden">
+            <Sidebar collapsed={collapsed} />
+            <main className="flex-1 overflow-hidden bg-gray-50">
+              <Outlet />
+            </main>
+          </div>
         </div>
-      </div>
+      </LocationSharingProvider>
     </PermissionsProvider>
   )
 }

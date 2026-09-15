@@ -4,18 +4,21 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { PageScroll } from '@/components/ui/PageScroll'
 import { Map } from '@/components/map/Map'
 import { formatDateTime } from '@/lib/format'
-import { useMyDriverProfile, useShareLocation } from '@/features/tracking/hooks/useTracking'
+import { useLocationSharing } from '@/context/LocationSharingContext'
 
 /** Página para el celular del operador: comparte su ubicación real
  * (geolocalización del navegador) mientras trabaja su ruta — decisión del
- * usuario de usar el celular en vez de un dispositivo GPS dedicado. No es
- * tracking en segundo plano ni una app nativa: solo funciona mientras esta
- * pestaña sigue abierta y con permiso de ubicación otorgado. */
+ * usuario de usar el celular en vez de un dispositivo GPS dedicado. El envío
+ * en sí vive en `LocationSharingProvider` (montado en `AppShell`, no aquí),
+ * así que sigue activo aunque el operador navegue a "Mis pedidos" o
+ * cualquier otra pantalla — esta página solo prende/apaga el interruptor y
+ * muestra el estado. No es tracking en segundo plano ni una app nativa: solo
+ * funciona mientras el navegador sigue abierto y con permiso de ubicación
+ * otorgado. */
 export function MiUbicacionPage() {
-  const profileQuery = useMyDriverProfile()
-  const { sharing, error, lastSentAt, lastCoords, start, stop } = useShareLocation()
+  const { driverProfile, driverProfileLoading, sharing, error, lastSentAt, lastCoords, start, stop } = useLocationSharing()
 
-  if (profileQuery.isLoading) {
+  if (driverProfileLoading) {
     return (
       <PageScroll>
         <div className="p-6">
@@ -25,8 +28,6 @@ export function MiUbicacionPage() {
     )
   }
 
-  const profile = profileQuery.data
-
   return (
     <PageScroll>
       <div className="mx-auto flex max-w-md flex-col gap-4 p-6">
@@ -35,13 +36,13 @@ export function MiUbicacionPage() {
           <p className="text-sm text-gray-500">Comparte tu ubicación real mientras trabajas tu ruta del día.</p>
         </div>
 
-        {!profile ? (
+        {!driverProfile ? (
           <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
             Tu cuenta no está vinculada a un operador — solo los operadores pueden compartir ubicación.
           </div>
-        ) : !profile.vehicle ? (
+        ) : !driverProfile.vehicle ? (
           <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
-            Hola {profile.driverName}. Todavía no tienes un vehículo asignado, así que no hay a quién guardarle la posición.
+            Hola {driverProfile.driverName}. Todavía no tienes un vehículo asignado, así que no hay a quién guardarle la posición.
           </div>
         ) : (
           <>
@@ -50,8 +51,8 @@ export function MiUbicacionPage() {
                 <Truck size={18} strokeWidth={2} />
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">{profile.driverName}</p>
-                <p className="truncate text-xs text-gray-500">Vehículo asignado: {profile.vehicle.label}</p>
+                <p className="truncate text-sm font-semibold text-ink">{driverProfile.driverName}</p>
+                <p className="truncate text-xs text-gray-500">Vehículo asignado: {driverProfile.vehicle.label}</p>
               </div>
             </div>
 
@@ -71,7 +72,8 @@ export function MiUbicacionPage() {
                 {sharing ? 'Dejar de compartir' : 'Compartir mi ubicación'}
               </Button>
               <p className="text-xs text-gray-400">
-                Se guarda cada ~15 segundos mientras esta pantalla está abierta y diste permiso de ubicación al navegador.
+                Se guarda cada ~15 segundos mientras el navegador tenga esta app abierta (en esta pantalla o cualquier otra) y diste
+                permiso de ubicación. Se detiene solo con "Dejar de compartir", al cerrar sesión o al cerrar la pestaña.
               </p>
             </div>
 
@@ -79,7 +81,7 @@ export function MiUbicacionPage() {
               <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                 <Map
                   className="h-64 w-full"
-                  markers={[{ id: 'me', lat: lastCoords.lat, lng: lastCoords.lng, label: profile.driverName, color: '#16a34a' }]}
+                  markers={[{ id: 'me', lat: lastCoords.lat, lng: lastCoords.lng, label: driverProfile.driverName, color: '#16a34a' }]}
                 />
               </div>
             )}

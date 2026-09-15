@@ -319,6 +319,7 @@ export function ControlMapPage() {
           label: `🟢 ${name}`,
           description: `Ubicación en vivo · ${formatAgo(v.last_position_at)}`,
           color: '#16a34a',
+          pulse: true,
         }
       })
 

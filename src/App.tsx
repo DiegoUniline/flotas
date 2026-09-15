@@ -25,6 +25,7 @@ import { JobDetailPage } from '@/features/jobs/JobDetailPage'
 import { RoutesPage } from '@/features/routes/RoutesPage'
 import { RouteDetailPage } from '@/features/routes/RouteDetailPage'
 import { MiUbicacionPage } from '@/features/tracking/MiUbicacionPage'
+import { MyJobsPage } from '@/features/jobs/MyJobsPage'
 import { DevicesPage } from '@/features/devices/DevicesPage'
 import { DeviceDetailPage } from '@/features/devices/DeviceDetailPage'
 import { GeofencesPage } from '@/features/geofences/GeofencesPage'
@@ -87,6 +88,7 @@ export function App() {
             <Route path="rutas" element={<RoutesPage />} />
             <Route path="rutas/:id" element={<RouteDetailPage />} />
             <Route path="mi-ubicacion" element={<MiUbicacionPage />} />
+            <Route path="mis-pedidos" element={<MyJobsPage />} />
             <Route path="dispositivos" element={<DevicesPage />} />
             <Route path="dispositivos/:id" element={<DeviceDetailPage />} />
             <Route path="geocercas" element={<GeofencesPage />} />
