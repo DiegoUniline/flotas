@@ -469,10 +469,10 @@ export function ControlMapPage() {
             {mappedQuery.isError ? (
               <ErrorState message="No se pudo cargar el mapa." onRetry={() => void mappedQuery.refetch()} />
             ) : mappedQuery.isLoading ? (
-              <Skeleton className="h-[620px]" />
+              <Skeleton className="h-[380px] lg:h-[620px]" />
             ) : markers.length > 0 ? (
               <>
-                <Map className="h-[620px] w-full" markers={markers} polyline={routePolyline} onMarkerClick={handleMarkerClick} />
+                <Map className="h-[380px] w-full lg:h-[620px]" markers={markers} polyline={routePolyline} onMarkerClick={handleMarkerClick} />
                 <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 px-3 py-2 text-[11px] text-gray-500">
                   {(liveVehiclesQuery.data?.length ?? 0) > 0 && (
                     <>

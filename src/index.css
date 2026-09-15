@@ -24,6 +24,12 @@
 
 :root {
   color-scheme: light;
+  /* Notch/home-indicator de iOS cuando corre instalada (PWA standalone) —
+     `viewport-fit=cover` en index.html expone estos valores; sin esto el
+     header/footer quedarían debajo de la isla dinámica o la barra de
+     estado en vez de respetarla. */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 html,
@@ -37,4 +43,14 @@ body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: #f7f7f8;
+  overscroll-behavior-y: none;
+  /* Se ve/siente como app nativa: sin el flash gris azulado al tocar
+     botones/links, y sin que un swipe accidental jale el "pull to
+     refresh" del navegador dentro de listas con scroll propio. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
 }

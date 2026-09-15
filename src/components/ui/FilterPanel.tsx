@@ -61,7 +61,15 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-96 rounded-md border border-gray-200 bg-white p-3 shadow-lg">
+        <>
+          {/* En celular es una hoja fija al fondo de la pantalla, no un
+              popover anclado al botón — ese botón puede estar en
+              cualquier parte de la barra de herramientas, así que un
+              popover de 384px anclado ahí se saldría de la pantalla en
+              cualquier dirección. Desde `sm:` vuelve a ser el popover de
+              siempre. */}
+          <div className="fixed inset-0 z-30 bg-black/30 sm:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="fixed inset-x-0 bottom-0 z-30 max-h-[75vh] overflow-y-auto rounded-t-xl border-t border-gray-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-1 sm:w-96 sm:rounded-md sm:border sm:p-3 sm:pb-3">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Filtros por campos</p>
             <div className="flex flex-col gap-2">
@@ -160,7 +168,8 @@ export function FilterPanel({ fields, groupFields = [], filters, onFiltersChange
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

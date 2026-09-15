@@ -193,7 +193,7 @@ export function VehicleDetailPage() {
   return (
     <>
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
           <button type="button" onClick={handleBack} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-ink">
             <ArrowLeft size={15} strokeWidth={2} />
             Vehículos
@@ -207,8 +207,8 @@ export function VehicleDetailPage() {
           )}
         </div>
 
-        <div className="flex flex-1 overflow-hidden bg-white">
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex flex-1 flex-col overflow-y-auto bg-white lg:flex-row lg:overflow-hidden">
+          <div className="flex-1 px-4 py-4 sm:px-6 sm:py-5 lg:overflow-y-auto">
             {!isNew && vehicleQuery.isLoading && <Skeleton className="h-64" />}
             {!isNew && vehicleQuery.isError && (
               <ErrorState message="No se pudo cargar el vehículo." onRetry={() => void vehicleQuery.refetch()} />
@@ -377,7 +377,7 @@ export function VehicleDetailPage() {
 
           {!isNew && id && (
             <Can permission="audit.view">
-              <div className="w-80 shrink-0 border-l border-gray-200">
+              <div className="shrink-0 border-t border-gray-200 lg:w-80 lg:border-l lg:border-t-0">
                 <HistoryPanel entityType="vehicles" entityId={id} />
               </div>
             </Can>

@@ -36,9 +36,13 @@ export function ListToolbar({
 }: ListToolbarProps) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
+      {/* En celular la fecha/filtros/trailing quedan en su fila y el
+          buscador se va solo a la siguiente (basis-full + order-last) —
+          apretarlos todos en una sola fila de ~375px de ancho lo dejaría
+          ilegible. Desde `sm:` vuelve a ser una sola fila, como siempre. */}
+      <div className="flex flex-wrap items-center gap-2">
         {dateRange && onDateRangeChange && <DateRangeFilter value={dateRange} onChange={onDateRangeChange} />}
-        <div className="relative flex-1">
+        <div className="relative order-last min-w-0 flex-1 basis-full sm:order-none sm:basis-0">
           <Search size={15} strokeWidth={2} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={search}

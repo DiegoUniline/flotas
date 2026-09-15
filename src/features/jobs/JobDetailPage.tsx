@@ -608,11 +608,11 @@ export function JobDetailPage() {
         onClose={handleBack}
         closeOnBackdrop={false}
         footer={
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <Button variant="secondary" onClick={() => (step === 0 ? handleBack() : setStep((s) => s - 1))} disabled={saving}>
               {step === 0 ? 'Cancelar' : 'Atrás'}
             </Button>
-            <p className="text-xs text-gray-400">
+            <p className="hidden text-xs text-gray-400 sm:block">
               Paso {step + 1} de {WIZARD_STEPS.length}
             </p>
             {isLastStep ? (
@@ -636,14 +636,18 @@ export function JobDetailPage() {
           </div>
         }
       >
-        <div className="flex gap-6">
-          <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-gray-100 pr-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+          {/* Fila de pasos horizontal y deslizable en móvil (un sidebar
+              fijo de 208px no cabría junto al contenido en una pantalla de
+              ~375px) — vuelve a ser el sidebar vertical de siempre desde
+              `sm:`. */}
+          <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-52 sm:shrink-0 sm:flex-col sm:overflow-visible sm:border-r sm:border-gray-100 sm:px-0 sm:pb-0 sm:pr-5">
             {WIZARD_STEPS.map((s, i) => (
               <button
                 key={s.title}
                 type="button"
                 onClick={() => setStep(i)}
-                className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
+                className={`flex shrink-0 items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm transition-colors sm:gap-2.5 ${
                   i === step ? 'bg-accent-50 font-medium text-accent-700' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -658,7 +662,7 @@ export function JobDetailPage() {
                 >
                   {i < step ? '✓' : i + 1}
                 </span>
-                {s.title}
+                <span className="whitespace-nowrap sm:whitespace-normal">{s.title}</span>
               </button>
             ))}
           </nav>

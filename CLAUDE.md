@@ -2033,6 +2033,130 @@ PWA) que los formularios de Pedidos necesitan para armarse sin conexión.
   `offlineSyncKeys` nueva + `searchWithOfflineFallback`) en vez de
   construir algo distinto.
 
+## Pasada de responsividad móvil real (agregado en esta fase)
+
+Pedido explícito del usuario: "que sea como una app realmente en el móvil.
+Tamaños, modales, botones, que nada quede desfasado, oculto." El diseño
+del proyecto siempre fue desktop-first (tablas densas, `DetailGrid` 2
+columnas, sidebar fija) — esta fase corrige los puntos donde ese diseño
+se rompía de verdad en una pantalla de celular (no solo "se ve apretado",
+sino contenido literalmente recortado/inalcanzable). Cambios por
+componente compartido, así que se corrigieron a la vez en todas las
+pantallas que ya los usaban — no se tocó página por página.
+
+- **Bug real: contenido de las tablas quedaba oculto en celular.**
+  `TableScrollArea` (el contenedor de toda tabla densa 90/10 del
+  proyecto) solo tenía `overflow-y-auto`. Las tablas (`<table
+  className="w-full">`, `table-layout: auto` por default) sí crecen más
+  allá de su contenedor cuando las columnas no caben — pero el ancestro
+  `<main>` de `AppShell` tiene `overflow-hidden`, así que ese excedente
+  simplemente se recortaba y desaparecía, sin scroll ni aviso. Corregido
+  agregando `overflow-x-auto` a `TableScrollArea` — ahora se desliza
+  horizontalmente en vez de ocultar columnas. Ninguna tabla se rediseñó a
+  "tarjetas en móvil" (sigue siendo una app densa tipo Odoo, no se pidió
+  ese rediseño) — deslizar para ver el resto es el mínimo esperable de
+  una tabla ancha en un teléfono, no una solución de compromiso.
+- **Bug real: `HistoryPanel` (los 13 detalles que lo usan) tapaba el
+  contenido principal en celular.** Era un layout de fila fija
+  (`flex flex-1 overflow-hidden` + panel `w-80 shrink-0 border-l`,
+  pensado para pantallas anchas con dos columnas de scroll
+  independiente) — en 375px de ancho, 320px del panel de historial no
+  dejaban casi nada para el contenido principal. Se cambió a
+  `flex-col` (apilado, toda la ficha se desplaza como una sola página) en
+  celular y `lg:flex-row` (el layout de dos columnas de siempre) desde
+  ahí; el panel pasó de `border-l` a `border-t lg:border-l lg:border-t-0`.
+  Mismo cambio aplicado en bloque a los 13 archivos que repetían
+  exactamente ese patrón (Vehículos, Pedidos, Operadores, Clientes,
+  Rutas, Sucursales, Combustible, Gastos, Dispositivos, Geocercas,
+  Mantenimientos, Inspecciones, Refacciones).
+- **Bug real: `FilterPanel` se salía de la pantalla.** Su dropdown
+  (`w-96`, anclado `right-0` al botón "Filtros") podía quedar total o
+  parcialmente fuera del viewport según dónde cayera ese botón en la
+  barra de herramientas — no hay una posición segura para anclar un
+  popover de 384px en una pantalla de ~375px sin importar dónde esté el
+  botón que lo abre. Corregido: en celular es una hoja fija al fondo de
+  la pantalla (`fixed inset-x-0 bottom-0`, con su propio fondo oscuro
+  para cerrar tocando fuera) en vez de un popover anclado; desde `sm:`
+  vuelve a ser el popover de siempre junto al botón.
+- **Sidebar: de "se encoge a íconos" a overlay real en celular.** Antes
+  era un ancho fijo (`w-60`/`w-16` colapsado) siempre presente en el
+  layout — en un celular de 375px eso significa que el sidebar solo,
+  colapsado, ya ocupa 64px permanentes que nunca se necesitan mientras se
+  usa la app con una mano. Ahora (`Sidebar.tsx`, prop `mobileOpen`) es un
+  overlay que se abre/cierra completo con el mismo botón de hamburguesa
+  del header (fondo oscuro para cerrar tocando fuera, se cierra solo al
+  navegar a otra pantalla) — invisible mientras no se usa, no permanente.
+  El modo "solo íconos" de escritorio (`iconOnly`) se conserva intacto,
+  solo aplica desde `lg:`. `src/hooks/useMediaQuery.ts` (nuevo) es lo que
+  le permite a `AppShell` saber en JS si el mismo botón de hamburguesa
+  debe alternar el overlay de celular o el modo íconos de escritorio —
+  algo que las clases `lg:` de Tailwind no pueden decidir por sí solas
+  porque es una sola función `onClick`, no dos layouts CSS distintos.
+- **Header: de una fila que desbordaba a un menú compacto.** La fila de
+  la derecha (Mis pedidos, Compartir ubicación, Sincronizar, Instalar
+  app, correo, Cerrar sesión) ya no cabía en 375px. Desde `sm:` sigue
+  exactamente igual; en celular se reemplaza por un botón "⋮" con un menú
+  desplegable que agrupa todo eso — el indicador verde de "compartiendo
+  ubicación" se mantiene visible siempre, fuera del menú, porque es
+  información que el operador necesita ver de un vistazo sin tocar nada.
+  `OrgSwitcher` ganó truncado (`max-w-[160px]` en celular) para que un
+  nombre de empresa largo no empuje el resto del header.
+- **`Modal` a pantalla completa en celular.** Antes era una tarjeta
+  centrada `max-w-5xl` con márgenes (`p-4`) fijos en todos los tamaños —
+  en un celular eso le roba ancho útil a un wizard de varios pasos (como
+  el de "Nuevo pedido") sin ninguna ganancia visual real. Ahora ocupa
+  toda la pantalla (`h-full w-full`, sin bordes redondeados) por debajo
+  de `sm:`, con padding de header/footer que respeta
+  `env(safe-area-inset-top/bottom)` (isla dinámica/home indicator de
+  iOS); desde `sm:` vuelve a ser el diálogo centrado de siempre.
+  `Drawer` no necesitó cambios — ya era `w-full max-w-md`, o sea que en
+  cualquier celular real (`max-w-md` = 448px, más ancho que casi
+  cualquier teléfono) ya ocupaba el ancho completo desde antes.
+- **Wizard de "Nuevo pedido": la barra de pasos ya no compite por ancho
+  con el formulario.** Dentro del `Modal` (ahora pantalla completa en
+  celular), la barra de pasos era una columna fija de 208px a la
+  izquierda del contenido — en 375px eso no dejaba espacio real para los
+  campos. Ahora es una fila horizontal deslizable de píldoras arriba del
+  contenido en celular, y vuelve a ser la columna vertical de siempre
+  desde `sm:` (`JobDetailPage.tsx`).
+- **`ListToolbar`: el buscador ya no se aprieta junto a fecha/filtros.**
+  En celular el buscador se va a su propia línea (segunda fila) debajo de
+  la fecha/filtros/botón de exportar, en vez de competir por espacio en
+  una sola fila de ~375px; desde `sm:` sigue siendo una sola fila, como
+  siempre.
+- **Safe-area + sensación de app nativa** (`src/index.css`): `:root` con
+  `padding-top`/`padding-bottom: env(safe-area-inset-*)` (mismo criterio
+  documentado para páginas HTML/PWA — el contenido nunca queda debajo de
+  la isla dinámica/notch cuando la app corre instalada);
+  `-webkit-tap-highlight-color: transparent` y `touch-action:
+  manipulation` en botones/links (sin el parpadeo gris azulado de
+  "toqué esto" que delata que es una página web, no una app);
+  `overscroll-behavior-y: none` en `body` para que un swipe hacia abajo
+  en el tope de una lista no jale el "pull to refresh" del navegador por
+  accidente.
+- **Mapa del Centro de control con menos scroll en celular:** de `h-[620px]`
+  fijo a `h-[380px] lg:h-[620px]` — el mapa protagonista sigue siendo
+  grande, pero no obliga a bajar toda la pantalla antes de ver los KPIs y
+  el panel lateral en un teléfono. El resto de `ControlMapPage.tsx` (KPIs
+  `grid-cols-2 sm:grid-cols-4`, panel lateral `flex-col lg:flex-row`,
+  filtros en pastilla con `flex-wrap`) ya estaba bien resuelto desde
+  fases anteriores, no necesitó cambios.
+- **No tocado a propósito:** `InlineField` (el padding compacto tipo
+  "se ve como texto" es una decisión de diseño deliberada y documentada,
+  no un bug — reducir su tamaño ahí afectaría la densidad de cada ficha
+  del proyecto entero, no se pidió eso); los botones pequeños superpuestos
+  al mapa de Leaflet (Mapa/Satélite, mi ubicación — mismo tamaño que
+  controles equivalentes de Google Maps, no están ocultos ni rotos, solo
+  compactos); rediseñar cualquier tabla a vista de tarjetas en celular
+  (la densidad tipo Odoo sigue siendo el patrón pedido, deslizar
+  horizontalmente es la solución correcta aquí, no colapsar columnas).
+- **Verificación:** `npx tsc --noEmit` y `npm run build` limpios.
+  Verificado visualmente con Playwright en viewport de iPhone contra
+  `/login` (única pantalla alcanzable sin credenciales reales de un
+  usuario de prueba) — el resto de la revisión fue por código, aplicando
+  el mismo criterio de "nada debe quedar oculto/recortado" a cada
+  componente compartido reusado en todo el proyecto.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).
