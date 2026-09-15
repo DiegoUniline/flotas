@@ -2560,6 +2560,39 @@ correctos en las otras dos mientras se hace hover en la primera) — el
 mecanismo de agrupación por `group/section` en sí nunca estuvo roto,
 solo faltaba la señal visual de dónde empieza/termina cada grupo.
 
+## Sidebar colapsado: un ícono por sección, no uno por cada módulo (agregado en esta fase)
+
+Pedido explícito del usuario tras ver la captura con ~26 íconos apilados:
+"cuando el menú se contraiga tiene que mostrar solo los módulos... como
+5 íconos máximo". El riel colapsado mostraba un ícono por cada `NavItem`
+individual (Inicio, Centro de control, Rutas, Pedidos, Clientes, Vehículos,
+Operadores...) — con 7 secciones y ~26 ítems en total eso es demasiado
+para escanear de un vistazo, aunque ya tuvieran separación visual entre
+grupos (fase anterior).
+
+- **`navConfig.ts`**: `NavSection` ganó `icon: LucideIcon` — un ícono
+  representativo por sección (Operación → `Compass`, Flota → `Truck`,
+  Mantenimiento → `Wrench`, Costos → `Calculator`, Seguridad →
+  `ShieldAlert`, Analítica → `BarChart3`, Configuración → `Settings`).
+  Varios reutilizan el ícono de un ítem fuertemente representativo de la
+  sección entera (p. ej. Flota/Truck ya era el ícono de "Vehículos") —
+  intencional, no hay problema en que un ítem dentro del flyout repita
+  el ícono de su sección.
+- **`Sidebar.tsx`**: `renderSection` (una sola función que mezclaba
+  ambos modos) se separó en `renderCompactSection` y
+  `renderExpandedSection`. Colapsado ahora renderiza **una fila por
+  sección** (su `section.icon`, con highlight `accent` si la ruta activa
+  pertenece a esa sección) en vez de una fila por cada ítem — de ~26
+  filas a **7**. El mecanismo de flyout al pasar el cursor no cambió:
+  sigue mostrando la lista real de vistas de esa sección
+  (`section.items`) para navegar. `renderItem` perdió el parámetro
+  `compact` (ya nunca se llama con `true` — todo ítem individual, tanto
+  en modo expandido como dentro de cualquier flyout, siempre muestra su
+  etiqueta completa).
+- Verificado con Playwright contra el CSS compilado real: el riel
+  colapsado renderiza exactamente 7 filas de sección (más el logo y la
+  lupa de búsqueda arriba), en vez de las ~26 anteriores.
+
 ## Bug real: el mapa se pintaba encima del sidebar (fix incompleto, corregido de verdad arriba)
 
 Reportado por el usuario con captura: el flyout del sidebar colapsado

@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useMemo, useRef, useState } from 'react'
 import { Truck, Search, X } from 'lucide-react'
 import { NAV_SECTIONS, type NavItem, type NavSection } from './navConfig'
@@ -43,6 +43,7 @@ function ItemLabel({ item }: { item: NavItem }) {
 
 export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: SidebarProps) {
   const { can } = usePermissions()
+  const location = useLocation()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const searchBoxRef = useRef<HTMLDivElement>(null)
@@ -70,7 +71,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
     setQuery('')
   }
 
-  function renderItem(item: NavItem, compact: boolean) {
+  function renderItem(item: NavItem) {
     return (
       <NavLink
         key={item.to}
@@ -79,34 +80,51 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
           onCloseMobile()
           closeSearch()
         }}
-        title={compact ? item.label : undefined}
         className={({ isActive }) =>
           `group flex items-center gap-2.5 rounded-lg border-l-[3px] px-2.5 py-2.5 text-sm font-medium transition-colors lg:py-2 ${
             isActive ? 'border-accent-500 bg-accent-50 text-accent-600' : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-ink'
-          } ${compact ? 'justify-center' : ''}`
+          }`
         }
       >
         <item.icon size={18} strokeWidth={2} className="shrink-0" />
-        {!compact && <ItemLabel item={item} />}
+        <ItemLabel item={item} />
       </NavLink>
     )
   }
 
-  function renderSection(section: NavSection, compact: boolean) {
+  /** Colapsado: UNA fila por sección (su ícono, `section.icon`), no una
+   * por cada ítem — antes se mostraban los ~26 íconos de todos los
+   * módulos apilados, ilegible ("se ven todos los iconos", pedido
+   * explícito del usuario de dejar solo unos pocos íconos de nivel
+   * sección). Pasar el cursor despliega el flyout con las vistas reales
+   * de esa sección — mismo mecanismo de siempre, solo cambia qué se ve
+   * en el riel colapsado. */
+  function renderCompactSection(section: NavSection) {
+    const isActiveSection = section.items.some((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`))
     return (
-      <div key={section.label} className={`mb-5 ${compact ? 'group/section relative' : ''}`}>
-        {!compact && <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>}
-        <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item, compact))}</ul>
+      <div key={section.label} className="group/section relative mb-1">
+        <div
+          title={section.label}
+          className={`flex items-center justify-center rounded-lg border-l-[3px] px-2.5 py-2.5 lg:py-2 ${
+            isActiveSection ? 'border-accent-500 bg-accent-50 text-accent-600' : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-ink'
+          }`}
+        >
+          <section.icon size={18} strokeWidth={2} className="shrink-0" />
+        </div>
 
-        {/* Flyout al pasar el cursor en modo colapsado — mismo criterio que
-            sidebars tipo Notion/Linear: no hace falta expandir todo el
-            menú para ver y elegir una vista de esta sección. */}
-        {compact && (
-          <div className="invisible absolute left-full top-0 z-[1100] ml-1.5 w-56 rounded-lg border border-gray-200 bg-white p-2 opacity-0 shadow-lg transition-opacity duration-100 group-hover/section:visible group-hover/section:opacity-100">
-            <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
-            <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item, false))}</ul>
-          </div>
-        )}
+        <div className="invisible absolute left-full top-0 z-[1100] ml-1.5 w-56 rounded-lg border border-gray-200 bg-white p-2 opacity-0 shadow-lg transition-opacity duration-100 group-hover/section:visible group-hover/section:opacity-100">
+          <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
+          <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item))}</ul>
+        </div>
+      </div>
+    )
+  }
+
+  function renderExpandedSection(section: NavSection) {
+    return (
+      <div key={section.label} className="mb-5">
+        <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
+        <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item))}</ul>
       </div>
     )
   }
@@ -179,7 +197,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
                       filteredSections.map((section) => (
                         <div key={section.label} className="mb-2 last:mb-0">
                           <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">{section.label}</p>
-                          <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item, false))}</ul>
+                          <ul className="flex flex-col gap-0.5">{section.items.map((item) => renderItem(item))}</ul>
                         </div>
                       ))
                     )}
@@ -212,7 +230,7 @@ export function Sidebar({ iconOnly, mobileOpen, onCloseMobile, isDesktop }: Side
 
         <nav className={`flex-1 px-2 py-2 ${iconOnly ? 'overflow-visible' : 'overflow-y-auto'}`}>
           {!iconOnly && normalizedQuery && filteredSections.length === 0 && <p className="px-3 py-3 text-center text-sm text-gray-400">Sin resultados</p>}
-          {(iconOnly ? visibleSections : filteredSections).map((section) => renderSection(section, iconOnly))}
+          {iconOnly ? visibleSections.map(renderCompactSection) : filteredSections.map(renderExpandedSection)}
         </nav>
       </aside>
     </>
