@@ -2742,3 +2742,55 @@ header y en `AuthLayout` para /login).
   como pantalla de configuración en vez de solo un botón de header,
   `useTheme()` ya expone `preference`/`setPreference` para armar un
   `select`/radio ahí sin tocar el mecanismo de fondo.
+
+## "App" del repartidor: un botón, menú inferior real (agregado en esta fase)
+
+Pedido explícito del usuario viendo el header: "eso de sincronzia
+comaprtir ubicaicon deberia de haber un boton que diga app y me lleva a
+al aop dodne veo lo de la app como tal y todo eso con menu abajo no asi
+de feo" — "Mis pedidos"/"Compartir mi ubicación"/"Sincronizar" vivían
+como 3 links sueltos en el header (fila completa en escritorio, y
+amontonados en el menú "⋮" de celular) — se consolidaron en una sola
+sección con menú inferior tipo app real.
+
+- **`features/app/AppTabLayout.tsx`** (nuevo): layout con una barra
+  superior delgada (botón "Volver" a `/centro-de-control` + título) y una
+  barra de navegación **inferior** fija con 3 pestañas — Pedidos/
+  Ubicación/Sincronizar (`ClipboardList`/`LocateFixed`/`RefreshCw`,
+  `NavLink` con estado activo en `accent-600`). El punto verde
+  "compartiendo ubicación" (antes un link de texto propio en el header)
+  ahora es un badge chiquito sobre el ícono de la pestaña "Ubicación"
+  (`useLocationSharing().sharing`). Sigue viviendo **dentro** del
+  `AppShell`/`OrgProvider`/`PermissionsProvider`/`LocationSharingProvider`
+  normales (no es un shell aparte ni rompe el envío de ubicación en
+  segundo plano que ya sobrevive a la navegación) — es solo un layout
+  propio para estas 3 pantallas, montado como ruta padre en `App.tsx`.
+- **Rutas** (`App.tsx`): `/app` (`AppTabLayout`) con hijas `pedidos`
+  (`MyJobsPage`, sin cambios de lógica, solo se le quitó el
+  `SyncOfflineDataButton` que tenía arriba — ahora vive en su propia
+  pestaña), `ubicacion` (`MiUbicacionPage`, sin cambios) y `sincronizar`
+  (**`AppSyncPage.tsx`**, nueva — envuelve el mismo `SyncOfflineDataButton`
+  de siempre en su propia pantalla con texto explicativo). Las rutas
+  viejas `/mis-pedidos`/`/mi-ubicacion` **no se eliminaron**, redirigen
+  (`<Navigate replace>`) a `/app/pedidos`/`/app/ubicacion` — por si algún
+  atajo/marcador/notificación vieja sigue apuntando ahí.
+- **`Header.tsx`**: el bloque `driverProfile && (...)` de 2 links
+  (Mis pedidos, Compartir ubicación) y el `<SyncOfflineDataButton
+  compact />` siempre-visible se reemplazaron por un solo
+  `<AppLink sharing={sharing} />` (componente local nuevo) → `/app`,
+  mismo gate de siempre (`driverProfile`, solo lo ven operadores
+  vinculados). **Decisión de alcance:** `SyncOfflineDataButton` ya no
+  tiene ningún acceso directo en el header para administradores que no
+  son operadores (antes CLAUDE.md decía "visible siempre, no solo para
+  operadores") — se aceptó ese trade-off porque el pedido explícito era
+  "un botón que diga app" reemplazando ese grupo completo; sigue
+  auto-sincronizando sola (`useAutoSyncOfflineData` en `AppShell`, sin
+  cambios) y accesible por URL directa (`/app/sincronizar`) para
+  cualquiera que la necesite manualmente.
+- **Verificación:** `npx tsc -b`/`npm run build`/lint limpios. La ruta
+  `/app/pedidos` sin sesión redirige a `/login` sin errores de consola
+  (mismo comportamiento que cualquier ruta protegida, verificado con
+  Playwright). El layout en sí se verificó visualmente con una
+  reproducción estática (mismas clases reales + CSS compilado real) en
+  viewport de celular, en claro y oscuro — no se pudo probar logueado
+  como operador real en este entorno (no hay credenciales de prueba).

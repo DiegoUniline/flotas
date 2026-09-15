@@ -237,7 +237,7 @@ const MY_JOB_SELECT =
   'id, job_number, status, priority, scheduled_date, time_window_start, time_window_end, amount, cod_amount, receiver_name, receiver_phone, instructions, received_at, delivery_latitude, delivery_longitude, customers(name), customer_locations!jobs_customer_location_id_fkey(name, address, latitude, longitude)'
 
 /** Pedidos asignados a un operador — vista angosta para la app del
- * repartidor (`/mis-pedidos`), no la lista administrativa completa de
+ * repartidor (`/app/pedidos`), no la lista administrativa completa de
  * `fetchJobs`. Filtrar por `assigned_driver_id` es un filtro de UX (RLS ya
  * permite a cualquier miembro de la org ver todos los pedidos vía
  * `jobs_select`), igual criterio que el resto del proyecto. */
