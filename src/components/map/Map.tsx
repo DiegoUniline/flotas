@@ -20,6 +20,15 @@ export interface MapMarker {
    * (celular del operador compartiendo ubicación), no decorativo en otros
    * casos. */
   pulse?: boolean
+  /** Foto real del operador (`drivers.photo_url`) para pintar un avatar
+   * circular más grande en vez del punto de color — solo tiene sentido en
+   * marcadores de posición en vivo, donde SÍ importa reconocer de un
+   * vistazo quién es cada unidad en el mapa. `avatarInitials` es el
+   * respaldo cuando no hay foto (mismo criterio de "iniciales como
+   * fallback" que el resto de la app). Definir cualquiera de los dos
+   * activa el ícono de avatar en vez del punto simple. */
+  avatarUrl?: string | null
+  avatarInitials?: string
 }
 
 interface MapProps {
@@ -48,6 +57,38 @@ function coloredDivIcon(color: string, pulse = false): L.DivIcon {
     html: `<span style="position:relative;display:block;width:${size}px;height:${size}px">
         <span class="animate-ping" style="position:absolute;inset:0;border-radius:9999px;background:${color};opacity:0.6"></span>
         <span style="position:absolute;top:4px;left:4px;width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid white;box-shadow:0 0 0 1px rgba(0,0,0,0.2)"></span>
+      </span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  })
+}
+
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+/** Avatar circular grande (44px, 56px con el anillo de "en vivo") con la
+ * foto real del operador de fondo, o sus iniciales sobre el color si no
+ * tiene foto — mucho más fácil de reconocer de un vistazo en el mapa que
+ * el punto de color simple de `coloredDivIcon`. */
+function avatarDivIcon(color: string, avatarUrl: string | null | undefined, initials: string, pulse: boolean): L.DivIcon {
+  const avatarSize = 44
+  const size = pulse ? avatarSize + 12 : avatarSize + 4
+  const offset = (size - avatarSize) / 2
+  const fill = avatarUrl
+    ? `background-image:url('${escapeAttr(avatarUrl)}');background-size:cover;background-position:center;`
+    : `background:${color};`
+  const pulseRing = pulse
+    ? `<span class="animate-ping" style="position:absolute;inset:0;border-radius:9999px;background:${color};opacity:0.45"></span>`
+    : ''
+  return L.divIcon({
+    className: '',
+    html: `<span style="position:relative;display:block;width:${size}px;height:${size}px">
+        ${pulseRing}
+        <span style="position:absolute;top:${offset}px;left:${offset}px;width:${avatarSize}px;height:${avatarSize}px;border-radius:9999px;border:3px solid ${color};${fill}box-shadow:0 2px 6px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:white;overflow:hidden">${
+          avatarUrl ? '' : escapeAttr(initials)
+        }</span>
       </span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -139,9 +180,15 @@ export function Map({ markers, className = '', polyline, polylineColor = '#f9731
         link.className = 'mt-1 inline-block text-xs font-medium text-accent-600 hover:text-accent-700'
         popup.appendChild(link)
       }
-      const leafletMarker = marker.color
-        ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color, marker.pulse), zIndexOffset: marker.pulse ? 1000 : 0 })
-        : L.marker([marker.lat, marker.lng])
+      const leafletMarker =
+        marker.avatarUrl !== undefined || marker.avatarInitials !== undefined
+          ? L.marker([marker.lat, marker.lng], {
+              icon: avatarDivIcon(marker.color ?? '#16a34a', marker.avatarUrl, marker.avatarInitials ?? '', !!marker.pulse),
+              zIndexOffset: 1000,
+            })
+          : marker.color
+            ? L.marker([marker.lat, marker.lng], { icon: coloredDivIcon(marker.color, marker.pulse), zIndexOffset: marker.pulse ? 1000 : 0 })
+            : L.marker([marker.lat, marker.lng])
       leafletMarker.addTo(layer).bindPopup(popup)
       leafletMarker.on('click', () => onMarkerClickRef.current?.(marker))
     }

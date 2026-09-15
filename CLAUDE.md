@@ -2157,6 +2157,36 @@ pantallas que ya los usaban — no se tocó página por página.
   el mismo criterio de "nada debe quedar oculto/recortado" a cada
   componente compartido reusado en todo el proyecto.
 
+## Avatar real (foto o iniciales) en el marcador de ubicación en vivo (agregado en esta fase)
+
+Pedido explícito del usuario: "haz el icono de usuario en vivo más grande
+y que se vea su foto de perfil" — el marcador de posición en vivo del
+Centro de control era un punto de color simple (14px, con anillo animado
+de 22px), sin ninguna foto. Ahora usa el mismo criterio de "foto real o
+iniciales" que ya existía en el panel de la unidad (`drivers.photo_url`).
+
+- **`MapMarker` ganó `avatarUrl`/`avatarInitials`** (`components/map/Map.tsx`):
+  si cualquiera de los dos está definido, el marcador se pinta como un
+  avatar circular de 44px (48px con el borde) con la foto de fondo, o las
+  iniciales sobre el color si no hay foto — mucho más grande y
+  reconocible que el punto simple de antes. `avatarDivIcon()` es la
+  función nueva que arma ese ícono (con su propio `escapeAttr()` para no
+  romper el HTML si el nombre/URL trae comillas); `coloredDivIcon()`
+  sigue existiendo tal cual para los marcadores que no son de operador
+  (pedidos, paradas, sucursales).
+- **`fetchLiveVehiclePositions`** (`features/map/api/controlApi.ts`) ahora
+  trae `drivers(first_name, last_name, photo_url)` (antes solo
+  first_name/last_name) — mismo campo que ya se leía en el panel de la
+  unidad y en `routePlansApi.ts`, no una fuente nueva de datos.
+  `ControlMapPage.tsx` arma el marcador en vivo con
+  `avatarUrl: v.drivers?.photo_url ?? null` y
+  `avatarInitials: initials(name)` (reutiliza el helper `initials()` ya
+  existente en el mismo archivo, usado también en el panel de la unidad
+  — no se duplicó).
+- Si el operador no tiene foto cargada en su ficha (`/operadores/:id`),
+  el marcador muestra sus iniciales sobre fondo verde — nunca una foto
+  inventada ni un ícono genérico sin identidad.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

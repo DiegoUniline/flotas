@@ -86,7 +86,7 @@ export interface LiveVehiclePosition {
   last_longitude: number
   last_position_at: string
   assigned_driver_id: string | null
-  drivers: { first_name: string; last_name: string } | null
+  drivers: { first_name: string; last_name: string; photo_url: string | null } | null
 }
 
 /** Vehículos con posición real conocida (compartida desde el celular del
@@ -96,7 +96,9 @@ export interface LiveVehiclePosition {
 export async function fetchLiveVehiclePositions(organizationId: string): Promise<LiveVehiclePosition[]> {
   const { data, error } = await supabase
     .from('vehicles')
-    .select('id, economic_number, plate, last_latitude, last_longitude, last_position_at, assigned_driver_id, drivers(first_name, last_name)')
+    .select(
+      'id, economic_number, plate, last_latitude, last_longitude, last_position_at, assigned_driver_id, drivers(first_name, last_name, photo_url)',
+    )
     .eq('organization_id', organizationId)
     .is('deleted_at', null)
     .not('last_latitude', 'is', null)

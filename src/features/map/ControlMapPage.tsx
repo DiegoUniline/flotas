@@ -320,6 +320,11 @@ export function ControlMapPage() {
           description: `Ubicación en vivo · ${formatAgo(v.last_position_at)}`,
           color: '#16a34a',
           pulse: true,
+          // Avatar real del operador (foto o iniciales) en vez del punto
+          // simple — es la unidad más importante de reconocer en el mapa,
+          // se gana el ícono grande.
+          avatarUrl: v.drivers?.photo_url ?? null,
+          avatarInitials: initials(name),
         }
       })
 
