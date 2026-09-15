@@ -23,6 +23,20 @@ interface CompletedRecordRow {
 
 export type DueStatus = 'overdue' | 'due_soon' | 'ok' | 'no_history'
 
+export const DUE_STATUS_LABEL: Record<DueStatus, string> = {
+  overdue: 'Vencido',
+  due_soon: 'Próximo a vencer',
+  ok: 'Al día',
+  no_history: 'Sin historial',
+}
+
+export const DUE_STATUS_TONE: Record<DueStatus, string> = {
+  overdue: 'bg-status-delayed-bg text-status-delayed',
+  due_soon: 'bg-status-progress-bg text-status-progress',
+  ok: 'bg-status-active-bg text-status-active',
+  no_history: 'bg-gray-100 text-gray-500',
+}
+
 export interface DueRow {
   vehicleId: string
   vehicleLabel: string

@@ -3217,17 +3217,6 @@ nombre del dueño es un link, igual que en escritorio).
 
 ### Deliberadamente sin terminar en esta fase (honesto, no un descuido)
 
-- **`MaintenanceDueTable`** (pestaña "Próximos vencimientos" de
-  Mantenimientos): sigue con scroll horizontal de la tabla de escritorio
-  en celular — es una vista derivada (no tiene fila-a-detalle, su acción
-  es un botón "Programar" por fila) que no encaja en el patrón
-  navegar-a-detalle de `RecordList` sin diseñar una variante nueva; no se
-  alcanzó a hacer en esta pasada.
-- **`MaintenanceTypesPage`/`InspectionTemplatesPage`** (catálogos
-  secundarios, sin ítem propio en el sidebar): solo recibieron el bump de
-  título, siguen con tabla de escritorio + scroll horizontal en celular —
-  son catálogos de bajo tráfico (se editan una vez, no se consultan a
-  diario como Vehículos/Pedidos), quedaron fuera de la priorización.
 - **Listas de sub-recursos dentro de una pestaña de ficha** (licencias y
   certificaciones de operador, documentos de vehículo, domicilios de
   cliente, paquetes de pedido, refacciones de un servicio, ítems de
@@ -3268,3 +3257,25 @@ documentada en cada fase móvil anterior) — por eso la verificación de
 real se hizo por código (mismo patrón ya aplicado y ya verificado por
 `tsc`/build en los 13+ módulos) más la reproducción estática del
 componente compartido, no por navegación autenticada end-to-end.
+
+- **Los 3 huecos de arriba ya se cerraron (pasada de seguimiento):**
+  `MaintenanceDueTable` ganó una hermana `MaintenanceDueList.tsx` (no se
+  extendió `RecordList` — su acción real es "Programar" por fila, no
+  navegar a un detalle propio, así que no encaja en el contrato
+  `onClick`-de-toda-la-fila que ya usan los otros 17 llamadores; el
+  hermano comparte el mismo lenguaje visual (título/badge de estado con
+  los mismos `DUE_STATUS_LABEL`/`DUE_STATUS_TONE`, ahora en
+  `maintenanceDueApi.ts` para no duplicarlos entre tabla y lista) y
+  termina en un botón "Programar" real de ancho completo, no un link
+  chico. `MaintenanceTypesPage`/`InspectionTemplatesPage` ya tienen el
+  mismo split tabla (`hidden sm:block`) + `RecordList` (`sm:hidden`) que
+  el resto de módulos, con `useScrollRestoration` para conservar la
+  posición al volver de un detalle — **no** se les agregó
+  `ListToolbar`/`useListState`/`Pagination`: son catálogos que siempre
+  traen la lista completa sin búsqueda/filtro/orden/paginado propios (a
+  diferencia de Dispositivos/Refacciones), así que no hay ningún slice de
+  ese tipo que persistir; agregarlo habría sido inventar una barra de
+  búsqueda/paginado que no existía, contra el criterio de siempre del
+  proyecto. Quedan igual de fuera de esta pasada las listas de
+  sub-recursos dentro de una pestaña de ficha (documentadas arriba) — ese
+  sigue siendo un patrón distinto por diseño, no un hueco.
