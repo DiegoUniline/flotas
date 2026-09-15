@@ -1,18 +1,23 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type MutateOptions } from '@tanstack/react-query'
 import { useOrg } from '@/context/OrgContext'
 import { useToast } from '@/context/ToastContext'
 import {
-  createJob,
   fetchJobById,
   fetchJobs,
   fetchMyJobs,
   softDeleteJob,
   updateJob,
+  type Job,
   type JobFilters,
   type JobInsert,
   type JobSort,
   type JobUpdate,
 } from '@/features/jobs/api/jobsApi'
+
+interface CreateJobVariables {
+  organizationId: string
+  input: JobInsert
+}
 
 const PAGE_SIZE = 20
 
@@ -37,19 +42,31 @@ export function useJob(id: string | undefined) {
   })
 }
 
+/** `mutationKey` en vez de un `mutationFn` inline: la función real vive
+ * registrada una sola vez en `queryClient.setMutationDefaults` (ver
+ * `lib/queryClient.ts`) — necesario para que, si la mutación queda pausada
+ * sin conexión y la pestaña se cierra o recarga, `PersistQueryClientProvider`
+ * pueda revivirla y reintentarla al reconectar sin depender de una
+ * función serializada (las funciones no se pueden guardar en localStorage).
+ * Las variables van explícitas (`organizationId` + `input`) por el mismo
+ * motivo — nada de leer `activeOrg` de un closure que puede no existir
+ * todavía durante ese reintento en segundo plano. */
 export function useCreateJob() {
   const { activeOrg } = useOrg()
-  const queryClient = useQueryClient()
   const { showToast } = useToast()
 
-  return useMutation({
-    mutationFn: (input: JobInsert) => createJob(activeOrg!.id, input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['jobs', activeOrg?.id] })
-      showToast('Pedido creado', 'success')
-    },
+  const mutation = useMutation<Job, Error, CreateJobVariables>({
+    mutationKey: ['create-job'],
+    onSuccess: () => showToast('Pedido creado', 'success'),
     onError: () => showToast('No se pudo crear el pedido', 'error'),
   })
+
+  return {
+    ...mutation,
+    mutate: (input: JobInsert, options?: MutateOptions<Job, Error, CreateJobVariables>) =>
+      mutation.mutate({ organizationId: activeOrg!.id, input }, options),
+    mutateAsync: (input: JobInsert) => mutation.mutateAsync({ organizationId: activeOrg!.id, input }),
+  }
 }
 
 export function useUpdateJob() {

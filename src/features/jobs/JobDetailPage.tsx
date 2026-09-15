@@ -15,7 +15,7 @@ import { CustomerLocationQuickCreate } from '@/features/customers/components/Cus
 import { searchLocations } from '@/features/locations/api/locationsApi'
 import { searchDrivers } from '@/features/drivers/api/driversApi'
 import { searchVehicles } from '@/features/vehicles/api/vehiclesApi'
-import { JOB_PRIORITIES, JOB_STATUSES, JOB_TYPES, ORIGIN_TYPES } from '@/features/jobs/api/jobsApi'
+import { JOB_PRIORITIES, JOB_STATUSES, JOB_TYPES, ORIGIN_TYPES, generateJobId, generateJobNumber } from '@/features/jobs/api/jobsApi'
 import { useCreateJob } from '@/features/jobs/hooks/useJobs'
 import { formatCurrency } from '@/lib/format'
 import { JobDetailContent } from './JobDetailContent'
@@ -26,6 +26,8 @@ const PRIORITY_OPTIONS = JOB_PRIORITIES.map((p) => ({ value: p.value, label: p.l
 const ORIGIN_TYPE_OPTIONS = ORIGIN_TYPES.map((o) => ({ value: o.value, label: o.label }))
 
 interface Draft {
+  id: string
+  job_number: string
   job_type: string
   status: string
   priority: string
@@ -69,6 +71,11 @@ interface Draft {
 
 function emptyDraft(): Draft {
   return {
+    // Se generan aquí, al abrir el formulario — no al guardar — para que
+    // el folio "nazca" desde el primer momento, sin conexión incluida (ver
+    // el comentario de `generateJobNumber` en jobsApi.ts).
+    id: generateJobId(),
+    job_number: generateJobNumber(),
     job_type: 'delivery',
     status: 'pending',
     priority: 'normal',
@@ -254,8 +261,11 @@ export function JobDetailPage() {
     }
 
     const input = {
-      // job_number NO se manda: lo genera el trigger set_job_number() en el
-      // insert (consecutivo por organización) y nunca se debe reescribir.
+      // id/job_number SÍ se mandan explícitos — se generaron al abrir el
+      // formulario (ver emptyDraft), no los asigna el servidor. Ver el
+      // comentario de generateJobNumber() en jobsApi.ts.
+      id: draft.id,
+      job_number: draft.job_number,
       job_type: draft.job_type,
       status: draft.status,
       priority: draft.priority,
@@ -308,6 +318,9 @@ export function JobDetailPage() {
   const sectionDatos = (
     <DetailSection title="Datos del pedido" description="Identificación, cliente y programación.">
       <DetailGrid>
+        <DetailField label="Folio">
+          <InlineField value={draft.job_number} onChange={() => {}} readOnly />
+        </DetailField>
         <DetailField label="Tipo">
           <InlineField type="buttons" value={draft.job_type} options={TYPE_OPTIONS} onChange={(v) => update('job_type', v)} />
         </DetailField>

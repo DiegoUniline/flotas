@@ -3,6 +3,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { OrgProvider } from '@/context/OrgContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { ToastViewport } from '@/components/ui/ToastViewport'
+import { PwaStatus } from '@/components/pwa/PwaStatus'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { AppShell } from '@/layout/AppShell'
 import { NAV_SECTIONS } from '@/layout/navConfig'
@@ -119,6 +120,7 @@ export function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <ToastViewport />
+        <PwaStatus />
       </ToastProvider>
     </AuthProvider>
   )

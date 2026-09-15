@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ClipboardList, LocateFixed, LogOut, PanelLeft } from 'lucide-react'
 import { OrgSwitcher } from '@/components/OrgSwitcher'
+import { InstallAppButton } from '@/components/pwa/InstallAppButton'
 import { useAuth } from '@/context/AuthContext'
 import { useLocationSharing } from '@/context/LocationSharingContext'
 import { signOut } from '@/features/auth/api/authApi'
@@ -48,6 +49,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             </Link>
           </>
         )}
+        <InstallAppButton />
         <span className="text-sm text-gray-500">{user?.email}</span>
         <button
           type="button"

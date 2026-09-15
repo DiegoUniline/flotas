@@ -4,6 +4,7 @@ import { AuthLayout } from './AuthLayout'
 import { Field } from '@/components/ui/Field'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { InstallAppButton } from '@/components/pwa/InstallAppButton'
 import { signInWithPassword } from '@/features/auth/api/authApi'
 
 export function LoginPage() {
@@ -63,6 +64,9 @@ export function LoginPage() {
           <Link to="/registro" className="text-gray-600 hover:underline">
             Crear cuenta
           </Link>
+        </div>
+        <div className="flex justify-center pt-1">
+          <InstallAppButton />
         </div>
       </form>
     </AuthLayout>

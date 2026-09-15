@@ -1829,6 +1829,152 @@ ubicación, y una pantalla nueva para el operador.
   gate que ya existía para el link de ubicación, ahora ambos leen del
   mismo contexto en vez de cada uno tener su propia query duplicada.
 
+## PWA: instalable, con sesión y datos que sobreviven sin conexión (agregado en esta fase)
+
+Pedido explícito del usuario: "falta botón ir a la app y que guarde
+realmente mi sesión, datos funcione offline todo" — y, en un mensaje
+aparte, una corrección importante sobre cómo debe nacer el folio de un
+pedido: **"el folio debe de nacer en el offline y ese es el único y así
+no importa cuando cae a la bbdd"**. Se instaló `vite-plugin-pwa` (Workbox
+por debajo) + persistencia de caché/mutaciones de TanStack Query. Nada de
+esto es simulado — service worker real, manifest real, caché real.
+
+### Instalable
+
+- **`vite.config.ts`**: plugin `VitePWA` con `manifest` (nombre, ícono,
+  `display: 'standalone'`, `theme_color` del morado de marca) e íconos
+  generados una sola vez a partir de `public/favicon.svg`
+  (`public/icons/icon-192.png`/`icon-512.png`/`icon-maskable-512.png`/
+  `apple-touch-icon.png` — se generaron con `sharp` en un script
+  temporal, `sharp` no quedó como dependencia). `registerType: 'autoUpdate'`
+  + `devOptions.enabled: true` para poder probar el service worker en
+  `npm run dev` sin tener que compilar cada vez.
+- **`src/hooks/useInstallPrompt.ts`** + **`src/components/pwa/InstallAppButton.tsx`**:
+  botón "Instalar app" real (no decorativo) en el header (visible siempre,
+  no solo para operadores) y en `LoginPage` (para poder instalarla antes
+  de iniciar sesión). En Chrome/Edge/Android captura el evento nativo
+  `beforeinstallprompt` y dispara el prompt real del navegador. **iOS/
+  Safari nunca dispara ese evento** (Apple no lo soporta) — ahí el botón
+  abre un popover con las 3 instrucciones reales de "Compartir → Agregar a
+  inicio" en vez de fingir un prompt que no existe en esa plataforma. Si
+  la app ya corre instalada (`display-mode: standalone`), el botón
+  desaparece.
+- **`src/components/pwa/PwaStatus.tsx`** (montado una sola vez en
+  `App.tsx`, fuera del árbol protegido): usa `useRegisterSW` de
+  `virtual:pwa-register/react` para registrar el service worker real y
+  mostrar 3 avisos reales, nunca simulados — "sin conexión" (real,
+  `navigator.onLine` + eventos `online`/`offline`, ver
+  `src/hooks/useOnlineStatus.ts`), "hay una versión nueva" (cuando el
+  service worker detecta un build nuevo — botón "Actualizar" llama
+  `updateServiceWorker(true)`), y "lista para funcionar sin conexión" (una
+  vez, al terminar el primer precache).
+
+### Sesión
+
+`supabase-js` ya persistía la sesión en `localStorage` por defecto
+(`persistSession`/`autoRefreshToken`) desde el inicio del proyecto — no
+era un bug, ya "se guardaba realmente". Lo que faltaba para que se
+**sintiera** persistente de verdad era que la propia app cargara sin
+conexión (ver abajo): antes, sin service worker, recargar la pestaña sin
+señal tiraba el error nativo del navegador antes de que React siquiera
+arrancara a leer esa sesión guardada.
+
+### Datos que sobreviven sin conexión
+
+- **Shell de la app cacheado** (Workbox, estrategia `generateSW`,
+  `navigateFallback: '/index.html'`): abrir cualquier ruta de la SPA sin
+  conexión (`/pedidos/:id`, `/mis-pedidos`, etc.) sigue cargando React en
+  vez del error de red del navegador.
+- **Lecturas a Supabase cacheadas en dos capas**, cada una con su
+  propósito:
+  1. **Red (Workbox `runtimeCaching`, `vite.config.ts`)**: `GET` a
+     `/rest/v1/*` con `StaleWhileRevalidate` (responde al instante desde
+     caché, refresca en segundo plano si hay señal) y `/storage/v1/*`
+     (fotos/adjuntos) con `CacheFirst`. Tiles del mapa (OSM/Esri) también
+     con `CacheFirst` — el mapa se ve con lo último cacheado sin
+     conexión. Los `insert`/`update`/`delete` son `POST`/`PATCH`/`DELETE`,
+     Workbox solo intercepta `GET` por diseño, así que esta capa es
+     puramente de lectura.
+  2. **`PersistQueryClientProvider`** (`src/main.tsx`, con
+     `@tanstack/query-sync-storage-persister` sobre `localStorage`,
+     `maxAge` 7 días): persiste la caché de TanStack Query completa —
+     sobrevive a cerrar la pestaña por completo (la caché de Workbox
+     también, pero esta capa es la que ya trae los datos parseados y
+     listos para que React pinte de inmediato, sin esperar a que el
+     service worker responda).
+- **Límite real, documentado a propósito:** ambas capas cachean lo que ya
+  se visitó estando en línea — un dato que nunca se cargó no puede
+  aparecer sin conexión (no es magia, no hay sincronización total de toda
+  la base al dispositivo). `RelationSelect` (buscar cliente, domicilio,
+  etc. mientras se crea un pedido) depende de la caché de red de
+  Supabase — si el operador nunca buscó ese cliente estando en línea, no
+  aparecerá sin conexión. No se intentó resolver esto con una réplica
+  local completa de las tablas (IndexedDB + sync bidireccional) — es un
+  proyecto mucho más grande que no se pidió; si se necesita a futuro,
+  evaluarlo aparte.
+
+### El folio nace en el dispositivo, no en el servidor (corrección importante del usuario)
+
+Antes, `job_number` lo generaba un trigger de la base
+(`generate_job_number`, consecutivo atómico por organización) al hacer el
+`insert` — funciona perfecto en línea, pero es **imposible de coordinar
+sin conexión** (dos dispositivos sin señal no pueden pedirse turno para
+"el siguiente número"). El usuario lo señaló explícitamente: el folio
+debe nacer offline y ser el único, sin importar cuándo llega a la base.
+
+- **`generateJobNumber()`/`generateJobId()`** (`features/jobs/api/jobsApi.ts`):
+  se generan en el dispositivo, con entropía suficiente para no necesitar
+  coordinación con el servidor — `id` es un UUID real
+  (`crypto.randomUUID()`), `job_number` tiene el formato
+  `PED-<6 caracteres aleatorios>-<DDMMYY>` (mismo criterio de "fecha al
+  final" que el consecutivo anterior, sin los caracteres 0/O/1/I/L que se
+  confunden al leerlos).
+- **Nacen al abrir el formulario, no al guardar**: `JobDetailPage.tsx`
+  (`emptyDraft()`) los genera una sola vez al montar el wizard de "Nuevo
+  pedido", y quedan dentro del `draft` que ya se persistía en
+  `sessionStorage` desde una fase anterior (borrador del wizard) — así el
+  folio es estable sin importar cuántas veces se reintente guardar hasta
+  que haya señal. El campo "Folio" ahora se muestra desde el primer paso
+  del wizard (antes decía "se genera automáticamente al guardar" porque
+  literalmente no existía hasta el insert).
+- **`createJob` los manda explícitos** en el `insert` (antes el
+  `job_number` se omitía a propósito para que el trigger lo generara —
+  ahora es al revés). También cambió `supabase.auth.getUser()` por
+  `supabase.auth.getSession()` para resolver `created_by`: `getUser()`
+  siempre hace una llamada de red al servidor de Auth (rompería este paso
+  sin conexión antes de siquiera intentar el `insert`), `getSession()`
+  lee la sesión ya guardada en `localStorage` sin red.
+- **Reintento idempotente**: si el `insert` sí llegó al servidor pero la
+  respuesta se perdió (típico con mala señal) y React Query reintenta,
+  `createJob` ahora detecta el choque de llave primaria (`error.code ===
+  '23505'`) y **recupera la fila ya creada en vez de fallar** — el
+  operador nunca ve "no se pudo crear el pedido" por un pedido que en
+  realidad sí se guardó.
+- **El trigger `set_job_number()` en la base no se quitó** — sigue como
+  respaldo (solo actúa si `job_number` llega `null`), por si algún otro
+  camino de inserción no pasa por este flujo. El frontend ya nunca
+  depende de él para pedidos creados desde `/pedidos/nuevo`.
+- **`useCreateJob()` usa `mutationKey: ['create-job']`** en vez de una
+  función inline (`src/features/jobs/hooks/useJobs.ts` +
+  `src/lib/queryClient.ts`, `queryClient.setMutationDefaults`) — es lo
+  que permite que, si la mutación queda **pausada sin conexión y la
+  pestaña se cierra o recarga**, `PersistQueryClientProvider` la reviva
+  desde `localStorage` y la reintente sola al reconectar
+  (`resumePausedMutations()` en `main.tsx`). Una función no se puede
+  serializar a `localStorage`, por eso la función real vive registrada
+  una sola vez contra su `mutationKey` en vez de closure de componente;
+  las variables (`organizationId` + `input`, con `id`/`job_number` ya
+  adentro) sí se persisten. El resto de mutaciones del proyecto (cambiar
+  estado de un pedido, actualizar un vehículo, etc.) **no** se migraron a
+  este patrón — se apoyan en el comportamiento por defecto de TanStack
+  Query (`networkMode: 'online'`): una mutación offline queda pausada en
+  memoria y se reintenta sola al reconectar, pero **solo si la pestaña
+  sigue abierta** (no sobrevive un cierre/recargo sin conexión). Se
+  priorizó "crear pedido" para este tratamiento especial porque fue lo
+  que pidió el usuario explícitamente (el folio); replicar el mismo
+  patrón (`mutationKey` + `setMutationDefaults`) en otra mutación si se
+  pide la misma garantía ahí.
+
 ## Variables de entorno
 
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` en `.env` (gitignored).

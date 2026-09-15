@@ -115,17 +115,67 @@ export async function fetchJobById(id: string): Promise<JobWithRelations> {
   return data as unknown as JobWithRelations
 }
 
+function randomToken(length: number): string {
+  // Sin 0/O ni 1/I/L (se confunden al leerlos en voz alta o a mano).
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  const bytes = crypto.getRandomValues(new Uint8Array(length))
+  return Array.from(bytes, (b) => chars[b % chars.length]).join('')
+}
+
+/** El folio (`job_number`) y el `id` de un pedido nuevo se generan en el
+ * dispositivo, no en el servidor — es lo que permite crear un pedido sin
+ * conexión: nacen estables desde el momento en que se abre el formulario
+ * (`JobDetailPage`, wizard de creación) y quedan persistidos en el
+ * borrador de `sessionStorage` desde ahí. Así, sin importar cuándo ni
+ * cuántas veces se reintente el `insert` hasta que vuelva la señal, es
+ * siempre el mismo folio — nunca depende de si "cayó" a la base de datos.
+ * Formato `PED-<6 caracteres>-<DDMMYY>` (mismo criterio de "fecha al
+ * final" que el consecutivo anterior, pero sin depender de una secuencia
+ * atómica del servidor, que no se puede coordinar sin conexión). El
+ * trigger `set_job_number()` en la base sigue existiendo como respaldo
+ * (solo actúa si `job_number` llega null), pero el frontend ya nunca lo
+ * necesita para pedidos creados desde aquí. */
+export function generateJobNumber(): string {
+  const now = new Date()
+  const dd = String(now.getDate()).padStart(2, '0')
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const yy = String(now.getFullYear()).slice(-2)
+  return `PED-${randomToken(6)}-${dd}${mm}${yy}`
+}
+
+export function generateJobId(): string {
+  return crypto.randomUUID()
+}
+
 export async function createJob(organizationId: string, input: JobInsert): Promise<Job> {
+  // `getSession()` en vez de `getUser()`: lee la sesión ya guardada en
+  // localStorage sin llamar al servidor de Auth — `getUser()` sí hace esa
+  // llamada de red, lo que tronaría este paso sin conexión antes de
+  // siquiera intentar el `insert`.
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
   const { data, error } = await supabase
     .from('jobs')
-    .insert({ ...input, organization_id: organizationId, created_by: user?.id ?? null })
+    .insert({ ...input, organization_id: organizationId, created_by: session?.user.id ?? null })
     .select()
     .single()
-  if (error) throw error
+
+  if (error) {
+    // Reintento tras una respuesta perdida (típico sin conexión: el
+    // `insert` anterior sí llegó y se guardó, pero la respuesta nunca
+    // volvió al dispositivo). Como `id`/`job_number` son estables entre
+    // reintentos, un choque de llave primaria aquí significa "ya se
+    // guardó", no un error real — se recupera la fila existente en vez de
+    // fallar y mostrarle al operador un error sobre un pedido que sí se
+    // creó.
+    if (error.code === '23505' && input.id) {
+      const { data: existing, error: fetchError } = await supabase.from('jobs').select('*').eq('id', input.id).single()
+      if (!fetchError && existing) return existing
+    }
+    throw error
+  }
   return data
 }
 
